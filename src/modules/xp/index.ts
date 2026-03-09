@@ -1,3 +1,4 @@
-// Barrel file — explicit public API for this module
-// Add exports as components/actions are created
-export {}
+export { grantXP, resetExpiredStreaks } from './lib/engine'
+export type { GrantXPInput } from './lib/engine'
+export { getLeaderboard, getUserXP, getUserGrants } from './lib/queries'
+export { getBasePoints } from './lib/rules'
