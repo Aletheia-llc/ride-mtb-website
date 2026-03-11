@@ -1,3 +1,5 @@
 // Barrel file — explicit public API for this module
-// Add exports as components/actions are created
-export {}
+export * from './types'
+export * from './components'
+export { submitReview } from './actions/submitReview'
+export type { SubmitReviewState } from './actions/submitReview'
