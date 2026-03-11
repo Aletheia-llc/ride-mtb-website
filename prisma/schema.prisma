@@ -51,6 +51,9 @@ model User {
   gearReviews     GearReview[]
   userBikes       UserBike[]
   mediaItems      MediaItem[]
+  listings        Listing[]
+  shops           Shop[]
+  coachProfile    CoachProfile?
 
   @@map("users")
 }
@@ -584,6 +587,111 @@ model MediaItem {
 }
 
 // ============================================================
+// MARKETPLACE
+// ============================================================
+
+model Listing {
+  id          String        @id @default(cuid())
+  sellerId    String
+  title       String
+  slug        String        @unique
+  description String        @db.Text
+  price       Float
+  category    ListingCategory
+  condition   ItemCondition
+  location    String?
+  imageUrls   Json          @default("[]")
+  status      ListingStatus @default(active)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  seller      User          @relation(fields: [sellerId], references: [id])
+
+  @@index([category, status])
+  @@index([sellerId])
+  @@index([createdAt])
+  @@map("listings")
+}
+
+// ============================================================
+// MERCH
+// ============================================================
+
+model MerchProduct {
+  id             String      @id @default(cuid())
+  name           String
+  slug           String      @unique
+  description    String?     @db.Text
+  price          Float
+  compareAtPrice Float?
+  imageUrls      Json        @default("[]")
+  category       MerchCategory
+  sizes          Json        @default("[]")
+  inStock        Boolean     @default(true)
+  sortOrder      Int         @default(0)
+  status         ContentStatus @default(published)
+  stripePriceId  String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([category, status])
+  @@map("merch_products")
+}
+
+// ============================================================
+// SHOPS
+// ============================================================
+
+model Shop {
+  id          String   @id @default(cuid())
+  ownerId     String?
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  address     String
+  city        String
+  state       String
+  zipCode     String?
+  country     String   @default("US")
+  phone       String?
+  email       String?
+  websiteUrl  String?
+  latitude    Float?
+  longitude   Float?
+  imageUrl    String?
+  services    Json     @default("[]")
+  brands      Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User?    @relation(fields: [ownerId], references: [id])
+
+  @@index([city, state])
+  @@index([latitude, longitude])
+  @@map("shops")
+}
+
+// ============================================================
+// COACHING
+// ============================================================
+
+model CoachProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  title        String
+  bio          String   @db.Text
+  specialties  Json     @default("[]")
+  hourlyRate   Float?
+  location     String?
+  calcomLink   String?
+  certifications Json   @default("[]")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@map("coach_profiles")
+}
+
+// ============================================================
 // ENUMS
 // ============================================================
 
@@ -764,4 +872,43 @@ enum BikeCategory {
 enum MediaType {
   photo
   video
+}
+
+enum ListingCategory {
+  complete_bikes
+  frames
+  wheels
+  suspension
+  drivetrain
+  brakes
+  cockpit
+  protection
+  clothing
+  accessories
+  other
+}
+
+enum ItemCondition {
+  new
+  like_new
+  good
+  fair
+  poor
+}
+
+enum ListingStatus {
+  active
+  sold
+  reserved
+  expired
+  removed
+}
+
+enum MerchCategory {
+  apparel
+  headwear
+  accessories
+  stickers
+  drinkware
+  other
 }
