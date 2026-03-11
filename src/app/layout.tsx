@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { DM_Sans } from 'next/font/google'
 import { PostHogProvider } from '@/lib/analytics/PostHogProvider'
 import './globals.css'
