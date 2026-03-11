@@ -133,35 +133,37 @@ export async function submitQuizAttempt({
   xpEarned,
   answers,
 }: SubmitQuizAttemptInput) {
-  const attempt = await db.learnQuizAttempt.create({
-    data: {
-      userId,
-      quizId,
-      score,
-      tier,
-      xpEarned,
-      answers: answers as object,
-      completedAt: new Date(),
-    },
-  })
-
-  // Upsert progress — only update if the new tier is better
-  const existing = await db.learnProgress.findUnique({
-    where: { userId_quizId: { userId, quizId } },
-  })
-
-  if (!existing) {
-    await db.learnProgress.create({
-      data: { userId, quizId, bestTier: tier },
+  return db.$transaction(async (tx) => {
+    const attempt = await tx.learnQuizAttempt.create({
+      data: {
+        userId,
+        quizId,
+        score,
+        tier,
+        xpEarned,
+        answers: answers as object,
+        completedAt: new Date(),
+      },
     })
-  } else if (isBetterTier(tier, existing.bestTier)) {
-    await db.learnProgress.update({
-      where: { id: existing.id },
-      data: { bestTier: tier },
-    })
-  }
 
-  return attempt
+    // Upsert progress — only update if the new tier is better
+    const existing = await tx.learnProgress.findUnique({
+      where: { userId_quizId: { userId, quizId } },
+    })
+
+    if (!existing) {
+      await tx.learnProgress.create({
+        data: { userId, quizId, bestTier: tier },
+      })
+    } else if (isBetterTier(tier, existing.bestTier)) {
+      await tx.learnProgress.update({
+        where: { id: existing.id },
+        data: { bestTier: tier },
+      })
+    }
+
+    return attempt
+  })
 }
 
 // ── 7. getCourseProgress ─────────────────────────────────────
@@ -261,6 +263,6 @@ export async function createCertificate(
   return db.learnCertificate.upsert({
     where: { userId_courseId: { userId, courseId } },
     create: { userId, courseId, tier },
-    update: {},
+    update: { tier },
   })
 }

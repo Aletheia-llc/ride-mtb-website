@@ -1,5 +1,3 @@
-'use client'
-
 import type { JSONContent } from '@tiptap/react'
 
 interface LessonViewerProps {

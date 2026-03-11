@@ -153,8 +153,7 @@ export function QuizFlow({
 
   if (!question) return null
 
-  const isInteractive = ['drag_drop', 'diagram_match'].includes(question.type)
-  const needsCheckButton = isInteractive && !hasAnswered
+  const needsCheckButton = question.type === 'drag_drop' && !hasAnswered
 
   return (
     <div className="mx-auto max-w-2xl">
