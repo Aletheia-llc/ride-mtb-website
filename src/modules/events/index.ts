@@ -1,3 +1,5 @@
 // Barrel file — explicit public API for this module
-// Add exports as components/actions are created
-export {}
+export * from './types'
+export * from './components'
+export { createEventAction, type CreateEventState } from './actions/createEvent'
+export { rsvpEvent } from './actions/rsvpEvent'
