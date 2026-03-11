@@ -1,3 +1,6 @@
 // Barrel file — explicit public API for this module
-// Add exports as components/actions are created
-export {}
+export * from './types'
+export * from './components'
+export { createThread } from './actions/createThread'
+export { createPost } from './actions/createPost'
+export { votePost } from './actions/votePost'
