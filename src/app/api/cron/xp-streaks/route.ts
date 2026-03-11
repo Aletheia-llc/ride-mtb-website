@@ -1,16 +1,14 @@
-import { resetExpiredStreaks } from '@/modules/xp'
+import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (request.headers.get('Authorization') !== `Bearer ${cronSecret}`) {
-    return new Response('Unauthorized', { status: 401 })
+  const authHeader = request.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const resetCount = await resetExpiredStreaks()
+  // Dynamic import to avoid loading DB client during build
+  const { resetExpiredStreaks } = await import('@/modules/xp/lib/engine')
+  const count = await resetExpiredStreaks()
 
-  return Response.json({
-    status: 'ok',
-    streaksReset: resetCount,
-    timestamp: new Date().toISOString(),
-  })
+  return NextResponse.json({ reset: count, timestamp: new Date().toISOString() })
 }

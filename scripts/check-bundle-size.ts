@@ -1,34 +1,32 @@
 import { readFileSync } from 'fs'
 
-const [, , buildOutputFile, maxKB] = process.argv
-const budgetKB = parseInt(maxKB || '250', 10)
+const [,, buildOutputPath, maxKB] = process.argv
+const maxBytes = parseInt(maxKB, 10) * 1024
 
-if (!buildOutputFile) {
-  console.error('Usage: tsx scripts/check-bundle-size.ts <build-output.txt> <max-kb>')
+if (!buildOutputPath || !maxKB) {
+  console.error('Usage: npx tsx scripts/check-bundle-size.ts <build-output-file> <max-kb>')
   process.exit(1)
 }
 
-const output = readFileSync(buildOutputFile, 'utf-8')
+const output = readFileSync(buildOutputPath, 'utf-8')
 
-// Parse Next.js build output for route sizes
-// Next.js outputs lines like: "○ /route    X kB" with first-load JS as the last size column
-const routePattern = /[○●λƒ]\s+(\/\S+)\s+[\d.]+\s+[kKmM]?B\s+([\d.]+)\s+kB/g
-let failed = false
+// Parse Next.js build output for "First Load JS" sizes
+const sizePattern = /○|●|λ|ƒ.*?(\d+(?:\.\d+)?)\s*kB/g
+let maxFound = 0
+const violations: string[] = []
 
-let match: RegExpExecArray | null
-while ((match = routePattern.exec(output)) !== null) {
-  const route = match[1]
-  const sizeKB = parseFloat(match[2])
-
-  if (sizeKB > budgetKB) {
-    console.error(`FAIL: ${route} (${sizeKB} kB > ${budgetKB} kB budget)`)
-    failed = true
+for (const match of output.matchAll(sizePattern)) {
+  const sizeKB = parseFloat(match[1])
+  if (sizeKB > maxFound) maxFound = sizeKB
+  if (sizeKB * 1024 > maxBytes) {
+    violations.push(match[0].trim())
   }
 }
 
-if (failed) {
-  console.error(`\nBundle budget exceeded! Max: ${budgetKB} kB uncompressed first-load JS per route.`)
+if (violations.length > 0) {
+  console.error(`❌ Bundle size violations (>${maxKB}KB):`)
+  violations.forEach((v) => console.error(`  ${v}`))
   process.exit(1)
+} else {
+  console.log(`✅ All routes under ${maxKB}KB budget (largest: ${maxFound.toFixed(1)}KB)`)
 }
-
-console.log(`All routes within ${budgetKB} kB budget.`)
