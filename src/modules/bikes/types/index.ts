@@ -1,3 +1,10 @@
+// Garage types
+export type {
+  BikeCategory,
+  UserBikeData,
+  BikeServiceLogData,
+} from './garage'
+
 // Quiz types
 export type QuizStepType = 'multi_select' | 'single_select' | 'slider'
 
