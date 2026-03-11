@@ -1,9 +1,13 @@
+import Image from 'next/image'
+
 interface AvatarProps {
   src?: string | null
   alt?: string
   size?: 'sm' | 'md' | 'lg'
   className?: string
 }
+
+const sizePx = { sm: 32, md: 40, lg: 56 }
 
 const sizeClasses = {
   sm: 'h-8 w-8 text-xs',
@@ -14,9 +18,11 @@ const sizeClasses = {
 export function Avatar({ src, alt = 'User', size = 'md', className = '' }: AvatarProps) {
   if (src) {
     return (
-      <img
+      <Image
         src={src}
         alt={alt}
+        width={sizePx[size]}
+        height={sizePx[size]}
         className={`rounded-full object-cover ${sizeClasses[size]} ${className}`}
       />
     )

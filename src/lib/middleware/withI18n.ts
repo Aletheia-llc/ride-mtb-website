@@ -1,5 +1,4 @@
-import { NextMiddleware, NextResponse } from 'next/server'
-import type { NextFetchEvent, NextRequest } from 'next/server'
+import type { NextMiddleware, NextFetchEvent, NextRequest } from 'next/server'
 
 export function withI18n(next: NextMiddleware): NextMiddleware {
   return async (request: NextRequest, event: NextFetchEvent) => {

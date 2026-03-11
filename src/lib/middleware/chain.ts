@@ -1,5 +1,4 @@
 import { NextMiddleware, NextResponse } from 'next/server'
-import type { NextFetchEvent, NextRequest } from 'next/server'
 
 type MiddlewareFactory = (next: NextMiddleware) => NextMiddleware
 
