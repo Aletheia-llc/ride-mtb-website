@@ -1,3 +1,5 @@
 // Barrel file — explicit public API for this module
-// Add exports as components/actions are created
-export {}
+export * from './types'
+export * from './components'
+export { uploadMedia, type UploadMediaState } from './actions/uploadMedia'
+export { deleteMedia } from './actions/deleteMedia'
