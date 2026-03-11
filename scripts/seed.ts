@@ -1927,7 +1927,7 @@ async function seedShops(db: PrismaClient) {
 async function seedGearReviews(db: PrismaClient, users: UserRecord[]) {
   console.log('  Creating gear reviews...')
 
-  const [admin, instructor, mike, _jess, dan] = users
+  const [admin, instructor, mike, , dan] = users
 
   const reviews = [
     {

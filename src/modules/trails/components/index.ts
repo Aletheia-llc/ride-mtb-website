@@ -23,3 +23,7 @@ export { TrailMapEmbed } from './TrailMapEmbed'
 //     { ssr: false }
 //   )
 export { ElevationProfile } from './ElevationProfile'
+
+// Pre-wrapped dynamic imports (safe for Server Components)
+export { TrailMapDynamic } from './TrailMapDynamic'
+export { ElevationProfileDynamic } from './ElevationProfileDynamic'

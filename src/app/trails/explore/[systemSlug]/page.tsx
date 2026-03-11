@@ -1,24 +1,11 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { TrailList } from '@/modules/trails'
+import { TrailList, TrailMapDynamic as TrailMap } from '@/modules/trails'
 import type { TrailSummary } from '@/modules/trails'
 import { Card, Badge } from '@/ui/components'
-import { Skeleton } from '@/ui/components'
 // eslint-disable-next-line no-restricted-imports
 import { getTrailSystemBySlug } from '@/modules/trails/lib/queries'
-
-const TrailMap = dynamic(
-  () =>
-    import('@/modules/trails/components/TrailMap').then((m) => ({
-      default: m.TrailMap,
-    })),
-  {
-    ssr: false,
-    loading: () => <Skeleton variant="map" />,
-  },
-)
 
 interface Props {
   params: Promise<{ systemSlug: string }>

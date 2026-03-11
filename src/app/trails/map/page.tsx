@@ -1,23 +1,7 @@
 import type { Metadata } from 'next'
-import dynamic from 'next/dynamic'
-import { Skeleton } from '@/ui/components'
+import { TrailMapDynamic as TrailMap } from '@/modules/trails'
 // eslint-disable-next-line no-restricted-imports
 import { getTrailSystems } from '@/modules/trails/lib/queries'
-
-const TrailMap = dynamic(
-  () =>
-    import('@/modules/trails/components/TrailMap').then((m) => ({
-      default: m.TrailMap,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-screen w-full items-center justify-center bg-[var(--color-bg)]">
-        <Skeleton variant="map" className="h-full w-full" />
-      </div>
-    ),
-  },
-)
 
 export const metadata: Metadata = {
   title: 'Trail Map | Ride MTB',

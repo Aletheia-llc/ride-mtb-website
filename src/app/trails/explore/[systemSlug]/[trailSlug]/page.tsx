@@ -1,34 +1,11 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import dynamic from 'next/dynamic'
-import { TrailDetailView, TrailReviewForm } from '@/modules/trails'
-import { Card, Skeleton } from '@/ui/components'
+import { TrailDetailView, TrailReviewForm, TrailMapDynamic as TrailMap, ElevationProfileDynamic as ElevationProfile } from '@/modules/trails'
+import { Card } from '@/ui/components'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
 import { getTrailBySlug, isTrailFavorited } from '@/modules/trails/lib/queries'
-
-const TrailMap = dynamic(
-  () =>
-    import('@/modules/trails/components/TrailMap').then((m) => ({
-      default: m.TrailMap,
-    })),
-  {
-    ssr: false,
-    loading: () => <Skeleton variant="map" />,
-  },
-)
-
-const ElevationProfile = dynamic(
-  () =>
-    import('@/modules/trails/components/ElevationProfile').then((m) => ({
-      default: m.ElevationProfile,
-    })),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-[200px] w-full" />,
-  },
-)
 
 interface Props {
   params: Promise<{ systemSlug: string; trailSlug: string }>
