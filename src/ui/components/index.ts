@@ -1,2 +1,10 @@
-// Design system barrel — all UI components exported from here
-export {}
+export { Button } from './Button'
+export { Card } from './Card'
+export { Input } from './Input'
+export { Skeleton } from './Skeleton'
+export { Avatar } from './Avatar'
+export { Badge } from './Badge'
+export { EmptyState } from './EmptyState'
+export { Modal } from './Modal'
+export { ProgressBar } from './ProgressBar'
+export { Tabs } from './Tabs'
