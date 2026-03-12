@@ -25,6 +25,7 @@ model User {
   bannedAt        DateTime?
   location        String?
   ridingStyle     String?
+  interests       String[]    @default([])
   skillLevel      SkillLevel?
   favoriteBike    String?
   favoriteTrail   String?
