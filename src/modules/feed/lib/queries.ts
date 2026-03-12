@@ -162,7 +162,7 @@ export async function getTrendingItems(limit: number = 5): Promise<TrendingItem[
   const threads = await db.forumThread.findMany({
     where: { createdAt: { gte: since } },
     take: limit,
-    orderBy: { _count: { posts: 'desc' } },
+    orderBy: { posts: { _count: 'desc' } },
     select: {
       id: true,
       title: true,
