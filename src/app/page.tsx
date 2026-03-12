@@ -53,7 +53,7 @@ export default async function HomePage() {
 
   const initialPage = rankedItems.slice(0, PAGE_SIZE)
   const hasMore = rankedItems.length > PAGE_SIZE
-  const nextCursor = hasMore ? initialPage[initialPage.length - 1].createdAt.toISOString() : null
+  const nextCursor = hasMore ? '2' : null
 
   // Strip internal fields for client
   const initialItems = initialPage.map(({ category, engagementScore, createdAt, ...rest }) => rest)
@@ -63,7 +63,7 @@ export default async function HomePage() {
         totalXp: xpAggregate.totalXp,
         streakDays: xpAggregate.streakDays,
         weeklyXp,
-        nextLevelXp: Math.ceil(xpAggregate.totalXp / 100 + 1) * 100,
+        nextLevelXp: Math.ceil((xpAggregate.totalXp + 1) / 100) * 100,
       }
     : undefined
 

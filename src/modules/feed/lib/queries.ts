@@ -1,16 +1,18 @@
 import 'server-only'
 import { db } from '@/lib/db/client'
+import { paginate } from '@/lib/db/helpers'
 import type { FeedItem } from '../types'
 
-const CANDIDATE_LIMIT = 50
+const ITEMS_PER_SOURCE = 50
 
-export async function getFeedCandidates(cursor?: Date): Promise<FeedItem[]> {
-  const cursorFilter = cursor ? { createdAt: { lt: cursor } } : {}
+export async function getFeedCandidates(page: number = 1): Promise<FeedItem[]> {
+  const { skip } = paginate(page, ITEMS_PER_SOURCE)
 
   const [courses, trailSystems, threads, events, reviews, listings] = await Promise.all([
     db.learnCourse.findMany({
-      where: { status: 'published', ...cursorFilter },
-      take: CANDIDATE_LIMIT,
+      where: { status: 'published' },
+      take: ITEMS_PER_SOURCE,
+      skip,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, title: true, slug: true, difficulty: true,
@@ -19,8 +21,9 @@ export async function getFeedCandidates(cursor?: Date): Promise<FeedItem[]> {
       },
     }),
     db.trailSystem.findMany({
-      where: { status: 'open', ...cursorFilter },
-      take: CANDIDATE_LIMIT,
+      where: { status: 'open' },
+      take: ITEMS_PER_SOURCE,
+      skip,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, name: true, slug: true, city: true, state: true,
@@ -28,8 +31,9 @@ export async function getFeedCandidates(cursor?: Date): Promise<FeedItem[]> {
       },
     }),
     db.forumThread.findMany({
-      where: cursorFilter,
-      take: CANDIDATE_LIMIT,
+      where: {},
+      take: ITEMS_PER_SOURCE,
+      skip,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, title: true, slug: true, viewCount: true, createdAt: true,
@@ -38,8 +42,9 @@ export async function getFeedCandidates(cursor?: Date): Promise<FeedItem[]> {
       },
     }),
     db.event.findMany({
-      where: { status: 'published', startDate: { gte: new Date() }, ...cursorFilter },
-      take: CANDIDATE_LIMIT,
+      where: { status: 'published', startDate: { gte: new Date() } },
+      take: ITEMS_PER_SOURCE,
+      skip,
       orderBy: { startDate: 'asc' },
       select: {
         id: true, title: true, slug: true, location: true, startDate: true,
@@ -48,8 +53,9 @@ export async function getFeedCandidates(cursor?: Date): Promise<FeedItem[]> {
       },
     }),
     db.gearReview.findMany({
-      where: cursorFilter,
-      take: CANDIDATE_LIMIT,
+      where: {},
+      take: ITEMS_PER_SOURCE,
+      skip,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, title: true, slug: true, brand: true, productName: true,
@@ -57,8 +63,9 @@ export async function getFeedCandidates(cursor?: Date): Promise<FeedItem[]> {
       },
     }),
     db.listing.findMany({
-      where: { status: 'active', ...cursorFilter },
-      take: CANDIDATE_LIMIT,
+      where: { status: 'active' },
+      take: ITEMS_PER_SOURCE,
+      skip,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, title: true, slug: true, price: true, category: true,

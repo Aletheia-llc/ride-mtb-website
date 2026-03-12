@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
   const session = await auth()
   const { searchParams } = request.nextUrl
   const tab = (searchParams.get('tab') ?? 'forYou') as FeedTab
-  const cursorParam = searchParams.get('cursor')
-  const cursor = cursorParam ? new Date(cursorParam) : undefined
+  const pageParam = searchParams.get('page')
+  const currentPage = pageParam ? parseInt(pageParam, 10) : 1
 
-  const candidates = await getFeedCandidates(cursor)
+  const candidates = await getFeedCandidates(currentPage)
 
   let rankedItems = candidates
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   const page = rankedItems.slice(0, PAGE_SIZE)
   const hasMore = rankedItems.length > PAGE_SIZE
-  const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : null
+  const nextCursor = hasMore ? String(currentPage + 1) : null
 
   const items = page.map(({ category, engagementScore, createdAt, ...rest }) => {
     if (tab !== 'forYou') {

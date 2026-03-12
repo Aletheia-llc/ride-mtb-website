@@ -25,10 +25,8 @@ export async function POST(request: NextRequest) {
   }
 
   const { category } = body as { category: string }
-  const increment = body.increment as number | undefined
 
-  // Determine increment from category if not provided
-  let inc = increment ?? 1
+  let inc = 1
   for (const [prefix, val] of Object.entries(CLICK_INCREMENT_MAP)) {
     if (category.startsWith(prefix)) { inc = val; break }
   }

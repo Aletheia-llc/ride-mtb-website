@@ -45,7 +45,7 @@ export function FeedClient({ initialItems, initialHasMore, initialCursor, isLogg
     setLoading(true)
     try {
       const params = new URLSearchParams({ tab: activeTab })
-      if (cursor) params.set('cursor', cursor)
+      if (cursor) params.set('page', cursor)
       const res = await fetch(`/api/feed?${params}`)
       const data: FeedResponse = await res.json()
       setItems((prev) => [...prev, ...data.items])
@@ -66,13 +66,11 @@ export function FeedClient({ initialItems, initialHasMore, initialCursor, isLogg
       course: 'learn',
     }
     const category = TYPE_TO_CATEGORY[type] ?? type
-    const INCREMENT: Record<string, number> = { learn: 2, trail: 1, forum: 1, events: 1, reviews: 1, buysell: 1 }
-    const increment = INCREMENT[category] ?? 1
 
     await fetch('/api/feed/click', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category, increment }),
+      body: JSON.stringify({ category }),
     }).catch(() => {})
   }, [])
 
