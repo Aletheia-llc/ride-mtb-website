@@ -20,3 +20,17 @@ export async function getUserGrants(userId: string, limit: number = 50) {
     take: limit,
   })
 }
+
+export async function getWeeklyXp(userId: string): Promise<number> {
+  const now = new Date()
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - now.getDay())
+  startOfWeek.setHours(0, 0, 0, 0)
+
+  const result = await db.xpGrant.aggregate({
+    where: { userId, createdAt: { gte: startOfWeek } },
+    _sum: { total: true },
+  })
+
+  return result._sum.total ?? 0
+}
