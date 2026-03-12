@@ -16,7 +16,7 @@ A Pinkbike-style 3-column magazine layout with a personalized center feed. Logge
 [ Left Sidebar 180px ] [ Center Feed fluid ] [ Right Sidebar 200px ]
 ```
 
-The layout sits inside a `max-width: 1200px` container, matching the existing `--max-content-width` token. Columns are separated by a 12px gap.
+The layout sits inside a `max-width: 1200px` container, matching the existing `--max-content-width` token. Columns are separated by a 12px gap. The existing `--sidebar-width: 240px` token is **not used** for this layout — the homepage sidebars use inline widths (180px left, 200px right) defined directly in the grid template to avoid conflict with the app sidebar used in other sections.
 
 ### Top Navigation
 
@@ -104,7 +104,15 @@ Lightweight score increments stored in Upstash Redis. Key format: `feed:scores:{
 | Click a gear review | `reviews` +1 |
 | Click a buy/sell listing | `buysell` +1 |
 
-Scores decay by 10% per week (TTL-based via Redis `EXPIRE`). Feed re-ranks on every page load using current scores.
+Scores decay by 10% per week via a new `/api/cron/feed-scores` cron job (same pattern as the existing `/api/cron/xp-streaks`). The job scans `feed:scores:*` keys, reads each hash with `HGETALL`, multiplies all values by 0.9, and writes them back with `HSET`.
+
+**Redis access pattern in `personalization.ts`:**
+- Use `@upstash/redis` instantiated as a shared singleton (same pattern as `src/lib/rate-limit.ts`)
+- Read: `redis.hgetall('feed:scores:{userId}')` → returns `Record<string, number> | null`
+- Write on click: `redis.hincrby('feed:scores:{userId}', categoryKey, increment)`
+- If Redis is unavailable (env vars missing or network error): catch the error and fall back to returning all-zero scores — feed still works, just unranked
+
+Feed re-ranks on every page load using current scores.
 
 ### Ranking Algorithm
 
@@ -117,6 +125,17 @@ score = base_engagement_score
       + behavior_boost          (redis score for item's category)
       - age_penalty             (items older than 14 days: -2 per day over)
 ```
+
+**`base_engagement_score` per content type:**
+
+| Type | Field used |
+|------|-----------|
+| Course | Count of `LearnQuizAttempt` rows across all modules in the course (derived via `_count` at query time — no denormalized field needed) |
+| Trail | `trailCount` (trails in the system, existing field) |
+| Forum | `_count.posts` on the thread (existing relation count) |
+| Event | `_count.rsvps` on the event (existing `EventRsvp` relation) |
+| Review | `rating` × 10 (existing field on `GearReview`) |
+| Buy/Sell | `viewCount` on the forum thread |
 
 Items are fetched, scored in-memory, and sorted. No ML — deterministic and auditable.
 
@@ -139,7 +158,7 @@ Items are fetched, scored in-memory, and sorted. No ML — deterministic and aud
 
 ## Right Sidebar
 
-1. **Ad Slot** — 300×250 IAB rectangle. Uses the existing `<AdSlot>` component.
+1. **Ad Slot** — 300×250 IAB rectangle. A new `<AdSlot size="rectangle" />` component is created in `src/ui/components/AdSlot.tsx`, rendering a placeholder `<div>` sized 300×250 with a grey background and "Advertisement" label. Slot content is static for v1.
 2. **Explore** — quick-links to all 6 main modules (Learn, Trails, Forum, Events, Reviews, Buy/Sell)
 3. **Upcoming Events** — next 3 events ordered by date, with date/title/location
 
@@ -150,10 +169,38 @@ Items are fetched, scored in-memory, and sorted. No ML — deterministic and aud
 `src/app/page.tsx` is a **server component**. It:
 1. Reads the session via `auth()`
 2. Fetches initial feed items (10) via `getFeedItems({ userId, tab: 'forYou' })`
-3. Fetches sidebar data in parallel: `getTrendingItems()`, `getUpcomingEvents(3)`, `getUserXpSummary(userId)`
+3. Fetches sidebar data in parallel: `getTrendingItems()`, `getUpcomingEvents({ limit: 3 })`, `getUserXP(userId)` (existing function from `src/modules/xp`). Note: the existing `getUpcomingEvents` signature is `(filters?, page?)` — it must be updated to accept an optional `limit` parameter (default: 10) and pass it to the Prisma `take` option.
 4. Passes all data as props to client components
 
+`getUserXP` returns a full `XpAggregate` row with `{ totalXp, streakDays, lastGrantAt }`. The XP widget derives "this week's XP" by calling a new helper `getWeeklyXp(userId)` that sums `XpGrant.total` (the post-multiplier total field) where `createdAt >= startOfWeek(new Date())`.
+
 The feed API route (`/api/feed`) handles tab-switching and pagination requests from the client.
+
+### `/api/feed` Response Shape
+
+```ts
+GET /api/feed?tab=forYou|latest|popular&cursor=<isoDateString>
+
+Response:
+{
+  items: FeedItem[],
+  nextCursor: string | null,  // ISO date of last item's createdAt, null if no more
+  hasMore: boolean
+}
+
+type FeedItem = {
+  id: string
+  type: 'course' | 'trail' | 'forum' | 'event' | 'review' | 'buysell'
+  title: string
+  subtitle: string           // e.g. "Lesson 3 of 5 · 8 min" or "42 trails · Intermediate"
+  url: string                // deep link to the content
+  imageUrl?: string
+  tags: string[]
+  meta: string               // e.g. "23 replies" or "⭐⭐⭐⭐⭐"
+  reason?: string            // personalization reason label, only on "forYou" tab
+  score?: number             // internal ranking score, omitted from response
+}
+```
 
 ---
 
@@ -170,12 +217,29 @@ The feed API route (`/api/feed`) handles tab-switching and pagination requests f
 | `src/modules/feed/components/LeftSidebar.tsx` | XP widget + interests + trending |
 | `src/modules/feed/components/RightSidebar.tsx` | Ad slot + explore links + events |
 | `src/app/api/feed/route.ts` | API route for tab switching + pagination |
+| `src/app/api/feed/click/route.ts` | POST endpoint to record a card click → Redis score increment |
+| `src/app/api/cron/feed-scores/route.ts` | Weekly cron to decay all feed scores by 10% |
+| `src/ui/components/AdSlot.tsx` | 300×250 placeholder ad slot component |
+
+Also add to `vercel.json` crons:
+```json
+{ "path": "/api/cron/feed-scores", "schedule": "0 3 * * 1" }
+```
+(Runs Monday 3am UTC, same guard pattern as existing cron routes.)
+
+**Dismissible banner persistence:** store dismissed state in `localStorage` key `feed-banner-dismissed`. Dismissed for the browser session only — resets on new device/browser.
 
 ---
 
 ## Schema Change
 
 Add `interests String[]` to the `User` model in `prisma/schema.prisma`. Default: `[]`.
+
+```prisma
+interests  String[]  @default([])
+```
+
+Run `npx prisma migrate dev --name add_user_interests` to apply. The project uses `PrismaPg` adapter with a non-standard datasource — `prisma migrate dev` still works normally; the adapter only affects the runtime client, not the migration CLI.
 
 ---
 
