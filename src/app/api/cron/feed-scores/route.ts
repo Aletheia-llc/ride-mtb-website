@@ -21,13 +21,14 @@ export async function GET(request: Request) {
   })
 
   // Scan all feed:scores:* keys
-  let cursor = 0
+  let cursor: string | number = 0
   let processed = 0
   const DECAY = 0.9
 
   do {
-    const [nextCursor, keys] = await redis.scan(cursor, { match: 'feed:scores:*', count: 100 })
-    cursor = nextCursor as number
+    const result: [string | number, string[]] = await redis.scan(cursor, { match: 'feed:scores:*', count: 100 })
+    cursor = result[0]
+    const keys = result[1]
 
     for (const key of keys) {
       const scores = await redis.hgetall<Record<string, number>>(key)
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
         processed++
       }
     }
-  } while (cursor !== 0)
+  } while (cursor !== 0 && cursor !== '0')
 
   return NextResponse.json({ processed, timestamp: new Date().toISOString() })
 }
