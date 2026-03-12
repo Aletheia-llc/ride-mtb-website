@@ -14,6 +14,7 @@ interface EventFilters {
 export async function getUpcomingEvents(
   filters?: EventFilters,
   page: number = 1,
+  limit?: number,
 ): Promise<{ events: EventSummary[]; totalCount: number }> {
   const where: Record<string, unknown> = {
     startDate: { gte: new Date() },
@@ -34,7 +35,7 @@ export async function getUpcomingEvents(
   const [rawEvents, totalCount] = await Promise.all([
     db.event.findMany({
       where,
-      ...paginate(page),
+      ...(limit ? { take: limit } : paginate(page)),
       orderBy: { startDate: 'asc' },
       select: {
         id: true,
