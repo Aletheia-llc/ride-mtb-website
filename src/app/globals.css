@@ -13,3 +13,24 @@ body {
   color: var(--color-text);
   font-family: var(--font-sans);
 }
+
+.homepage-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr 200px;
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .homepage-grid {
+    grid-template-columns: 1fr;
+  }
+  .homepage-grid > aside:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .homepage-grid > aside:first-child {
+    display: none;
+  }
+}

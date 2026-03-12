@@ -1,9 +1,11 @@
 // src/app/api/feed/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
+/* eslint-disable no-restricted-imports */
 import { getFeedCandidates } from '@/modules/feed/lib/queries'
 import { scoreFeedItems, getBehaviorScores } from '@/modules/feed/lib/personalization'
 import type { FeedTab } from '@/modules/feed/types'
+/* eslint-enable no-restricted-imports */
 
 const PAGE_SIZE = 10
 

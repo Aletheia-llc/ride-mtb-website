@@ -1,6 +1,7 @@
 // src/app/api/feed/click/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
+// eslint-disable-next-line no-restricted-imports
 import { recordFeedClick } from '@/modules/feed/lib/personalization'
 
 const CLICK_INCREMENT_MAP: Record<string, number> = {

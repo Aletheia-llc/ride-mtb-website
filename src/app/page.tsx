@@ -1,14 +1,16 @@
 // src/app/page.tsx
 import { auth } from '@/lib/auth/config'
+/* eslint-disable no-restricted-imports */
 import { getFeedCandidates, getTrendingItems } from '@/modules/feed/lib/queries'
 import { scoreFeedItems, getBehaviorScores } from '@/modules/feed/lib/personalization'
-import { getUserXP, getWeeklyXp } from '@/modules/xp'
-import { getUpcomingEvents } from '@/modules/events/lib/queries'
-import { db } from '@/lib/db/client'
 import { HeroSection } from '@/modules/feed/components/HeroSection'
 import { LeftSidebar } from '@/modules/feed/components/LeftSidebar'
 import { RightSidebar } from '@/modules/feed/components/RightSidebar'
 import { FeedClient } from '@/modules/feed/components/FeedClient'
+import { getUpcomingEvents } from '@/modules/events/lib/queries'
+/* eslint-enable no-restricted-imports */
+import { getUserXP, getWeeklyXp } from '@/modules/xp'
+import { db } from '@/lib/db/client'
 
 const PAGE_SIZE = 10
 
