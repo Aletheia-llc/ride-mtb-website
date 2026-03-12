@@ -1,4 +1,5 @@
 // src/app/page.tsx
+import { Suspense } from 'react'
 import { auth } from '@/lib/auth/config'
 /* eslint-disable no-restricted-imports */
 import { getFeedCandidates, getTrendingItems } from '@/modules/feed/lib/queries'
@@ -7,8 +8,10 @@ import { HeroSection } from '@/modules/feed/components/HeroSection'
 import { LeftSidebar } from '@/modules/feed/components/LeftSidebar'
 import { RightSidebar } from '@/modules/feed/components/RightSidebar'
 import { FeedClient } from '@/modules/feed/components/FeedClient'
+import { MTBNewsFeed } from '@/modules/feed/components/MTBNewsFeed'
 import { getUpcomingEvents } from '@/modules/events/lib/queries'
 /* eslint-enable no-restricted-imports */
+
 import { getUserXP, getWeeklyXp } from '@/modules/xp'
 import { db } from '@/lib/db/client'
 
@@ -70,6 +73,10 @@ export default async function HomePage() {
   return (
     <>
       {!userId && <HeroSection />}
+
+      <Suspense fallback={null}>
+        <MTBNewsFeed />
+      </Suspense>
 
       <div
         className="mx-auto px-4 py-6"
