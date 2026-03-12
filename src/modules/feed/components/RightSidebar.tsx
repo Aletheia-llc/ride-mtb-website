@@ -5,7 +5,6 @@ import { BookOpen, Map, MessageSquare, CalendarDays, Star, ShoppingBag } from 'l
 import type { LucideIcon } from 'lucide-react'
 import { AdSlot } from '@/ui/components/AdSlot'
 import type { EventSummary } from '@/modules/events/types'
-// eslint-disable-next-line no-restricted-imports
 import { XFeed } from './XFeed'
 
 const MODULE_LINKS: { label: string; href: string; Icon: LucideIcon }[] = [
