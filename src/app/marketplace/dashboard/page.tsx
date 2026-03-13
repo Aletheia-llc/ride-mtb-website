@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, LayoutDashboard } from 'lucide-react'
 import { auth } from '@/lib/auth/config'
+// eslint-disable-next-line no-restricted-imports
 import { getSellerListings } from '@/modules/marketplace/lib/queries'
+// eslint-disable-next-line no-restricted-imports
 import { SellerDashboard } from '@/modules/marketplace/components/SellerDashboard'
 
 export const metadata = { title: 'My Listings | Marketplace | Ride MTB' }

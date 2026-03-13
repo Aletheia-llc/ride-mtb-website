@@ -21,6 +21,10 @@ model User {
   passwordHash    String?
   avatarUrl       String?
   bio             String?
+  karma           Int       @default(0)
+  creditSeed      Int       @default(500)
+  creditPurchased Int       @default(0)
+  creditEarned    Int       @default(0)
   role            UserRole  @default(user)
   bannedAt        DateTime?
   location        String?
@@ -38,8 +42,18 @@ model User {
   sessions        Session[]
   xpGrants        XpGrant[]
   xpAggregate     XpAggregate?
-  forumPosts      ForumPost[]
-  forumVotes      ForumVote[]
+  forumPosts              ForumPost[]
+  forumVotes              ForumVote[]
+  forumBookmarks          ForumBookmark[]
+  ownedForumCommunities   ForumCategory[]              @relation("ownedForumCommunities")
+  forumMemberships        ForumCommunityMembership[]
+  forumReports            ForumReport[]                @relation("forumReporter")
+  forumModActions         ForumReport[]                @relation("forumModerator")
+  conversations           ConversationParticipant[]
+  sentMessages            DirectMessage[]
+  creditTransactions      CreditTransaction[]
+  tipsSent                CreditTip[]              @relation("TipsSent")
+  tipsReceived            CreditTip[]              @relation("TipsReceived")
   learnAttempts   LearnQuizAttempt[]
   learnProgress   LearnProgress[]
   learnCerts      LearnCertificate[]
@@ -52,7 +66,7 @@ model User {
   gearReviews     GearReview[]
   userBikes       UserBike[]
   mediaItems      MediaItem[]
-  listings        Listing[]
+  listings         Listing[]
   listingFavorites ListingFavorite[]
   shops           Shop[]
   coachProfile    CoachProfile?
@@ -153,15 +167,36 @@ model XpAggregate {
 // ============================================================
 
 model ForumCategory {
-  id          String      @id @default(cuid())
-  name        String
-  slug        String      @unique
-  description String?
-  icon        String?
-  sortOrder   Int         @default(0)
-  threads     ForumThread[]
+  id            String      @id @default(cuid())
+  name          String
+  slug          String      @unique
+  description   String?
+  icon          String?
+  color         String      @default("#6b7280")
+  sortOrder     Int         @default(0)
+  // Community fields
+  isGated       Boolean     @default(false)
+  ownerId       String?
+  coverImageUrl String?
+  memberCount   Int         @default(0)
+  owner         User?       @relation("ownedForumCommunities", fields: [ownerId], references: [id])
+  threads       ForumThread[]
+  memberships   ForumCommunityMembership[]
 
   @@map("forum_categories")
+}
+
+model ForumCommunityMembership {
+  id         String        @id @default(cuid())
+  userId     String
+  categoryId String
+  role       String        @default("member")
+  createdAt  DateTime      @default(now())
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@map("forum_community_memberships")
 }
 
 model ForumThread {
@@ -172,10 +207,15 @@ model ForumThread {
   isPinned    Boolean       @default(false)
   isLocked    Boolean       @default(false)
   viewCount   Int           @default(0)
+  hotScore    Float         @default(0)
+  lastReplyAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   category    ForumCategory @relation(fields: [categoryId], references: [id])
   posts       ForumPost[]
+  tags        ForumThreadTag[]
+  bookmarks   ForumBookmark[]
+  reports     ForumReport[]
 
   @@index([categoryId, createdAt])
   @@map("forum_threads")
@@ -192,6 +232,7 @@ model ForumPost {
   thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   author    User        @relation(fields: [authorId], references: [id])
   votes     ForumVote[]
+  reports   ForumReport[]
 
   @@index([threadId, createdAt])
   @@index([authorId])
@@ -208,6 +249,61 @@ model ForumVote {
 
   @@unique([postId, userId])
   @@map("forum_votes")
+}
+
+model ForumTag {
+  id      String          @id @default(cuid())
+  name    String          @unique
+  slug    String          @unique
+  color   String          @default("#6b7280")
+  threads ForumThreadTag[]
+
+  @@map("forum_tags")
+}
+
+model ForumThreadTag {
+  threadId String
+  tagId    String
+  thread   ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  tag      ForumTag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([threadId, tagId])
+  @@map("forum_thread_tags")
+}
+
+model ForumBookmark {
+  id        String      @id @default(cuid())
+  userId    String
+  threadId  String
+  createdAt DateTime    @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, threadId])
+  @@map("forum_bookmarks")
+}
+
+model ForumReport {
+  id           String              @id @default(cuid())
+  reporterId   String
+  targetType   ForumReportTarget
+  postId       String?
+  threadId     String?
+  reportedUserId String?
+  reason       String
+  status       ForumReportStatus   @default(OPEN)
+  moderatorId  String?
+  modNote      String?
+  resolvedAt   DateTime?
+  createdAt    DateTime            @default(now())
+
+  reporter     User        @relation("forumReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  moderator    User?       @relation("forumModerator", fields: [moderatorId], references: [id])
+  post         ForumPost?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  thread       ForumThread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("forum_reports")
 }
 
 // ============================================================
@@ -931,4 +1027,100 @@ enum MerchCategory {
   stickers
   drinkware
   other
+}
+
+enum ForumReportStatus {
+  OPEN
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum ForumReportTarget {
+  POST
+  THREAD
+  USER
+}
+
+// ============================================================
+// DIRECT MESSAGES
+// ============================================================
+
+model Conversation {
+  id           String                    @id @default(cuid())
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  participants ConversationParticipant[]
+  messages     DirectMessage[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model DirectMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  createdAt      DateTime     @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("direct_messages")
+}
+
+// ============================================================
+// CREDITS & WALLET
+// ============================================================
+
+enum CreditTransactionType {
+  EARNED
+  TIP_SENT
+  TIP_RECEIVED
+  PURCHASE
+  REFUND
+  ADJUSTMENT
+}
+
+model CreditTransaction {
+  id          String                 @id @default(cuid())
+  userId      String
+  type        CreditTransactionType
+  amount      Int
+  description String
+  metadata    Json?
+  createdAt   DateTime               @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("credit_transactions")
+}
+
+model CreditTip {
+  id         String   @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  amount     Int
+  createdAt  DateTime @default(now())
+
+  fromUser User @relation("TipsSent", fields: [fromUserId], references: [id])
+  toUser   User @relation("TipsReceived", fields: [toUserId], references: [id])
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("credit_tips")
 }

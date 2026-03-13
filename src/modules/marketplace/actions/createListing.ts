@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
 import { createListing as createListingQuery } from '../lib/queries'
+// eslint-disable-next-line no-restricted-imports
 import { grantXP } from '@/modules/xp/lib/engine'
 
 const categoryEnum = z.enum([

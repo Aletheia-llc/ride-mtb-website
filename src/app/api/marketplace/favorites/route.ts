@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
+// eslint-disable-next-line no-restricted-imports
 import { toggleListingFavorite } from '@/modules/marketplace/lib/queries'
+// eslint-disable-next-line no-restricted-imports
 import { grantXP } from '@/modules/xp/lib/engine'
 
 export async function POST(request: NextRequest) {

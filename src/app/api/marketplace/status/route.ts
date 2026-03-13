@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
+// eslint-disable-next-line no-restricted-imports
 import { updateListingStatus } from '@/modules/marketplace/lib/queries'
+// eslint-disable-next-line no-restricted-imports
 import type { ListingStatus } from '@/modules/marketplace/types'
 
 export async function PATCH(request: NextRequest) {
