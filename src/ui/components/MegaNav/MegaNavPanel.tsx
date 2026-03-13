@@ -17,7 +17,7 @@ export function MegaNavPanel({ entry, onMouseEnter, onMouseLeave }: MegaNavPanel
 
   return (
     <div
-      className="absolute left-0 right-0 top-full z-40 hidden md:block animate-in fade-in duration-150"
+      className="absolute left-0 right-0 top-full z-40 hidden md:block"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

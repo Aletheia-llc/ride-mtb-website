@@ -42,6 +42,8 @@ export function TopNavClient({ session }: TopNavClientProps) {
     timerRef.current = setTimeout(() => setActiveNav(null), 200)
   }
 
+  useEffect(() => () => clearTimer(), [])
+
   useEffect(() => {
     if (!activeNav) return
     const handler = (e: KeyboardEvent) => {
