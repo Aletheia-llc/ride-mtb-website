@@ -51,6 +51,7 @@ const withPWA = withPWAInit({
 })
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['@react-pdf/renderer'],
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'img.youtube.com' },
