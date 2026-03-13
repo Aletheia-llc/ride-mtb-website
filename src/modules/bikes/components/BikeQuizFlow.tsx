@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Bike } from 'lucide-react'
 import { Button } from '@/ui/components'
 import { ProgressBar } from '@/ui/components'
@@ -12,9 +13,10 @@ import { QuizStep } from './QuizStep'
 import { ResultsView } from './ResultsView'
 
 export function BikeQuizFlow() {
-  const { currentStep, answers, isSubmitting, setAnswer, nextStep, prevStep, setSubmitting, reset } =
+  const { currentStep, answers, isSubmitting, sessionToken, setAnswer, nextStep, prevStep, setSubmitting, reset } =
     useQuizStore()
   const [result, setResult] = useState<SpectrumResult | null>(null)
+  const router = useRouter()
 
   const stepConfig = QUIZ_STEPS[currentStep - 1]
 
@@ -46,10 +48,30 @@ export function BikeQuizFlow() {
     }
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     setSubmitting(true)
     try {
       const computed = computeSpectrumCategory(answers)
+
+      // Attempt to persist to DB and navigate to results page
+      try {
+        const response = await fetch('/api/bikes/quiz/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers, sessionToken }),
+        })
+        if (response.ok) {
+          const data = await response.json() as { resultId: string; sessionId: string }
+          router.push(`/bikes/selector/results/${data.resultId}`)
+          return
+        } else {
+          console.error('[BikeQuizFlow] Submit API failed:', response.status, response.statusText)
+        }
+      } catch (err) {
+        console.error('[BikeQuizFlow] API submit failed, falling back to inline results:', err)
+      }
+
+      // Fallback: show inline results if API fails or navigation is slow
       setResult(computed)
     } finally {
       setSubmitting(false)

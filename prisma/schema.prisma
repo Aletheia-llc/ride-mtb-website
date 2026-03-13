@@ -70,6 +70,9 @@ model User {
   listingFavorites ListingFavorite[]
   shops           Shop[]
   coachProfile    CoachProfile?
+  quizSessions          QuizSession[]
+  quizResults           QuizResult[]
+  bikeConsultations     BikeConsultationRequest[]
 
   @@map("users")
 }
@@ -892,6 +895,7 @@ enum XpEvent {
   streak_bonus
   listing_created
   listing_favorited
+  bike_quiz_completed
 }
 
 enum TrailSystemType {
@@ -1123,4 +1127,120 @@ model CreditTip {
   @@index([fromUserId])
   @@index([toUserId])
   @@map("credit_tips")
+}
+
+// ============================================================
+// BIKE SELECTOR
+// ============================================================
+
+model QuizSession {
+  id           String      @id @default(cuid())
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionToken String      @unique @default(cuid())
+  answers      QuizAnswer[]
+  result       QuizResult?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([sessionToken])
+  @@map("quiz_sessions")
+}
+
+model QuizAnswer {
+  id          String      @id @default(cuid())
+  sessionId   String
+  session     QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  stepKey     String
+  answerValue Json
+
+  @@unique([sessionId, stepKey])
+  @@index([sessionId])
+  @@map("quiz_answers")
+}
+
+model QuizResult {
+  id              String      @id @default(cuid())
+  sessionId       String      @unique
+  session         QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  primaryCategory Int
+  rawScore        Float
+  categoryName    String
+  resultJson      Json
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("quiz_results")
+}
+
+model BikeSpectrumCategory {
+  id                     String   @id @default(cuid())
+  categoryNumber         Int      @unique
+  categoryName           String
+  categoryDescription    String
+  travelRange            String?
+  recommendedWheelConfig String
+  recommendedSizes       Json
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("bike_spectrum_categories")
+}
+
+model BikeBrand {
+  id        String           @id @default(cuid())
+  slug      String           @unique
+  name      String
+  website   String?
+  logoUrl   String?
+  models    BikeBrandModel[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@map("bike_brands")
+}
+
+model BikeBrandModel {
+  id             String    @id @default(cuid())
+  brandId        String
+  brand          BikeBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  categoryNumber Int
+  modelName      String
+  priceRange     String?
+  productUrl     String?
+  availableSizes Json
+  keySpecs       Json?
+  imageUrl       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([brandId, categoryNumber, modelName])
+  @@index([brandId])
+  @@index([categoryNumber])
+  @@map("bike_brand_models")
+}
+
+model BikeConsultationRequest {
+  id                String   @id @default(cuid())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name              String
+  email             String
+  phone             String?
+  ridingGoals       String
+  specificQuestions String?
+  budgetRange       String?
+  quizSessionId     String?
+  status            String   @default("pending")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("bike_consultation_requests")
 }
