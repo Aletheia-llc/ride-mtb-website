@@ -1,6 +1,18 @@
+import { Pool } from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '../src/generated/prisma/client'
 
-const prisma = new PrismaClient()
+const pool = new Pool({
+  host: process.env.DATABASE_HOST,
+  port: Number(process.env.DATABASE_PORT ?? '5432'),
+  user: process.env.DATABASE_USER ?? 'postgres',
+  password: process.env.DATABASE_PASSWORD,
+  database: 'postgres',
+  ssl: process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false },
+})
+
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   console.log('Seeding bike spectrum categories...')
@@ -141,4 +153,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect()
+    await pool.end()
   })
