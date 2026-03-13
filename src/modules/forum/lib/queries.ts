@@ -909,3 +909,39 @@ export async function isCommunityMember(categoryId: string, userId: string) {
   })
   return !!membership
 }
+
+// ── 21. getForumLeaderboard ───────────────────────────────────
+
+export async function getForumLeaderboard(limit = 50) {
+  const users = await db.user.findMany({
+    where: {
+      forumPosts: { some: { deletedAt: null } },
+    },
+    orderBy: { karma: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      image: true,
+      avatarUrl: true,
+      karma: true,
+      _count: {
+        select: {
+          forumPosts: true,
+        },
+      },
+    },
+  })
+
+  return users.map((u, i) => ({
+    rank: i + 1,
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    image: u.image,
+    avatarUrl: u.avatarUrl,
+    karma: u.karma ?? 0,
+    postCount: u._count.forumPosts,
+  }))
+}

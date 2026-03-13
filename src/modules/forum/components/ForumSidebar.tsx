@@ -186,7 +186,7 @@ export async function ForumSidebar({ currentCategorySlug }: { currentCategorySlu
           {[
             { label: 'Forum Home', href: '/forum' },
             { label: 'Communities', href: '/forum/communities' },
-            { label: 'Leaderboard', href: '/learn/leaderboard' },
+            { label: 'Leaderboard', href: '/forum/leaderboard' },
             { label: 'Trail Maps', href: '/trails' },
           ].map(({ label, href }) => (
             <Link
