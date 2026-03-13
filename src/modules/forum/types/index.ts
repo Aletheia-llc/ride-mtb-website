@@ -7,6 +7,9 @@ export interface ForumAuthor {
   username: string | null
   image: string | null
   avatarUrl?: string | null
+  role?: string
+  karma?: number | null
+  forumBadges?: ForumBadgeDisplay[]
 }
 
 export interface ForumCategory {
@@ -34,6 +37,17 @@ export interface ForumThreadSummary {
   voteScore: number
 }
 
+export interface ForumBadgeDisplay {
+  badgeSlug: string
+  awardedAt: Date
+  badge: {
+    name: string
+    description: string
+    icon: string
+    color: string
+  }
+}
+
 export interface ForumPost {
   id: string
   threadId: string
@@ -42,6 +56,8 @@ export interface ForumPost {
   isFirst: boolean
   createdAt: Date
   updatedAt: Date
+  editedAt: Date | null
+  deletedAt: Date | null
   author: ForumAuthor
   voteScore: number
 }
@@ -55,6 +71,7 @@ export interface ForumThread {
   viewCount: number
   createdAt: Date
   updatedAt: Date
+  deletedAt: Date | null
   category: { name: string; slug: string }
   posts: ForumPost[]
 }

@@ -147,6 +147,22 @@ export async function getThreadBySlug(slug: string) {
               username: true,
               image: true,
               avatarUrl: true,
+              forumBadges: {
+                select: {
+                  badgeSlug: true,
+                  awardedAt: true,
+                  badge: {
+                    select: {
+                      name: true,
+                      description: true,
+                      icon: true,
+                      color: true,
+                    },
+                  },
+                },
+                orderBy: { awardedAt: 'asc' },
+                take: 3,
+              },
             },
           },
         },

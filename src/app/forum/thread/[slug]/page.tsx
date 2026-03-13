@@ -37,6 +37,7 @@ export default async function ThreadPage({ params }: ThreadPageProps) {
       <ThreadPageClient
         thread={thread}
         currentUserId={currentUserId}
+        currentUserRole={session?.user?.role ?? null}
       />
     </div>
   )

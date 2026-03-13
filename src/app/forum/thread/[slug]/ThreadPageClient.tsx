@@ -8,9 +8,10 @@ import type { ForumThread } from '@/modules/forum'
 interface ThreadPageClientProps {
   thread: ForumThread
   currentUserId: string | null
+  currentUserRole?: string | null
 }
 
-export function ThreadPageClient({ thread, currentUserId }: ThreadPageClientProps) {
+export function ThreadPageClient({ thread, currentUserId, currentUserRole }: ThreadPageClientProps) {
   async function handleVote(postId: string, value: 1 | -1) {
     await votePost(postId, value)
   }
@@ -20,6 +21,7 @@ export function ThreadPageClient({ thread, currentUserId }: ThreadPageClientProp
       <ThreadView
         thread={thread}
         currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
         onVote={handleVote}
       />
       <div className="mt-8">
