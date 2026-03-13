@@ -129,8 +129,8 @@ export function CreateListingForm() {
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-[var(--color-text)]">Photos</label>
         <ImageUploader value={imageUrls} onChange={setImageUrls} />
-        {imageUrls.map((url, i) => (
-          <input key={i} type="hidden" name="imageUrls" value={url} />
+        {imageUrls.map((url) => (
+          <input key={url} type="hidden" name="imageUrls" value={url} />
         ))}
         {state.errors?.imageUrls && (
           <p className="text-xs text-red-500">{state.errors.imageUrls}</p>

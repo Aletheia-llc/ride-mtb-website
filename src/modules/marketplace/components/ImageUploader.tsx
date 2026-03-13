@@ -22,6 +22,14 @@ export function ImageUploader({ value, onChange, maxImages = 8 }: ImageUploaderP
     setError(null)
     setUploading(true)
 
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    const invalidFile = Array.from(files).find((f) => !allowedTypes.includes(f.type))
+    if (invalidFile) {
+      setError(`${invalidFile.name}: only JPEG, PNG, and WebP files are supported`)
+      setUploading(false)
+      return
+    }
+
     const toUpload = Array.from(files).slice(0, remaining)
     const results: string[] = []
 
