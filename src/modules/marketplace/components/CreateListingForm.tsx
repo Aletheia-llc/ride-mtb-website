@@ -1,10 +1,11 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useState, useActionState } from 'react'
 import { Input, Button } from '@/ui/components'
 import { createListing } from '../actions/createListing'
 import { categoryLabels, conditionLabels } from '../types'
 import type { ListingCategory, ItemCondition } from '../types'
+import { ImageUploader } from './ImageUploader'
 
 const categories = Object.entries(categoryLabels) as [ListingCategory, string][]
 const conditions = Object.entries(conditionLabels) as [ItemCondition, string][]
@@ -13,6 +14,7 @@ export function CreateListingForm() {
   const [state, formAction, isPending] = useActionState(createListing, {
     errors: {} as Record<string, string>,
   })
+  const [imageUrls, setImageUrls] = useState<string[]>([])
 
   return (
     <form action={formAction} className="space-y-5">
@@ -125,22 +127,11 @@ export function CreateListingForm() {
       />
 
       <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="imageUrls"
-          className="text-sm font-medium text-[var(--color-text)]"
-        >
-          Image URLs
-        </label>
-        <textarea
-          id="imageUrls"
-          name="imageUrls"
-          rows={3}
-          placeholder="Paste image URLs, one per line"
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 resize-y"
-        />
-        <p className="text-xs text-[var(--color-text-muted)]">
-          Enter one image URL per line. The first image will be used as the cover.
-        </p>
+        <label className="text-sm font-medium text-[var(--color-text)]">Photos</label>
+        <ImageUploader value={imageUrls} onChange={setImageUrls} />
+        {imageUrls.map((url, i) => (
+          <input key={i} type="hidden" name="imageUrls" value={url} />
+        ))}
         {state.errors?.imageUrls && (
           <p className="text-xs text-red-500">{state.errors.imageUrls}</p>
         )}

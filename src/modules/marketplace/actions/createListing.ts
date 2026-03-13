@@ -54,12 +54,8 @@ export async function createListing(
   try {
     const user = await requireAuth()
 
-    // Parse image URLs from newline-separated textarea
-    const imageUrlsRaw = (formData.get('imageUrls') as string) || ''
-    const imageUrls = imageUrlsRaw
-      .split('\n')
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0)
+    // Parse image URLs from hidden inputs (one per uploaded image)
+    const imageUrls = formData.getAll('imageUrls').map(String).filter(Boolean)
 
     const priceRaw = formData.get('price')
     const price = priceRaw ? parseFloat(priceRaw as string) : undefined

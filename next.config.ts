@@ -60,6 +60,8 @@ const nextConfig: NextConfig = {
       // X (Twitter) — avatars and media
       { protocol: 'https', hostname: 'pbs.twimg.com' },
       { protocol: 'https', hostname: 'abs.twimg.com' },
+      // Supabase Storage — marketplace images and other assets
+      { protocol: 'https', hostname: '*.supabase.co' },
     ],
   },
 }
