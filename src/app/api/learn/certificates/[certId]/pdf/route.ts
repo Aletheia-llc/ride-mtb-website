@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { db } from '@/lib/db/client'
+import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
 import { CertificatePdf } from '@/modules/learn/components/CertificatePdf'
 
@@ -24,6 +25,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   if (!cert) {
     return NextResponse.json({ error: 'Certificate not found' }, { status: 404 })
+  }
+
+  const session = await auth()
+  if (!session?.user?.id) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+  if (cert.userId !== session.user.id && session.user.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
   }
 
   // Get best score for this user + course from quiz attempts

@@ -13,7 +13,10 @@ export async function rateLimit({
   action: string
   maxPerMinute?: number
 }) {
-  if (!isConfigured) return
+  if (!isConfigured) {
+    console.warn('[rate-limit] Upstash not configured — rate limiting disabled')
+    return
+  }
 
   const { Ratelimit } = await import('@upstash/ratelimit')
   const { Redis } = await import('@upstash/redis')

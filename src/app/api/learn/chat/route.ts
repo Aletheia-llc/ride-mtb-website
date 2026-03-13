@@ -109,13 +109,17 @@ export async function POST(request: Request) {
     )
   }
 
-  // 9. Save messages to DB
-  await db.learnChatMessage.create({
-    data: { userId, role: 'user', content: message.trim(), courseId: courseId ?? null },
-  })
-  await db.learnChatMessage.create({
-    data: { userId, role: 'assistant', content: assistantResponse, courseId: courseId ?? null },
-  })
+  // 9. Save messages to DB (best-effort — don't fail the response if DB write fails)
+  try {
+    await db.learnChatMessage.create({
+      data: { userId, role: 'user', content: message.trim(), courseId: courseId ?? null },
+    })
+    await db.learnChatMessage.create({
+      data: { userId, role: 'assistant', content: assistantResponse, courseId: courseId ?? null },
+    })
+  } catch (err) {
+    console.error('[learn/chat] Failed to persist messages:', err)
+  }
 
   return NextResponse.json({ response: assistantResponse })
 }
