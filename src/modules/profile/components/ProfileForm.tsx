@@ -157,6 +157,25 @@ export function ProfileForm({ user }: ProfileFormProps) {
         error={state.errors?.websiteUrl}
       />
 
+      {/* Email notification preference */}
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          id="emailNotifications"
+          name="emailNotifications"
+          defaultChecked={user.emailNotifications}
+          className="mt-0.5 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]/20"
+        />
+        <div>
+          <label htmlFor="emailNotifications" className="text-sm font-medium text-[var(--color-text)] cursor-pointer">
+            Email me when someone replies to my threads
+          </label>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Also notifies you when someone mentions you with @username.
+          </p>
+        </div>
+      </div>
+
       <div className="flex justify-end gap-3">
         <Link
           href="/profile"

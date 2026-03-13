@@ -22,6 +22,7 @@ export interface UserProfileData {
   createdAt: Date
   lastActivityAt: Date | null
   bannedAt: Date | null
+  emailNotifications: boolean
   xpAggregate: {
     totalXp: number
     moduleBreakdown: Record<string, number>
@@ -56,6 +57,7 @@ export interface ProfileUpdateInput {
   favoriteTrail?: string
   yearsRiding?: number | null
   websiteUrl?: string
+  emailNotifications?: boolean
 }
 
 // ── Utility ─────────────────────────────────────────────────

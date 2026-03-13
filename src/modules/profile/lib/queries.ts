@@ -27,6 +27,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileData | 
       createdAt: true,
       lastActivityAt: true,
       bannedAt: true,
+      emailNotifications: true,
       xpAggregate: {
         select: {
           totalXp: true,
@@ -104,6 +105,7 @@ export async function updateProfile(userId: string, input: ProfileUpdateInput) {
       favoriteTrail: input.favoriteTrail,
       yearsRiding: input.yearsRiding,
       websiteUrl: input.websiteUrl,
+      emailNotifications: input.emailNotifications,
     },
     select: { id: true },
   })
@@ -133,6 +135,7 @@ export async function getUserByUsername(username: string): Promise<UserProfileDa
       createdAt: true,
       lastActivityAt: true,
       bannedAt: true,
+      emailNotifications: true,
       xpAggregate: {
         select: {
           totalXp: true,
