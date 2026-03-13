@@ -25,7 +25,7 @@ export async function manageUser(
   formData: FormData,
 ): Promise<ManageUserState> {
   try {
-    await requireAdmin()
+    const admin = await requireAdmin()
 
     const raw = {
       userId: formData.get('userId') as string,
@@ -46,6 +46,10 @@ export async function manageUser(
     }
 
     const { userId, action, role } = parsed.data
+
+    if (userId === admin.id) {
+      return { errors: { general: 'You cannot modify your own account.' } }
+    }
 
     switch (action) {
       case 'changeRole': {

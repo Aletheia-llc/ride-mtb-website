@@ -225,6 +225,8 @@ model ForumThread {
   reports     ForumReport[]
 
   @@index([categoryId, createdAt])
+  @@index([hotScore])
+  @@index([deletedAt])
   @@map("forum_threads")
 }
 

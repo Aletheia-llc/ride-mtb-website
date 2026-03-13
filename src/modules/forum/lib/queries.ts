@@ -286,73 +286,63 @@ export async function createPost({
 // ── 6. voteOnPost ─────────────────────────────────────────────
 
 export async function voteOnPost({ postId, userId, value }: VoteOnPostInput) {
-  const post = await db.forumPost.findUnique({
-    where: { id: postId },
-    select: { id: true },
-  })
+  const result = await db.$transaction(async (tx) => {
+    const post = await tx.forumPost.findUnique({
+      where: { id: postId },
+      select: { id: true, authorId: true },
+    })
 
-  if (!post) {
-    throw new Error('Post not found')
-  }
+    if (!post) throw new Error('Post not found')
 
-  const result = await db.forumVote.upsert({
-    where: {
-      postId_userId: { postId, userId },
-    },
-    create: {
-      postId,
-      userId,
-      value,
-    },
-    update: {
-      value,
-    },
-  })
+    const vote = await tx.forumVote.upsert({
+      where: { postId_userId: { postId, userId } },
+      create: { postId, userId, value },
+      update: { value },
+    })
 
-  // Fire-and-forget karma update for post author
-  const postWithAuthor = await db.forumPost.findUnique({
-    where: { id: postId },
-    select: { authorId: true },
-  })
-  if (postWithAuthor) {
-    const karmaResult = await db.forumVote.aggregate({
-      where: {
-        post: { authorId: postWithAuthor.authorId },
-      },
+    // Recalculate karma atomically with the vote
+    const karmaResult = await tx.forumVote.aggregate({
+      where: { post: { authorId: post.authorId } },
       _sum: { value: true },
     })
-    void db.user.update({
-      where: { id: postWithAuthor.authorId },
+    await tx.user.update({
+      where: { id: post.authorId },
       data: { karma: karmaResult._sum.value ?? 0 },
-    }).catch(() => {})
-  }
+    })
+
+    return { vote, authorId: post.authorId }
+  })
+
+  const votedAuthorId = result.authorId
 
   // Fire-and-forget hotScore update
-  const thread = await db.forumThread.findFirst({
-    where: { posts: { some: { id: postId } } },
-    include: {
-      _count: { select: { posts: true } },
-    },
-  })
-  if (thread) {
-    const allPostIds = (await db.forumPost.findMany({
-      where: { threadId: thread.id },
-      select: { id: true },
-    })).map(p => p.id)
-    const voteResult = await db.forumVote.aggregate({
-      where: { postId: { in: allPostIds } },
-      _sum: { value: true },
-    })
-    const newVoteScore = voteResult._sum.value ?? 0
-    const replyCount = Math.max(0, thread._count.posts - 1)
-    const newHotScore = calculateThreadHotScore(newVoteScore, replyCount, thread.createdAt)
-    void db.forumThread.update({
-      where: { id: thread.id },
-      data: { hotScore: newHotScore },
-    }).catch(() => {})
-  }
+  void (async () => {
+    try {
+      const thread = await db.forumThread.findFirst({
+        where: { posts: { some: { id: postId } } },
+        include: { _count: { select: { posts: true } } },
+      })
+      if (thread) {
+        const allPostIds = (await db.forumPost.findMany({
+          where: { threadId: thread.id },
+          select: { id: true },
+        })).map(p => p.id)
+        const voteResult = await db.forumVote.aggregate({
+          where: { postId: { in: allPostIds } },
+          _sum: { value: true },
+        })
+        const newVoteScore = voteResult._sum.value ?? 0
+        const replyCount = Math.max(0, thread._count.posts - 1)
+        const newHotScore = calculateThreadHotScore(newVoteScore, replyCount, thread.createdAt)
+        await db.forumThread.update({
+          where: { id: thread.id },
+          data: { hotScore: newHotScore },
+        })
+      }
+    } catch {}
+  })()
 
-  return result
+  return result.vote
 }
 
 // ── 7. getPostVoteScore ───────────────────────────────────────
