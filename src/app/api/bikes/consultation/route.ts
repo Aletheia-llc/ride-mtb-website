@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { db } from '@/lib/db/client'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   const session = await auth()
@@ -25,6 +26,18 @@ export async function POST(request: NextRequest) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) {
     return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
+  }
+
+  if (name.length > 200 || email.length > 254 || ridingGoals.length > 2000 ||
+      (specificQuestions && specificQuestions.length > 2000)) {
+    return NextResponse.json({ error: 'Input too long' }, { status: 400 })
+  }
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  try {
+    await rateLimit({ identifier: ip, action: 'bike-consultation', maxPerMinute: 3 })
+  } catch {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 
   const consultation = await db.bikeConsultationRequest.create({
