@@ -54,9 +54,10 @@ model User {
   creditTransactions      CreditTransaction[]
   tipsSent                CreditTip[]              @relation("TipsSent")
   tipsReceived            CreditTip[]              @relation("TipsReceived")
-  learnAttempts   LearnQuizAttempt[]
-  learnProgress   LearnProgress[]
-  learnCerts      LearnCertificate[]
+  learnAttempts      LearnQuizAttempt[]
+  learnProgress      LearnProgress[]
+  learnCerts         LearnCertificate[]
+  learnChatMessages  LearnChatMessage[]
   trailReviews    TrailReview[]
   trailFavorites  TrailFavorite[]
   rideLogs        RideLog[]
@@ -429,6 +430,20 @@ model LearnCertificate {
   @@unique([userId, courseId])
   @@index([userId])
   @@map("learn_certificates")
+}
+
+model LearnChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  courseId  String?  // optional context
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("learn_chat_messages")
 }
 
 // ============================================================
