@@ -15,6 +15,9 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const { certId } = await params
 
+  const session = await auth()
+  if (!session?.user?.id) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
   const cert = await db.learnCertificate.findUnique({
     where: { id: certId },
     include: {
@@ -27,8 +30,6 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Certificate not found' }, { status: 404 })
   }
 
-  const session = await auth()
-  if (!session?.user?.id) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   if (cert.userId !== session.user.id && session.user.role !== 'admin') {
     return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
   }

@@ -58,9 +58,8 @@ describe('GET /api/learn/certificates/[certId]/pdf', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('returns 404 for unknown certId', async () => {
-    vi.mocked(db.learnCertificate.findUnique).mockResolvedValueOnce(null)
-    // auth is checked after 404, so we can provide any session value
     mockAuth.mockResolvedValue({ user: { id: 'user-456', role: 'user' } } as never)
+    vi.mocked(db.learnCertificate.findUnique).mockResolvedValueOnce(null)
 
     const response = await GET(makeRequest('nonexistent'), {
       params: Promise.resolve({ certId: 'nonexistent' }),
@@ -72,7 +71,6 @@ describe('GET /api/learn/certificates/[certId]/pdf', () => {
   })
 
   it('returns 401 when user is not authenticated', async () => {
-    vi.mocked(db.learnCertificate.findUnique).mockResolvedValueOnce(mockCert as never)
     mockAuth.mockResolvedValue(null as never)
 
     const response = await GET(makeRequest('cert-123'), {
