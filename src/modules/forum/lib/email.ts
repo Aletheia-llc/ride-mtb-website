@@ -10,7 +10,14 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;')
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[email] RESEND_API_KEY not configured — email notifications disabled')
+    return null
+  }
+  return new Resend(process.env.RESEND_API_KEY)
+}
+
 const FROM = 'Ride MTB <notifications@ride-mtb.com>'
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://ride-mtb.vercel.app'
 
@@ -41,6 +48,8 @@ export async function sendReplyNotification({
   emailNotifications,
 }: ReplyNotificationInput): Promise<void> {
   if (!emailNotifications) return
+  const resend = getResend()
+  if (!resend) return
 
   const threadUrl = `${BASE_URL}/forum/thread/${threadSlug}`
   const greeting = toName ? `Hi ${escapeHtml(toName)},` : 'Hi,'
@@ -67,6 +76,8 @@ export async function sendMentionNotification({
   emailNotifications,
 }: MentionNotificationInput): Promise<void> {
   if (!emailNotifications) return
+  const resend = getResend()
+  if (!resend) return
 
   const threadUrl = `${BASE_URL}/forum/thread/${threadSlug}`
   const greeting = toName ? `Hi ${escapeHtml(toName)},` : 'Hi,'
