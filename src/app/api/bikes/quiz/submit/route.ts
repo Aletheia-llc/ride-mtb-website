@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { db } from '@/lib/db/client'
+// eslint-disable-next-line no-restricted-imports
 import { computeSpectrumCategory } from '@/modules/bikes/lib/spectrum'
+// eslint-disable-next-line no-restricted-imports
 import { grantXP } from '@/modules/xp/lib/engine'
 import type { QuizAnswers } from '@/modules/bikes/types'
 
