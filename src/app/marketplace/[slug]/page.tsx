@@ -2,9 +2,10 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { auth } from '@/lib/auth/config'
 import { ListingDetail } from '@/modules/marketplace'
 // eslint-disable-next-line no-restricted-imports
-import { getListingBySlug } from '@/modules/marketplace/lib/queries'
+import { getListingBySlug, isListingFavorited } from '@/modules/marketplace/lib/queries'
 
 interface ListingPageProps {
   params: Promise<{ slug: string }>
@@ -23,9 +24,16 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
 
 export default async function ListingPage({ params }: ListingPageProps) {
   const { slug } = await params
-  const listing = await getListingBySlug(slug)
+  const [listing, session] = await Promise.all([
+    getListingBySlug(slug),
+    auth(),
+  ])
 
   if (!listing) notFound()
+
+  const isFavorited = session?.user?.id
+    ? await isListingFavorited(listing.id, session.user.id)
+    : false
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -38,7 +46,12 @@ export default async function ListingPage({ params }: ListingPageProps) {
         Back to Marketplace
       </Link>
 
-      <ListingDetail listing={listing} />
+      <ListingDetail
+        listing={listing}
+        favoriteCount={listing.favoriteCount ?? 0}
+        isFavorited={isFavorited}
+        isLoggedIn={!!session?.user}
+      />
     </div>
   )
 }

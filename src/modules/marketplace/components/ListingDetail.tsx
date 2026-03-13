@@ -9,12 +9,16 @@ import {
   statusLabels,
   formatRelativeTime,
 } from '../types'
+import { FavoriteButton } from './FavoriteButton'
 
 interface ListingDetailProps {
   listing: ListingDetailData
+  favoriteCount?: number
+  isFavorited?: boolean
+  isLoggedIn?: boolean
 }
 
-export function ListingDetail({ listing }: ListingDetailProps) {
+export function ListingDetail({ listing, favoriteCount, isFavorited, isLoggedIn = false }: ListingDetailProps) {
   const hasImages = listing.imageUrls.length > 0
 
   return (
@@ -78,9 +82,17 @@ export function ListingDetail({ listing }: ListingDetailProps) {
           <h1 className="text-2xl font-bold text-[var(--color-text)] sm:text-3xl">
             {listing.title}
           </h1>
-          <p className="mt-2 text-3xl font-bold text-[var(--color-primary)]">
-            ${listing.price.toFixed(2)}
-          </p>
+          <div className="mt-2 flex items-center gap-4">
+            <p className="text-3xl font-bold text-[var(--color-primary)]">
+              ${listing.price.toFixed(2)}
+            </p>
+            <FavoriteButton
+              listingId={listing.id}
+              initialFavorited={isFavorited ?? listing.isFavorited ?? false}
+              initialCount={favoriteCount ?? listing.favoriteCount ?? 0}
+              isLoggedIn={isLoggedIn ?? listing.isLoggedIn ?? false}
+            />
+          </div>
         </div>
 
         {/* Meta */}
