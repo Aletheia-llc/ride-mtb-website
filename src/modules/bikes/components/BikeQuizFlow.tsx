@@ -64,6 +64,8 @@ export function BikeQuizFlow() {
           const data = await response.json() as { resultId: string; sessionId: string }
           router.push(`/bikes/selector/results/${data.resultId}`)
           return
+        } else {
+          console.error('[BikeQuizFlow] Submit API failed:', response.status, response.statusText)
         }
       } catch (err) {
         console.error('[BikeQuizFlow] API submit failed, falling back to inline results:', err)
