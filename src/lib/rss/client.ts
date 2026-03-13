@@ -11,10 +11,11 @@ export interface RssItem {
 }
 
 const MTB_FEEDS = [
-  { name: 'Singletracks', url: 'https://www.singletracks.com/feed/', siteUrl: 'https://www.singletracks.com' },
+  { name: 'Bikerumor', url: 'https://bikerumor.com/feed/', siteUrl: 'https://bikerumor.com' },
   { name: 'Enduro MTB', url: 'https://enduro-mtb.com/en/feed/', siteUrl: 'https://enduro-mtb.com' },
   { name: 'MBR', url: 'https://www.mbr.co.uk/feed', siteUrl: 'https://www.mbr.co.uk' },
   { name: 'Dirt', url: 'https://www.dirtmountainbike.com/feed/', siteUrl: 'https://www.dirtmountainbike.com' },
+  { name: 'Bikepacking', url: 'https://bikepacking.com/feed/', siteUrl: 'https://bikepacking.com' },
 ]
 
 function extractTag(xml: string, tag: string): string {

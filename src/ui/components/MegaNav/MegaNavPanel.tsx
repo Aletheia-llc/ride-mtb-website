@@ -21,12 +21,11 @@ export function MegaNavPanel({ entry, onMouseEnter, onMouseLeave }: MegaNavPanel
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-bg)] shadow-lg">
+      <div className="mx-auto w-fit border border-t-0 border-[var(--color-border)] rounded-b-xl bg-[var(--color-bg)] shadow-lg">
         <div
-          className="mx-auto grid gap-6 px-4 py-5"
+          className="grid gap-6 px-5 py-5"
           style={{
-            maxWidth: 'var(--max-content-width)',
-            gridTemplateColumns: `260px repeat(${groups.length}, 1fr)`,
+            gridTemplateColumns: `260px repeat(${groups.length}, 200px)`,
           }}
         >
           {/* Featured card */}

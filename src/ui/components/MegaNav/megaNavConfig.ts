@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   GraduationCap, BookOpen, ClipboardList, Trophy, LayoutDashboard,
-  MessageSquare, LayoutList, Users, Search, Bookmark, PenLine,
+  MessageSquare, LayoutList, Users, Search, Bookmark, PenLine, CalendarDays,
   Map, Compass, MapPin,
   Bike, Sliders, Wrench, Star,
   ShoppingBag, Tag, PlusCircle,
@@ -76,6 +76,7 @@ export const MEGA_NAV_CONFIG: Record<string, MegaNavEntry> = {
           { icon: LayoutList, label: 'All Posts', href: '/forum' },
           { icon: Users, label: 'Communities', href: '/forum/communities' },
           { icon: Search, label: 'Search', href: '/forum/search' },
+          { icon: CalendarDays, label: 'Events', href: '/events' },
         ],
       },
       {
