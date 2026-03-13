@@ -6,6 +6,8 @@ import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
 import { grantXP } from '@/modules/xp'
 import { createThread as createThreadQuery } from '../lib/queries'
+// eslint-disable-next-line no-restricted-imports
+import { checkAndGrantBadges } from '../lib/badges'
 
 const createThreadSchema = z.object({
   categoryId: z.string().min(1, 'Category is required'),
@@ -87,6 +89,9 @@ export async function createThread(
     })
 
     redirectUrl = `/forum/thread/${thread.slug}`
+
+    // Badge check (fire-and-forget)
+    void checkAndGrantBadges(user.id, 'thread').catch(console.error)
   } catch (error) {
     if (error instanceof Error && error.message.includes('Rate limit')) {
       return { errors: { general: error.message } }

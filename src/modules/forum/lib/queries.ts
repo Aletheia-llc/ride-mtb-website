@@ -596,6 +596,21 @@ export async function getForumUserProfile(username: string) {
       karma: true,
       bio: true,
       createdAt: true,
+      forumBadges: {
+        select: {
+          badgeSlug: true,
+          awardedAt: true,
+          badge: {
+            select: {
+              name: true,
+              description: true,
+              icon: true,
+              color: true,
+            },
+          },
+        },
+        orderBy: { awardedAt: 'asc' },
+      },
       _count: {
         select: {
           forumPosts: true,

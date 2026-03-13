@@ -4,6 +4,10 @@ import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
 import { grantXP } from '@/modules/xp'
 import { voteOnPost } from '../lib/queries'
+// eslint-disable-next-line no-restricted-imports
+import { db } from '../../../lib/db/client'
+// eslint-disable-next-line no-restricted-imports
+import { checkAndGrantBadges } from '../lib/badges'
 
 export type VotePostResult =
   | { success: true }
@@ -34,6 +38,21 @@ export async function votePost(
       module: 'forum',
       refId: `${postId}-${user.id}`,
     })
+
+    // Badge check for post author (fire-and-forget)
+    void (async () => {
+      try {
+        const votedPost = await db.forumPost.findUnique({
+          where: { id: postId },
+          select: { authorId: true },
+        })
+        if (votedPost) {
+          await checkAndGrantBadges(votedPost.authorId, 'vote')
+        }
+      } catch {
+        // best-effort
+      }
+    })()
 
     return { success: true }
   } catch (error) {

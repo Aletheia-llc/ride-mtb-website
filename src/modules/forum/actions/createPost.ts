@@ -10,7 +10,8 @@ import { createPost as createPostQuery } from '../lib/queries'
 import { db } from '../../../lib/db/client'
 // eslint-disable-next-line no-restricted-imports
 import { sendReplyNotification, sendMentionNotification } from '../lib/email'
-// Badge import added in Task 4
+// eslint-disable-next-line no-restricted-imports
+import { checkAndGrantBadges } from '../lib/badges'
 
 const createPostSchema = z.object({
   threadId: z.string().min(1, 'Thread ID is required'),
@@ -67,6 +68,9 @@ export async function createPost(
     })
 
     revalidatePath(`/forum/thread/[slug]`, 'page')
+
+    // Badge check (fire-and-forget)
+    void checkAndGrantBadges(user.id, 'post').catch(console.error)
 
     // Email notifications (fire-and-forget)
     void (async () => {
