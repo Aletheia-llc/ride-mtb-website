@@ -12,6 +12,12 @@ export async function DELETE(
   }
 
   const { id } = await params
-  await deleteListing(id, session.user.id)
-  return NextResponse.json({ ok: true })
+  try {
+    await deleteListing(id, session.user.id)
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Delete failed'
+    const status_code = message.includes('Not authorized') ? 403 : message.includes('not found') ? 404 : 500
+    return NextResponse.json({ error: message }, { status: status_code })
+  }
 }

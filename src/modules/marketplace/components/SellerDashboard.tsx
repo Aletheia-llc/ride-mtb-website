@@ -40,21 +40,37 @@ export function SellerDashboard({ listings }: SellerDashboardProps) {
 
   const updateStatus = async (listingId: string, status: ListingStatus) => {
     setPending(listingId)
-    await fetch('/api/marketplace/status', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ listingId, status }),
-    })
-    router.refresh()
-    setPending(null)
+    try {
+      const res = await fetch('/api/marketplace/status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId, status }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        console.error('[SellerDashboard] updateStatus failed:', data.error)
+        return
+      }
+      router.refresh()
+    } finally {
+      setPending(null)
+    }
   }
 
   const handleDelete = async (listingId: string) => {
     if (!confirm('Delete this listing? This cannot be undone.')) return
     setPending(listingId)
-    await fetch(`/api/marketplace/listings/${listingId}`, { method: 'DELETE' })
-    router.refresh()
-    setPending(null)
+    try {
+      const res = await fetch(`/api/marketplace/listings/${listingId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        console.error('[SellerDashboard] delete failed:', data.error)
+        return
+      }
+      router.refresh()
+    } finally {
+      setPending(null)
+    }
   }
 
   if (listings.length === 0) {
@@ -75,8 +91,8 @@ export function SellerDashboard({ listings }: SellerDashboardProps) {
   return (
     <div className="space-y-3">
       {listings.map((listing) => {
-        const images = listing.imageUrls as string[]
-        const cover = images?.[0] ?? null
+        const images = Array.isArray(listing.imageUrls) ? (listing.imageUrls as string[]) : []
+        const cover = images[0] ?? null
         const isLoading = pending === listing.id
 
         return (
