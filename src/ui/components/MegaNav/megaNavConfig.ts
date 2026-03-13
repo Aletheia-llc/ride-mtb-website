@@ -3,7 +3,7 @@ import {
   GraduationCap, BookOpen, ClipboardList, Trophy, LayoutDashboard,
   MessageSquare, LayoutList, Users, Search, Bookmark, PenLine, CalendarDays,
   Map, Compass, MapPin,
-  Bike, Sliders, Wrench, Star,
+  Bike, Sliders, Wrench, Star, History,
   ShoppingBag, Tag, PlusCircle, Heart,
 } from 'lucide-react'
 
@@ -128,6 +128,12 @@ export const MEGA_NAV_CONFIG: Record<string, MegaNavEntry> = {
         label: 'Research',
         links: [
           { icon: Star, label: 'Reviews', href: '/reviews' },
+        ],
+      },
+      {
+        label: 'Your Bikes',
+        links: [
+          { icon: History, label: 'My Results', href: '/bikes/selector/history' },
         ],
       },
     ],
