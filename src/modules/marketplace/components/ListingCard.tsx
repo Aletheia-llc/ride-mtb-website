@@ -72,7 +72,7 @@ export function ListingCard({ listing, isLoggedIn = false }: ListingCardProps) {
                 {formatRelativeTime(listing.createdAt)}
               </time>
               {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-              <span onClick={(e) => e.preventDefault()}>
+              <span onClick={(e) => e.stopPropagation()}>
                 <FavoriteButton
                   listingId={listing.id}
                   initialFavorited={listing.isFavorited ?? false}

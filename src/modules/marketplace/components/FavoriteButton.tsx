@@ -19,7 +19,7 @@ export function FavoriteButton({ listingId, initialFavorited, initialCount, isLo
 
   const toggle = async () => {
     if (!isLoggedIn) {
-      router.push('/signin')
+      router.push('/auth/signin')
       return
     }
     setPending(true)

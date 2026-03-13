@@ -55,7 +55,6 @@ export interface ListingDetailData {
   }
   favoriteCount?: number
   isFavorited?: boolean
-  isLoggedIn?: boolean
 }
 
 // ── Display helpers ─────────────────────────────────────────

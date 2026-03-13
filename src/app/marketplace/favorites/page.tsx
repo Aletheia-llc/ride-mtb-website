@@ -11,7 +11,7 @@ export const metadata = { title: 'Saved Listings | Marketplace | Ride MTB' }
 
 export default async function FavoritesPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/signin')
+  if (!session?.user?.id) redirect('/auth/signin')
 
   const rawListings = await getUserFavoriteListings(session.user.id)
 

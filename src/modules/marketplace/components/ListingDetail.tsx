@@ -90,7 +90,7 @@ export function ListingDetail({ listing, favoriteCount, isFavorited, isLoggedIn 
               listingId={listing.id}
               initialFavorited={isFavorited ?? listing.isFavorited ?? false}
               initialCount={favoriteCount ?? listing.favoriteCount ?? 0}
-              isLoggedIn={isLoggedIn ?? listing.isLoggedIn ?? false}
+              isLoggedIn={isLoggedIn ?? false}
             />
           </div>
         </div>

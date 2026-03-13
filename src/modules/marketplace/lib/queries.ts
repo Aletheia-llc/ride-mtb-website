@@ -246,7 +246,7 @@ export async function toggleListingFavorite(listingId: string, userId: string) {
 
 export async function getUserFavoriteListings(userId: string) {
   const favorites = await db.listingFavorite.findMany({
-    where: { userId },
+    where: { userId, listing: { status: 'active' } },
     orderBy: { createdAt: 'desc' },
     include: {
       listing: {
@@ -267,9 +267,7 @@ export async function getUserFavoriteListings(userId: string) {
       },
     },
   })
-  return favorites
-    .map((f) => f.listing)
-    .filter((l) => l.status === 'active')
+  return favorites.map((f) => f.listing)
 }
 
 // ── 8. getListingFavoriteCounts ───────────────────────────────

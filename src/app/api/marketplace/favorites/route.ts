@@ -17,7 +17,9 @@ export async function POST(request: NextRequest) {
   const result = await toggleListingFavorite(listingId, session.user.id)
 
   if (result.favorited && result.sellerId && result.sellerId !== session.user.id) {
-    grantXP({ userId: result.sellerId, event: 'listing_favorited', module: 'marketplace', refId: listingId }).catch(() => {})
+    grantXP({ userId: result.sellerId, event: 'listing_favorited', module: 'marketplace', refId: listingId }).catch((err) => {
+      console.error('[marketplace/favorites] XP grant failed:', err)
+    })
   }
 
   return NextResponse.json({ favorited: result.favorited })
