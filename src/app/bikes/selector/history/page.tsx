@@ -13,7 +13,7 @@ export default async function BikeHistoryPage() {
   const session = await auth()
 
   if (!session?.user?.id) {
-    redirect('/signin?callbackUrl=/bikes/selector/history')
+    redirect('/auth/signin?callbackUrl=/bikes/selector/history')
   }
 
   const records = await db.quizResult.findMany({

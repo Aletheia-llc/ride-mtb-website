@@ -30,10 +30,14 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
     const url = resultId
       ? `${window.location.origin}/bikes/selector/results/${resultId}`
       : window.location.href
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }).catch(() => {
+        // Fallback: clipboard write failed silently
+      })
+    }
   }
 
   return (
