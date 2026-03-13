@@ -176,7 +176,19 @@ export async function createListing(input: CreateListingInput) {
   })
 }
 
-// ── 4. updateListingStatus ────────────────────────────────────
+// ── 4. getSellerListings ──────────────────────────────────────
+
+export async function getSellerListings(sellerId: string) {
+  return db.listing.findMany({
+    where: { sellerId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      _count: { select: { favorites: true } },
+    },
+  })
+}
+
+// ── 5. updateListingStatus (auth check included) ─────────────
 
 export async function updateListingStatus(
   listingId: string,
