@@ -9,6 +9,7 @@ interface QuizState {
   currentStep: number
   answers: QuizAnswers
   isSubmitting: boolean
+  sessionToken: string
   setAnswer: <K extends keyof QuizAnswers>(key: K, value: QuizAnswers[K]) => void
   nextStep: () => void
   prevStep: () => void
@@ -32,6 +33,7 @@ export const useQuizStore = create<QuizState>()(
       currentStep: 1,
       answers: { ...initialAnswers },
       isSubmitting: false,
+      sessionToken: crypto.randomUUID(),
       setAnswer: (key, value) =>
         set((state) => ({ answers: { ...state.answers, [key]: value } })),
       nextStep: () =>
@@ -40,7 +42,8 @@ export const useQuizStore = create<QuizState>()(
         set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
       goToStep: (step) => set({ currentStep: Math.max(1, Math.min(step, TOTAL_STEPS)) }),
       setSubmitting: (submitting) => set({ isSubmitting: submitting }),
-      reset: () => set({ currentStep: 1, answers: { ...initialAnswers }, isSubmitting: false }),
+      reset: () =>
+        set({ currentStep: 1, answers: { ...initialAnswers }, isSubmitting: false, sessionToken: crypto.randomUUID() }),
     }),
     {
       name: 'ride-mtb-quiz-v3',
