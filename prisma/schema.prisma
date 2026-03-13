@@ -37,6 +37,7 @@ model User {
   websiteUrl      String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  emailNotifications Boolean @default(true)
   lastActivityAt  DateTime?
   accounts        Account[]
   sessions        Session[]
@@ -49,6 +50,7 @@ model User {
   forumMemberships        ForumCommunityMembership[]
   forumReports            ForumReport[]                @relation("forumReporter")
   forumModActions         ForumReport[]                @relation("forumModerator")
+  forumBadges             ForumUserBadge[]
   conversations           ConversationParticipant[]
   sentMessages            DirectMessage[]
   creditTransactions      CreditTransaction[]
@@ -215,6 +217,7 @@ model ForumThread {
   lastReplyAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
   category    ForumCategory @relation(fields: [categoryId], references: [id])
   posts       ForumPost[]
   tags        ForumThreadTag[]
@@ -233,6 +236,8 @@ model ForumPost {
   isFirst   Boolean     @default(false)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  editedAt  DateTime?
+  deletedAt DateTime?
   thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   author    User        @relation(fields: [authorId], references: [id])
   votes     ForumVote[]
@@ -308,6 +313,31 @@ model ForumReport {
 
   @@index([status])
   @@map("forum_reports")
+}
+
+model ForumBadge {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  name        String
+  description String
+  icon        String
+  color       String
+  createdAt   DateTime         @default(now())
+  userBadges  ForumUserBadge[]
+
+  @@map("forum_badges")
+}
+
+model ForumUserBadge {
+  id        String     @id @default(cuid())
+  userId    String
+  badgeSlug String
+  awardedAt DateTime   @default(now())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge     ForumBadge @relation(fields: [badgeSlug], references: [slug])
+
+  @@unique([userId, badgeSlug])
+  @@map("forum_user_badges")
 }
 
 // ============================================================

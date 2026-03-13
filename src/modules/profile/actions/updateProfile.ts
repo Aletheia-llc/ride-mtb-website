@@ -63,6 +63,7 @@ const updateProfileSchema = z.object({
     .optional()
     .or(z.literal(''))
     .transform((v) => v || undefined),
+  emailNotifications: z.boolean().optional(),
 })
 
 export type UpdateProfileState = {
@@ -88,6 +89,7 @@ export async function updateProfile(
       favoriteTrail: formData.get('favoriteTrail') as string,
       yearsRiding: formData.get('yearsRiding') as string,
       websiteUrl: formData.get('websiteUrl') as string,
+      emailNotifications: formData.get('emailNotifications') !== null,
     }
 
     const parsed = updateProfileSchema.safeParse(raw)

@@ -9,19 +9,17 @@ import { formatRelativeTime } from '@/modules/forum/types'
 interface ThreadViewProps {
   thread: ForumThread
   currentUserId: string | null
+  currentUserRole?: string | null
   onVote: (postId: string, value: 1 | -1) => Promise<void>
   renderTrailEmbed?: (threadId: string) => React.ReactNode
 }
 
-export function ThreadView({ thread, currentUserId, onVote, renderTrailEmbed }: ThreadViewProps) {
+export function ThreadView({ thread, currentUserId, currentUserRole, onVote, renderTrailEmbed }: ThreadViewProps) {
   return (
     <div>
       {/* Breadcrumb */}
       <nav className="mb-4 flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-        <Link
-          href="/forum"
-          className="transition-colors hover:text-[var(--color-text)]"
-        >
+        <Link href="/forum" className="transition-colors hover:text-[var(--color-text)]">
           Forum
         </Link>
         <span>/</span>
@@ -35,10 +33,7 @@ export function ThreadView({ thread, currentUserId, onVote, renderTrailEmbed }: 
 
       {/* Thread header */}
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">
-          {thread.title}
-        </h1>
-
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">{thread.title}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-[var(--color-text-muted)]">
           <span className="flex items-center gap-1">
             <Eye className="h-3.5 w-3.5" />
@@ -54,7 +49,7 @@ export function ThreadView({ thread, currentUserId, onVote, renderTrailEmbed }: 
         </div>
       </header>
 
-      {/* Trail embed slot (cross-module composition) */}
+      {/* Trail embed slot */}
       {renderTrailEmbed && renderTrailEmbed(thread.id)}
 
       {/* Locked notice */}
@@ -72,6 +67,7 @@ export function ThreadView({ thread, currentUserId, onVote, renderTrailEmbed }: 
             key={post.id}
             post={post}
             currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
             onVote={onVote}
           />
         ))}

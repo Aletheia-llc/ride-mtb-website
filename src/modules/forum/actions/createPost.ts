@@ -6,6 +6,12 @@ import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
 import { grantXP } from '@/modules/xp'
 import { createPost as createPostQuery } from '../lib/queries'
+// eslint-disable-next-line no-restricted-imports
+import { db } from '../../../lib/db/client'
+// eslint-disable-next-line no-restricted-imports
+import { sendReplyNotification, sendMentionNotification } from '../lib/email'
+// eslint-disable-next-line no-restricted-imports
+import { checkAndGrantBadges } from '../lib/badges'
 
 const createPostSchema = z.object({
   threadId: z.string().min(1, 'Thread ID is required'),
@@ -62,6 +68,66 @@ export async function createPost(
     })
 
     revalidatePath(`/forum/thread/[slug]`, 'page')
+
+    // Badge check (fire-and-forget)
+    void checkAndGrantBadges(user.id, 'post').catch(console.error)
+
+    // Email notifications (fire-and-forget)
+    void (async () => {
+      try {
+        const thread = await db.forumThread.findUnique({
+          where: { id: threadId },
+          select: {
+            title: true,
+            slug: true,
+            posts: {
+              where: { isFirst: true },
+              select: { authorId: true },
+              take: 1,
+            },
+          },
+        })
+        const threadAuthorId = thread?.posts[0]?.authorId
+        // Reply notification
+        if (thread && threadAuthorId && threadAuthorId !== user.id) {
+          const threadAuthor = await db.user.findUnique({
+            where: { id: threadAuthorId },
+            select: { email: true, name: true, emailNotifications: true },
+          })
+          if (threadAuthor) {
+            sendReplyNotification({
+              toEmail: threadAuthor.email,
+              toName: threadAuthor.name,
+              replierName: user.name ?? user.email ?? 'Someone',
+              threadTitle: thread.title,
+              threadSlug: thread.slug,
+              emailNotifications: threadAuthor.emailNotifications,
+            }).catch(console.error)
+          }
+        }
+        // @mention notifications
+        const mentionRegex = /@([a-zA-Z0-9_-]+)/g
+        const mentionedUsernames = [...content.matchAll(mentionRegex)].map((m) => m[1])
+        if (mentionedUsernames.length > 0 && thread) {
+          const mentionedUsers = await db.user.findMany({
+            where: { username: { in: mentionedUsernames }, NOT: { id: user.id } },
+            select: { email: true, name: true, emailNotifications: true },
+          })
+          for (const mentionedUser of mentionedUsers) {
+            sendMentionNotification({
+              toEmail: mentionedUser.email,
+              toName: mentionedUser.name,
+              mentionerName: user.name ?? user.email ?? 'Someone',
+              threadTitle: thread.title,
+              threadSlug: thread.slug,
+              emailNotifications: mentionedUser.emailNotifications,
+            }).catch(console.error)
+          }
+        }
+      } catch {
+        // notifications are best-effort
+      }
+    })()
 
     return { errors: {}, success: true }
   } catch (error) {

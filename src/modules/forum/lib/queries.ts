@@ -138,6 +138,7 @@ export async function getThreadBySlug(slug: string) {
         select: { name: true, slug: true },
       },
       posts: {
+        where: { deletedAt: null },
         orderBy: { createdAt: 'asc' },
         include: {
           author: {
@@ -147,6 +148,22 @@ export async function getThreadBySlug(slug: string) {
               username: true,
               image: true,
               avatarUrl: true,
+              forumBadges: {
+                select: {
+                  badgeSlug: true,
+                  awardedAt: true,
+                  badge: {
+                    select: {
+                      name: true,
+                      description: true,
+                      icon: true,
+                      color: true,
+                    },
+                  },
+                },
+                orderBy: { awardedAt: 'asc' },
+                take: 3,
+              },
             },
           },
         },
@@ -580,6 +597,21 @@ export async function getForumUserProfile(username: string) {
       karma: true,
       bio: true,
       createdAt: true,
+      forumBadges: {
+        select: {
+          badgeSlug: true,
+          awardedAt: true,
+          badge: {
+            select: {
+              name: true,
+              description: true,
+              icon: true,
+              color: true,
+            },
+          },
+        },
+        orderBy: { awardedAt: 'asc' },
+      },
       _count: {
         select: {
           forumPosts: true,
@@ -877,4 +909,45 @@ export async function isCommunityMember(categoryId: string, userId: string) {
     where: { userId_categoryId: { userId, categoryId } },
   })
   return !!membership
+}
+
+// ── 21. getForumLeaderboard ───────────────────────────────────
+
+export async function getForumLeaderboard(limit = 50) {
+  const users = await db.user.findMany({
+    where: { karma: { gt: 0 } },
+    orderBy: { karma: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      image: true,
+      avatarUrl: true,
+      karma: true,
+    },
+  })
+
+  // Count non-deleted posts per user
+  const postCounts = await db.forumPost.groupBy({
+    by: ['authorId'],
+    where: {
+      authorId: { in: users.map(u => u.id) },
+      deletedAt: null,
+    },
+    _count: { id: true },
+  })
+
+  const countMap = new Map(postCounts.map(p => [p.authorId, p._count.id]))
+
+  return users.map((u, i) => ({
+    rank: i + 1,
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    image: u.image,
+    avatarUrl: u.avatarUrl,
+    karma: u.karma ?? 0,
+    postCount: countMap.get(u.id) ?? 0,
+  }))
 }
