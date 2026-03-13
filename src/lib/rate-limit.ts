@@ -14,7 +14,11 @@ export async function rateLimit({
   maxPerMinute?: number
 }) {
   if (!isConfigured) {
-    console.warn('[rate-limit] Upstash not configured — rate limiting disabled')
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[rate-limit] Upstash not configured in production — blocking request')
+      throw new Error('Rate limit exceeded. Please try again in a moment.')
+    }
+    console.warn('[rate-limit] Upstash not configured — rate limiting disabled in dev')
     return
   }
 

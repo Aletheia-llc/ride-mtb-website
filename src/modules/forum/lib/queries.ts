@@ -58,7 +58,7 @@ export async function getThreadsByCategory(
 
   const [threads, totalCount] = await Promise.all([
     db.forumThread.findMany({
-      where: { categoryId: category.id },
+      where: { categoryId: category.id, deletedAt: null },
       ...paginate(page),
       orderBy: [
         { isPinned: 'desc' },
@@ -83,7 +83,7 @@ export async function getThreadsByCategory(
       },
     }),
     db.forumThread.count({
-      where: { categoryId: category.id },
+      where: { categoryId: category.id, deletedAt: null },
     }),
   ])
 
@@ -388,8 +388,8 @@ export async function getAllThreads(
   categorySlug?: string,
 ) {
   const where = categorySlug
-    ? { category: { slug: categorySlug } }
-    : {}
+    ? { category: { slug: categorySlug }, deletedAt: null as null }
+    : { deletedAt: null as null }
 
   const orderBy =
     sort === 'hot' ? [{ isPinned: 'desc' as const }, { hotScore: 'desc' as const }]
@@ -500,6 +500,7 @@ export async function getPopularTags(limit = 10) {
 
 export async function getLatestForumThreads(limit = 5) {
   return db.forumThread.findMany({
+    where: { deletedAt: null },
     take: limit,
     orderBy: { createdAt: 'desc' },
     include: {
@@ -640,6 +641,7 @@ export async function searchForumThreads(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const andClauses: any[] = [
+    { deletedAt: null },
     {
       OR: [
         { title: { contains: q, mode: 'insensitive' } },

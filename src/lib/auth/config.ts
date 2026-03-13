@@ -16,6 +16,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = user.id
         session.user.role = user.role ?? 'user'
+        session.user.bannedAt = user.bannedAt ?? null
       }
       return session
     },
