@@ -51,6 +51,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
         favoriteCount={listing.favoriteCount ?? 0}
         isFavorited={isFavorited}
         isLoggedIn={!!session?.user}
+        currentUserId={session?.user?.id}
       />
     </div>
   )

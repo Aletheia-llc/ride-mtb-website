@@ -1,5 +1,6 @@
 import Image from 'next/image'
-import { MapPin, Clock, Tag } from 'lucide-react'
+import Link from 'next/link'
+import { MapPin, Clock, Tag, MessageCircle } from 'lucide-react'
 import { Badge, Avatar, Card } from '@/ui/components'
 import type { ListingDetailData } from '../types'
 import {
@@ -16,9 +17,10 @@ interface ListingDetailProps {
   favoriteCount?: number
   isFavorited?: boolean
   isLoggedIn?: boolean
+  currentUserId?: string
 }
 
-export function ListingDetail({ listing, favoriteCount, isFavorited, isLoggedIn = false }: ListingDetailProps) {
+export function ListingDetail({ listing, favoriteCount, isFavorited, isLoggedIn = false, currentUserId }: ListingDetailProps) {
   const hasImages = listing.imageUrls.length > 0
 
   return (
@@ -138,6 +140,15 @@ export function ListingDetail({ listing, favoriteCount, isFavorited, isLoggedIn 
               </p>
             </div>
           </div>
+          {currentUserId && currentUserId !== listing.sellerId && (
+            <Link
+              href={`/messages?to=${listing.sellerId}`}
+              className="mt-3 flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg-secondary)]"
+            >
+              <MessageCircle size={16} />
+              Message Seller
+            </Link>
+          )}
         </Card>
       </div>
     </div>

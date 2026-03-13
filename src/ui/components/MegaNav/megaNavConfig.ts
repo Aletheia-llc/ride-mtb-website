@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutList, Users, Search, Bookmark, PenLine, CalendarDays,
   Map, Compass, MapPin,
   Bike, Sliders, Wrench, Star,
-  ShoppingBag, Tag, PlusCircle,
+  ShoppingBag, Tag, PlusCircle, Heart,
 } from 'lucide-react'
 
 export interface MegaNavLink {
@@ -147,6 +147,13 @@ export const MEGA_NAV_CONFIG: Record<string, MegaNavEntry> = {
         links: [
           { icon: Tag, label: 'Browse Listings', href: '/marketplace' },
           { icon: PlusCircle, label: 'Create Listing', href: '/marketplace/create' },
+        ],
+      },
+      {
+        label: 'My Stuff',
+        links: [
+          { icon: Heart, label: 'Saved Listings', href: '/marketplace/favorites' },
+          { icon: LayoutList, label: 'My Listings', href: '/marketplace/dashboard' },
         ],
       },
     ],

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
 import { createListing as createListingQuery } from '../lib/queries'
+import { grantXP } from '@/modules/xp/lib/engine'
 
 const categoryEnum = z.enum([
   'complete_bikes',
@@ -95,6 +96,10 @@ export async function createListing(
       condition,
       location,
       imageUrls: parsed.data.imageUrls,
+    })
+
+    grantXP({ userId: user.id, event: 'listing_created', module: 'marketplace', refId: listing.id }).catch((err) => {
+      console.error('[marketplace] XP grant failed on listing create:', err)
     })
 
     redirectUrl = `/marketplace/${listing.slug}`
