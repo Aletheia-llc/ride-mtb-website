@@ -53,6 +53,7 @@ model User {
   userBikes       UserBike[]
   mediaItems      MediaItem[]
   listings        Listing[]
+  listingFavorites ListingFavorite[]
   shops           Shop[]
   coachProfile    CoachProfile?
 
@@ -606,11 +607,27 @@ model Listing {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   seller      User          @relation(fields: [sellerId], references: [id])
+  favorites   ListingFavorite[]
 
   @@index([category, status])
   @@index([sellerId])
   @@index([createdAt])
   @@map("listings")
+}
+
+model ListingFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId, createdAt])
+  @@index([listingId])
+  @@map("listing_favorites")
 }
 
 // ============================================================
@@ -777,6 +794,8 @@ enum XpEvent {
   review_submitted
   event_attended
   streak_bonus
+  listing_created
+  listing_favorited
 }
 
 enum TrailSystemType {
