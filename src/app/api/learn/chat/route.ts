@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { auth } from '@/lib/auth/config'
-// eslint-disable-next-line no-restricted-imports
 import { rateLimit } from '@/lib/rate-limit'
 import { db } from '@/lib/db/client'
 

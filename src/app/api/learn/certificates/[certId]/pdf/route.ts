@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { db } from '@/lib/db/client'
+// eslint-disable-next-line no-restricted-imports
 import { CertificatePdf } from '@/modules/learn/components/CertificatePdf'
 
 interface RouteParams {
@@ -53,7 +54,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       })
     )
 
-    return new Response(buffer, {
+    return new Response(new Uint8Array(buffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="certificate-${certId}.pdf"`,

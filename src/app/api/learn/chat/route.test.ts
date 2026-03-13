@@ -42,7 +42,7 @@ describe('POST /api/learn/chat', () => {
   })
 
   it('returns 401 when user is not authenticated', async () => {
-    vi.mocked(auth).mockResolvedValueOnce(null)
+    vi.mocked(auth).mockResolvedValueOnce(null as never)
 
     const request = new Request('http://localhost/api/learn/chat', {
       method: 'POST',
