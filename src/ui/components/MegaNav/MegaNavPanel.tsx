@@ -59,7 +59,7 @@ export function MegaNavPanel({ entry, onMouseEnter, onMouseLeave }: MegaNavPanel
                 const LinkIcon = link.icon
                 return (
                   <Link
-                    key={link.href}
+                    key={link.label}
                     href={link.href}
                     className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]"
                   >
