@@ -9,12 +9,14 @@ import {
   conditionBadgeVariant,
   formatRelativeTime,
 } from '../types'
+import { FavoriteButton } from './FavoriteButton'
 
 interface ListingCardProps {
   listing: ListingSummary
+  isLoggedIn?: boolean
 }
 
-export function ListingCard({ listing }: ListingCardProps) {
+export function ListingCard({ listing, isLoggedIn = false }: ListingCardProps) {
   return (
     <Link href={`/marketplace/${listing.slug}`} className="block group">
       <Card className="overflow-hidden p-0 transition-shadow hover:shadow-md">
@@ -55,7 +57,7 @@ export function ListingCard({ listing }: ListingCardProps) {
             ${listing.price.toFixed(2)}
           </p>
 
-          {/* Footer: location + seller + time */}
+          {/* Footer: location + seller + time + favorite */}
           <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-text-muted)]">
             <div className="flex items-center gap-2">
               <Avatar
@@ -65,9 +67,20 @@ export function ListingCard({ listing }: ListingCardProps) {
               />
               <span>{listing.sellerName || 'Anonymous'}</span>
             </div>
-            <time dateTime={new Date(listing.createdAt).toISOString()}>
-              {formatRelativeTime(listing.createdAt)}
-            </time>
+            <div className="flex items-center gap-2">
+              <time dateTime={new Date(listing.createdAt).toISOString()}>
+                {formatRelativeTime(listing.createdAt)}
+              </time>
+              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+              <span onClick={(e) => e.stopPropagation()}>
+                <FavoriteButton
+                  listingId={listing.id}
+                  initialFavorited={listing.isFavorited ?? false}
+                  initialCount={listing.favoriteCount ?? 0}
+                  isLoggedIn={isLoggedIn}
+                />
+              </span>
+            </div>
           </div>
 
           {listing.location && (

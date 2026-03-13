@@ -6,7 +6,7 @@ import { auth } from '@/lib/auth/config'
 import { ListingGrid, ListingFilters } from '@/modules/marketplace'
 import type { ListingCategory, ItemCondition } from '@/modules/marketplace'
 // eslint-disable-next-line no-restricted-imports
-import { getListings } from '@/modules/marketplace/lib/queries'
+import { getListings, getListingFavoriteCounts, getUserFavoriteIds } from '@/modules/marketplace/lib/queries'
 
 export const metadata: Metadata = {
   title: 'Marketplace | Ride MTB',
@@ -39,6 +39,17 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
 
   const page = params.page ? parseInt(params.page, 10) : 1
   const { listings, totalCount } = await getListings(filters, page)
+
+  const [favoriteCounts, userFavIds] = await Promise.all([
+    getListingFavoriteCounts(listings.map((l) => l.id)),
+    session?.user?.id ? getUserFavoriteIds(session.user.id) : Promise.resolve([]),
+  ])
+
+  const enrichedListings = listings.map((l) => ({
+    ...l,
+    favoriteCount: favoriteCounts[l.id] ?? 0,
+    isFavorited: userFavIds.includes(l.id),
+  }))
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -79,7 +90,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
       </div>
 
       {/* Grid */}
-      <ListingGrid listings={listings} />
+      <ListingGrid listings={enrichedListings} isLoggedIn={!!session?.user} />
 
       {/* Pagination */}
       {totalCount > 25 && (

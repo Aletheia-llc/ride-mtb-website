@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
 import { createListing as createListingQuery } from '../lib/queries'
+// eslint-disable-next-line no-restricted-imports
+import { grantXP } from '@/modules/xp/lib/engine'
 
 const categoryEnum = z.enum([
   'complete_bikes',
@@ -54,12 +56,8 @@ export async function createListing(
   try {
     const user = await requireAuth()
 
-    // Parse image URLs from newline-separated textarea
-    const imageUrlsRaw = (formData.get('imageUrls') as string) || ''
-    const imageUrls = imageUrlsRaw
-      .split('\n')
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0)
+    // Parse image URLs from hidden inputs (one per uploaded image)
+    const imageUrls = formData.getAll('imageUrls').map(String).filter(Boolean)
 
     const priceRaw = formData.get('price')
     const price = priceRaw ? parseFloat(priceRaw as string) : undefined
@@ -99,6 +97,10 @@ export async function createListing(
       condition,
       location,
       imageUrls: parsed.data.imageUrls,
+    })
+
+    grantXP({ userId: user.id, event: 'listing_created', module: 'marketplace', refId: listing.id }).catch((err) => {
+      console.error('[marketplace] XP grant failed on listing create:', err)
     })
 
     redirectUrl = `/marketplace/${listing.slug}`

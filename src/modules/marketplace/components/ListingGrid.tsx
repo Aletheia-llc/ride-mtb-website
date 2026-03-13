@@ -5,9 +5,10 @@ import { ListingCard } from './ListingCard'
 
 interface ListingGridProps {
   listings: ListingSummary[]
+  isLoggedIn?: boolean
 }
 
-export function ListingGrid({ listings }: ListingGridProps) {
+export function ListingGrid({ listings, isLoggedIn = false }: ListingGridProps) {
   if (listings.length === 0) {
     return (
       <EmptyState
@@ -21,7 +22,7 @@ export function ListingGrid({ listings }: ListingGridProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {listings.map((listing) => (
-        <ListingCard key={listing.id} listing={listing} />
+        <ListingCard key={listing.id} listing={listing} isLoggedIn={isLoggedIn} />
       ))}
     </div>
   )

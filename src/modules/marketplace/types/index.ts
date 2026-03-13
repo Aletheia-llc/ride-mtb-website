@@ -30,6 +30,8 @@ export interface ListingSummary {
   status: ListingStatus
   sellerName: string | null
   createdAt: Date
+  favoriteCount?: number
+  isFavorited?: boolean
 }
 
 export interface ListingDetailData {
@@ -51,6 +53,8 @@ export interface ListingDetailData {
     name: string | null
     image: string | null
   }
+  favoriteCount?: number
+  isFavorited?: boolean
 }
 
 // ── Display helpers ─────────────────────────────────────────

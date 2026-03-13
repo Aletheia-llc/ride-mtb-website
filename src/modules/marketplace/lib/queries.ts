@@ -123,6 +123,9 @@ export async function getListingBySlug(slug: string): Promise<ListingDetailData 
           image: true,
         },
       },
+      _count: {
+        select: { favorites: true },
+      },
     },
   })
 
@@ -143,6 +146,7 @@ export async function getListingBySlug(slug: string): Promise<ListingDetailData 
     createdAt: listing.createdAt,
     updatedAt: listing.updatedAt,
     seller: listing.seller,
+    favoriteCount: listing._count.favorites,
   }
 }
 
@@ -172,7 +176,19 @@ export async function createListing(input: CreateListingInput) {
   })
 }
 
-// ── 4. updateListingStatus ────────────────────────────────────
+// ── 4. getSellerListings ──────────────────────────────────────
+
+export async function getSellerListings(sellerId: string) {
+  return db.listing.findMany({
+    where: { sellerId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      _count: { select: { favorites: true } },
+    },
+  })
+}
+
+// ── 5. updateListingStatus (auth check included) ─────────────
 
 export async function updateListingStatus(
   listingId: string,
@@ -217,4 +233,83 @@ export async function deleteListing(listingId: string, sellerId: string) {
   return db.listing.delete({
     where: { id: listingId },
   })
+}
+
+// ── 6. toggleListingFavorite ──────────────────────────────────
+
+export async function toggleListingFavorite(listingId: string, userId: string) {
+  const existing = await db.listingFavorite.findUnique({
+    where: { userId_listingId: { userId, listingId } },
+  })
+
+  if (existing) {
+    await db.listingFavorite.delete({ where: { id: existing.id } })
+    return { favorited: false, sellerId: null as string | null }
+  }
+
+  const favorite = await db.listingFavorite.create({
+    data: { userId, listingId },
+    include: { listing: { select: { sellerId: true } } },
+  })
+  return { favorited: true, sellerId: favorite.listing.sellerId }
+}
+
+// ── 7. getUserFavoriteListings ────────────────────────────────
+
+export async function getUserFavoriteListings(userId: string) {
+  const favorites = await db.listingFavorite.findMany({
+    where: { userId, listing: { status: 'active' } },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      listing: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          price: true,
+          category: true,
+          condition: true,
+          location: true,
+          imageUrls: true,
+          status: true,
+          createdAt: true,
+          seller: { select: { name: true } },
+          _count: { select: { favorites: true } },
+        },
+      },
+    },
+  })
+  return favorites.map((f) => f.listing)
+}
+
+// ── 8. getListingFavoriteCounts ───────────────────────────────
+
+export async function getListingFavoriteCounts(listingIds: string[]): Promise<Record<string, number>> {
+  if (listingIds.length === 0) return {}
+  const counts = await db.listingFavorite.groupBy({
+    by: ['listingId'],
+    where: { listingId: { in: listingIds } },
+    _count: { _all: true },
+  })
+  return Object.fromEntries(counts.map((c) => [c.listingId, c._count._all]))
+}
+
+// ── 9. getUserFavoriteIds ─────────────────────────────────────
+
+export async function getUserFavoriteIds(userId: string): Promise<string[]> {
+  const favs = await db.listingFavorite.findMany({
+    where: { userId },
+    select: { listingId: true },
+  })
+  return favs.map((f) => f.listingId)
+}
+
+// ── 10. isListingFavorited ────────────────────────────────────
+
+export async function isListingFavorited(listingId: string, userId: string): Promise<boolean> {
+  const fav = await db.listingFavorite.findUnique({
+    where: { userId_listingId: { userId, listingId } },
+    select: { id: true },
+  })
+  return fav !== null
 }

@@ -16,6 +16,8 @@ export const XP_VALUES: Record<XpEvent, number> = {
   review_submitted: 10,
   event_attended: 20,
   streak_bonus: 10,
+  listing_created: 10,
+  listing_favorited: 2,
 }
 
 export const STREAK_MULTIPLIERS: Record<number, number> = {
