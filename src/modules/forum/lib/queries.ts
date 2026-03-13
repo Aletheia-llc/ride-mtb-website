@@ -138,6 +138,7 @@ export async function getThreadBySlug(slug: string) {
         select: { name: true, slug: true },
       },
       posts: {
+        where: { deletedAt: null },
         orderBy: { createdAt: 'asc' },
         include: {
           author: {
@@ -914,9 +915,7 @@ export async function isCommunityMember(categoryId: string, userId: string) {
 
 export async function getForumLeaderboard(limit = 50) {
   const users = await db.user.findMany({
-    where: {
-      forumPosts: { some: { deletedAt: null } },
-    },
+    where: { karma: { gt: 0 } },
     orderBy: { karma: 'desc' },
     take: limit,
     select: {
@@ -926,13 +925,20 @@ export async function getForumLeaderboard(limit = 50) {
       image: true,
       avatarUrl: true,
       karma: true,
-      _count: {
-        select: {
-          forumPosts: true,
-        },
-      },
     },
   })
+
+  // Count non-deleted posts per user
+  const postCounts = await db.forumPost.groupBy({
+    by: ['authorId'],
+    where: {
+      authorId: { in: users.map(u => u.id) },
+      deletedAt: null,
+    },
+    _count: { id: true },
+  })
+
+  const countMap = new Map(postCounts.map(p => [p.authorId, p._count.id]))
 
   return users.map((u, i) => ({
     rank: i + 1,
@@ -942,6 +948,6 @@ export async function getForumLeaderboard(limit = 50) {
     image: u.image,
     avatarUrl: u.avatarUrl,
     karma: u.karma ?? 0,
-    postCount: u._count.forumPosts,
+    postCount: countMap.get(u.id) ?? 0,
   }))
 }

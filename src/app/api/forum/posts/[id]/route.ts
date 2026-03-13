@@ -75,6 +75,10 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
+  if (post.deletedAt) {
+    return NextResponse.json({ error: 'Post already deleted' }, { status: 404 })
+  }
+
   const isAuthor = post.authorId === session.user.id
   const isAdmin = session.user.role === 'admin'
 

@@ -32,14 +32,7 @@ export async function votePost(
 
     await voteOnPost({ postId, userId: user.id, value })
 
-    await grantXP({
-      userId: user.id,
-      event: 'forum_vote_received',
-      module: 'forum',
-      refId: `${postId}-${user.id}`,
-    })
-
-    // Badge check for post author (fire-and-forget)
+    // Badge check for post author and XP grant (fire-and-forget)
     void (async () => {
       try {
         const votedPost = await db.forumPost.findUnique({
@@ -47,6 +40,12 @@ export async function votePost(
           select: { authorId: true },
         })
         if (votedPost) {
+          await grantXP({
+            userId: votedPost.authorId,
+            event: 'forum_vote_received',
+            module: 'forum',
+            refId: `${postId}-${user.id}`,
+          })
           await checkAndGrantBadges(votedPost.authorId, 'vote')
         }
       } catch {
