@@ -21,6 +21,7 @@ interface QuizResultsProps {
 export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProps) {
   const [consultationOpen, setConsultationOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [copyFailed, setCopyFailed] = useState(false)
 
   const categoryLabels = Object.fromEntries(
     Object.entries(CATEGORY_META).map(([k, v]) => [Number(k), { name: v.name }]),
@@ -35,8 +36,11 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       }).catch(() => {
-        // Fallback: clipboard write failed silently
+        setCopyFailed(true)
+        setTimeout(() => setCopyFailed(false), 2000)
       })
+    } else {
+      window.prompt('Copy this link to share your result:', url)
     }
   }
 
@@ -159,7 +163,7 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
           className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-colors hover:border-[var(--color-primary)]"
         >
           <Share2 className="h-4 w-4" />
-          {copied ? 'Copied!' : 'Share result'}
+          {copied ? 'Copied!' : copyFailed ? 'Copy failed' : 'Share result'}
         </button>
         <button
           type="button"
