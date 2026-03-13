@@ -82,6 +82,17 @@ export default async function CertificatePage({ params }: PageProps) {
         Certificate ID: {cert.id}
       </p>
 
+      {/* Download PDF */}
+      <div className="mt-4 text-center">
+        <a
+          href={`/api/learn/certificates/${cert.id}/pdf`}
+          download
+          className="inline-flex items-center gap-2 rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          Download PDF
+        </a>
+      </div>
+
       {/* Back link */}
       <div className="mt-8 text-center">
         <Link
