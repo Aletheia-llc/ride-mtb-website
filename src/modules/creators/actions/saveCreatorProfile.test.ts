@@ -96,4 +96,20 @@ describe('saveCreatorProfile', () => {
     )
     expect(result.errors.general).toBeDefined()
   })
+
+  it('returns error when displayName exceeds 50 characters', async () => {
+    const result = await saveCreatorProfile(
+      { errors: {} },
+      makeFormData({ displayName: 'A'.repeat(51), licensingAttested: 'true' }),
+    )
+    expect(result.errors.displayName).toBeDefined()
+  })
+
+  it('returns error when bio exceeds 500 characters', async () => {
+    const result = await saveCreatorProfile(
+      { errors: {} },
+      makeFormData({ displayName: 'Kyle Warner', bio: 'X'.repeat(501), licensingAttested: 'true' }),
+    )
+    expect(result.errors.bio).toBeDefined()
+  })
 })
