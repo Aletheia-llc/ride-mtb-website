@@ -3,10 +3,9 @@ import { NextRequest } from 'next/server'
 
 vi.mock('@/lib/db/client', () => ({
   db: {
-    creatorProfile: {
-      findFirst: vi.fn(),
-      update: vi.fn(),
-    },
+    creatorProfile: { findFirst: vi.fn(), update: vi.fn() },
+    payoutRequest: { findFirst: vi.fn(), update: vi.fn() },
+    walletTransaction: { create: vi.fn() },
   },
 }))
 
@@ -75,5 +74,38 @@ describe('POST /api/stripe/webhook', () => {
     const res = await POST(makeWebhookRequest(JSON.stringify(mockEvent)))
     expect(res.status).toBe(200)
     expect(db.creatorProfile.update).not.toHaveBeenCalled()
+  })
+
+  it('marks PayoutRequest completed on transfer.paid', async () => {
+    vi.mocked(constructStripeEvent).mockReturnValueOnce({
+      type: 'transfer.paid',
+      data: { object: { id: 'tr_abc123' } },
+    } as never)
+    vi.mocked(db.payoutRequest.findFirst).mockResolvedValueOnce({ id: 'pr_1', creatorId: 'creator_1', amountCents: 5000 } as never)
+
+    const res = await POST(makeWebhookRequest('{}'))
+    expect(res.status).toBe(200)
+    expect(db.payoutRequest.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'completed' }) }),
+    )
+    expect(db.walletTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ amountCents: -5000, type: 'payout' }),
+      }),
+    )
+  })
+
+  it('marks PayoutRequest failed on transfer.failed', async () => {
+    vi.mocked(constructStripeEvent).mockReturnValueOnce({
+      type: 'transfer.failed',
+      data: { object: { id: 'tr_abc123' } },
+    } as never)
+    vi.mocked(db.payoutRequest.findFirst).mockResolvedValueOnce({ id: 'pr_1', creatorId: 'creator_1', amountCents: 5000 } as never)
+
+    const res = await POST(makeWebhookRequest('{}'))
+    expect(res.status).toBe(200)
+    expect(db.payoutRequest.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'failed' }) }),
+    )
   })
 })

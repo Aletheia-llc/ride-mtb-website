@@ -37,6 +37,42 @@ export async function POST(req: NextRequest) {
       }
       break
     }
+    case 'transfer.paid': {
+      const transfer = event.data.object as { id: string }
+      const payout = await db.payoutRequest.findFirst({
+        where: { stripeTransferId: transfer.id },
+        select: { id: true, creatorId: true, amountCents: true },
+      })
+      if (payout) {
+        await db.payoutRequest.update({
+          where: { id: payout.id },
+          data: { status: 'completed' },
+        })
+        await db.walletTransaction.create({
+          data: {
+            creatorId: payout.creatorId,
+            amountCents: -payout.amountCents,
+            type: 'payout',
+            payoutRequestId: payout.id,
+          },
+        })
+      }
+      break
+    }
+    case 'transfer.failed': {
+      const transfer = event.data.object as { id: string }
+      const payout = await db.payoutRequest.findFirst({
+        where: { stripeTransferId: transfer.id },
+        select: { id: true },
+      })
+      if (payout) {
+        await db.payoutRequest.update({
+          where: { id: payout.id },
+          data: { status: 'failed' },
+        })
+      }
+      break
+    }
     default:
       break
   }
