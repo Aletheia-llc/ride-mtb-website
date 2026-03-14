@@ -228,6 +228,19 @@ export async function getUserRsvps(
   return { rsvps, totalCount }
 }
 
+// ── getEventComments ──────────────────────────────────────
+
+export async function getEventComments(eventId: string) {
+  return db.eventComment.findMany({
+    where: { eventId, parentId: null },
+    include: {
+      user: { select: { name: true } },
+      replies: { include: { user: { select: { name: true } } }, orderBy: { createdAt: 'asc' } },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+}
+
 // ── deleteEvent ───────────────────────────────────────────
 
 export async function deleteEvent(
