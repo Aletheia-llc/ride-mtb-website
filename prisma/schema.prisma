@@ -85,6 +85,9 @@ model User {
   quizSessions          QuizSession[]
   quizResults           QuizResult[]
   bikeConsultations     BikeConsultationRequest[]
+  cartItems             CartItem[]
+  wishlistItems         WishlistItem[]
+  dropSubscription      DropSubscriber?
 
   @@map("users")
 }
@@ -983,15 +986,128 @@ model MerchProduct {
   imageUrls      Json        @default("[]")
   category       MerchCategory
   sizes          Json        @default("[]")
+  variants       Json        @default("[]")
   inStock        Boolean     @default(true)
   sortOrder      Int         @default(0)
   status         ContentStatus @default(published)
   stripePriceId  String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  cartItems      CartItem[]
+  wishlistItems  WishlistItem[]
 
   @@index([category, status])
   @@map("merch_products")
+}
+
+enum ContestStatus {
+  accepting_submissions
+  voting
+  closed
+  winner_announced
+  in_production
+  completed
+}
+
+model CartItem {
+  id         String   @id @default(cuid())
+  userId     String
+  productId  String
+  variantKey String   @default("default")
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product    MerchProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId, variantKey])
+  @@map("cart_items")
+}
+
+model LimitedDrop {
+  id                String    @id @default(cuid())
+  name              String
+  description       String?   @db.Text
+  coverImageUrl     String?
+  productIds        String[]
+  launchAt          DateTime
+  endsAt            DateTime?
+  isActive          Boolean   @default(false)
+  notifySubscribers Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("limited_drops")
+}
+
+model DropSubscriber {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("drop_subscribers")
+}
+
+model DesignContest {
+  id                 String        @id @default(cuid())
+  title              String
+  description        String        @db.Text
+  coverImageUrl      String?
+  productType        String
+  submissionStart    DateTime
+  submissionEnd      DateTime
+  votingStart        DateTime
+  votingEnd          DateTime
+  status             ContestStatus @default(accepting_submissions)
+  prizeDescription   String?
+  winnerSubmissionId String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  submissions        DesignSubmission[]
+
+  @@map("design_contests")
+}
+
+model DesignSubmission {
+  id          String        @id @default(cuid())
+  contestId   String
+  contest     DesignContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  userId      String
+  title       String
+  description String?
+  imageUrl    String
+  mockupUrl   String?
+  voteCount   Int           @default(0)
+  isWinner    Boolean       @default(false)
+  votes       DesignVote[]
+  createdAt   DateTime      @default(now())
+
+  @@unique([contestId, userId])
+  @@map("design_submissions")
+}
+
+model DesignVote {
+  id           String           @id @default(cuid())
+  submissionId String
+  submission   DesignSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  userId       String
+  createdAt    DateTime         @default(now())
+
+  @@unique([submissionId, userId])
+  @@map("design_votes")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   MerchProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
 }
 
 // ============================================================
