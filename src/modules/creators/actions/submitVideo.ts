@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
 import { getBoss } from '@/lib/pgboss'
+// eslint-disable-next-line no-restricted-imports
 import { extractYouTubeVideoId } from '@/modules/creators/lib/youtube'
 
 const schema = z.object({
