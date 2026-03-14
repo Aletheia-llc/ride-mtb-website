@@ -61,15 +61,23 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
             Find and join upcoming mountain biking events near you.
           </p>
         </div>
-        {session?.user && (
+        <div className="flex items-center gap-2">
           <Link
-            href="/events/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-dark)]"
+            href="/events/calendar"
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg-secondary)]"
           >
-            <CalendarPlus className="h-4 w-4" />
-            Create Event
+            Calendar View
           </Link>
-        )}
+          {session?.user && (
+            <Link
+              href="/events/new"
+              className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-dark)]"
+            >
+              <CalendarPlus className="h-4 w-4" />
+              Create Event
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Filters */}

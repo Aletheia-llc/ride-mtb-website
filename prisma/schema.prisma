@@ -69,6 +69,8 @@ model User {
   notifications   Notification[]
   events          Event[]
   eventRsvps      EventRsvp[]
+  eventComments   EventComment[]
+  organizerProfile OrganizerProfile?
   gearReviews     GearReview[]
   userBikes       UserBike[]
   buildLogEntries BuildLogEntry[]
@@ -685,12 +687,57 @@ model Event {
   status      ContentStatus @default(published)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  // New fields from race calendar port
+  eventTypeEnum         EventTypeEnum?
+  organizerId           String?
+  organizer             OrganizerProfile? @relation(fields: [organizerId], references: [id])
+  registrationUrl       String?
+  registrationDeadline  DateTime?
+  costCents             Int?
+  isFree                Boolean  @default(false)
+  isFeatured            Boolean  @default(false)
+  resultsUrl            String?
+  resultsPosted         Boolean  @default(false)
   creator     User        @relation(fields: [creatorId], references: [id])
   rsvps       EventRsvp[]
+  comments    EventComment[]
 
   @@index([startDate])
   @@index([creatorId])
   @@map("events")
+}
+
+model EventComment {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  parentId  String?
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  parent    EventComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   EventComment[] @relation("CommentReplies")
+
+  @@index([eventId, createdAt])
+  @@map("event_comments")
+}
+
+model OrganizerProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  orgName     String
+  bio         String?
+  websiteUrl  String?
+  logoUrl     String?
+  isVerified  Boolean  @default(false)
+  eventCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+  events      Event[]
+
+  @@map("organizer_profiles")
 }
 
 model EventRsvp {
@@ -1249,6 +1296,22 @@ enum EventType {
   social
   demo_day
   other
+}
+
+enum EventTypeEnum {
+  RACE
+  ENDURO
+  DOWNHILL
+  CROSS_COUNTRY
+  TRAIL_RIDE
+  GROUP_RIDE
+  SKILLS_CLINIC
+  KIDS_CAMP
+  BIKEPACKING
+  FUNDRAISER
+  SOCIAL
+  FESTIVAL
+  OTHER
 }
 
 enum RsvpStatus {
