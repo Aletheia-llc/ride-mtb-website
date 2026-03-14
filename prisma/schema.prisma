@@ -75,6 +75,7 @@ model User {
   listingFavorites ListingFavorite[]
   shops           Shop[]
   coachProfile    CoachProfile?
+  creatorProfile  CreatorProfile?
   quizSessions          QuizSession[]
   quizResults           QuizResult[]
   bikeConsultations     BikeConsultationRequest[]
@@ -502,6 +503,7 @@ model TrailSystem {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   trails        Trail[]
+  creatorVideos   CreatorVideo[]
 
   @@index([city, state])
   @@index([latitude, longitude])
@@ -1292,4 +1294,223 @@ model BikeConsultationRequest {
   @@index([userId])
   @@index([status])
   @@map("bike_consultation_requests")
+}
+
+// ============================================================
+// CREATORS
+// ============================================================
+
+model CreatorProfile {
+  id                  String        @id @default(cuid())
+  userId              String        @unique
+  displayName         String
+  bio                 String?       @db.Text
+  youtubeChannelId    String?
+  revenueSharePct     Int           @default(70)
+  stripeAccountId     String?
+  status              CreatorStatus @default(onboarding)
+  licensingAttestedAt DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos              CreatorVideo[]
+  wallet              CreatorWallet?
+  walletTransactions  WalletTransaction[]
+  payoutRequests      PayoutRequest[]
+  campaignTargets     AdCampaignCreatorTarget[]
+
+  @@map("creator_profiles")
+}
+
+model CreatorVideo {
+  id             String         @id @default(cuid())
+  creatorId      String
+  youtubeVideoId String
+  title          String
+  description    String?        @db.Text
+  thumbnailUrl   String?
+  duration       Int?
+  bunnyHlsUrl    String?
+  status         VideoStatus    @default(queued)
+  viewCount      Int            @default(0)
+  category       VideoCategory  @default(other)
+  trailSystemId  String?
+  tagsConfirmedAt DateTime?
+  errorMessage   String?        @db.Text
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  creator        CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  trailSystem    TrailSystem?   @relation(fields: [trailSystemId], references: [id])
+  tags           CreatorVideoTag[]
+  impressions    AdImpression[]
+
+  @@unique([creatorId, youtubeVideoId])
+  @@index([creatorId, status])
+  @@map("creator_videos")
+}
+
+model CreatorVideoTag {
+  id        String       @id @default(cuid())
+  videoId   String
+  value     String
+  source    TagSource    @default(ai)
+  confirmed Boolean      @default(false)
+  video     CreatorVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@map("creator_video_tags")
+}
+
+model AdCampaign {
+  id                 String           @id @default(cuid())
+  advertiserName     String
+  logoUrl            String?
+  creativeUrl        String
+  cpmCents           Int
+  dailyImpressionCap Int
+  startDate          DateTime
+  endDate            DateTime
+  status             AdCampaignStatus @default(active)
+  categoryFilter     VideoCategory?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  creatorTargets     AdCampaignCreatorTarget[]
+  impressions        AdImpression[]
+
+  @@index([status, startDate, endDate])
+  @@map("ad_campaigns")
+}
+
+model AdCampaignCreatorTarget {
+  campaignId       String
+  creatorProfileId String
+  campaign         AdCampaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator          CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, creatorProfileId])
+  @@map("ad_campaign_creator_targets")
+}
+
+model AdImpression {
+  id            String           @id @default(cuid())
+  campaignId    String
+  videoId       String
+  viewerId      String?
+  status        ImpressionStatus @default(pending)
+  earningsCents Int              @default(0)
+  createdAt     DateTime         @default(now())
+  campaign      AdCampaign       @relation(fields: [campaignId], references: [id])
+  video         CreatorVideo     @relation(fields: [videoId], references: [id])
+  transactions  WalletTransaction[]
+
+  @@index([campaignId, status])
+  @@index([videoId])
+  @@map("ad_impressions")
+}
+
+model CreatorWallet {
+  id               String         @id @default(cuid())
+  creatorProfileId String         @unique
+  creator          CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  @@map("creator_wallets")
+}
+
+model WalletTransaction {
+  id              String                @id @default(cuid())
+  creatorId       String
+  amountCents     Int
+  type            WalletTransactionType
+  impressionId    String?
+  payoutRequestId String?
+  createdAt       DateTime              @default(now())
+  creator         CreatorProfile        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  impression      AdImpression?         @relation(fields: [impressionId], references: [id])
+  payoutRequest   PayoutRequest?        @relation(fields: [payoutRequestId], references: [id])
+
+  @@index([creatorId, createdAt])
+  @@map("wallet_transactions")
+}
+
+model PayoutRequest {
+  id               String              @id @default(cuid())
+  creatorId        String
+  amountCents      Int
+  status           PayoutRequestStatus @default(pending)
+  stripeTransferId String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  creator          CreatorProfile      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  transactions     WalletTransaction[]
+
+  @@index([creatorId, status])
+  @@map("payout_requests")
+}
+
+model InviteToken {
+  id               String   @id @default(cuid())
+  tokenHash        String   @unique
+  createdByAdminId String
+  claimedByUserId  String?
+  expiresAt        DateTime
+  used             Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([tokenHash])
+  @@map("invite_tokens")
+}
+
+enum CreatorStatus {
+  invited
+  onboarding
+  active
+  suspended
+}
+
+enum VideoStatus {
+  queued
+  processing
+  transcoding
+  pending_review
+  live
+  rejected
+}
+
+enum VideoCategory {
+  riding_skills
+  maintenance
+  fitness
+  gear
+  trails
+  other
+}
+
+enum TagSource {
+  ai
+  manual
+}
+
+enum AdCampaignStatus {
+  active
+  paused
+  completed
+  cancelled
+}
+
+enum ImpressionStatus {
+  pending
+  confirmed
+  skipped
+}
+
+enum PayoutRequestStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum WalletTransactionType {
+  earning
+  payout
 }
