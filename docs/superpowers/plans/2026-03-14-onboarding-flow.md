@@ -479,14 +479,15 @@ describe('getRecommendations', () => {
     )
   })
 
-  it('falls back to first published course when no skill-level match', async () => {
+  it('falls back to first published course when skill-level query returns no match', async () => {
+    // beginner is provided but no beginner course exists in DB
     vi.mocked(db.learnCourse.findFirst)
       .mockResolvedValueOnce(null)               // skill-level query returns nothing
       .mockResolvedValueOnce(mockCourse as never) // fallback query
     vi.mocked(db.forumCategory.findUnique).mockResolvedValueOnce(mockCommunity as never)
     vi.mocked(db.trailSystem.findFirst).mockResolvedValueOnce(mockTrail as never)
 
-    const result = await getRecommendations(makeUser({ skillLevel: null }))
+    const result = await getRecommendations(makeUser({ skillLevel: 'beginner' }))
 
     expect(result.course).toBe(mockCourse)
     expect(db.learnCourse.findFirst).toHaveBeenCalledTimes(2)
