@@ -1,13 +1,30 @@
 import Image from 'next/image'
-import { MapPin, Phone, Mail, Globe, Wrench, Tag } from 'lucide-react'
+import { MapPin, Phone, Mail, Globe, Wrench, Tag, Clock } from 'lucide-react'
 import { Badge } from '@/ui/components'
 import type { ShopDetailData } from '../types'
+import { ShopHoursTable } from './ShopHoursTable'
+import { ShopReviewSection } from './ShopReviewSection'
+
+interface ShopReview {
+  id: string
+  overallRating: number
+  serviceRating: number
+  pricingRating: number
+  selectionRating: number
+  title: string | null
+  body: string
+  bikeType: string | null
+  helpfulCount: number
+  createdAt: Date
+  user: { name: string | null }
+}
 
 interface ShopDetailProps {
   shop: ShopDetailData
+  reviews?: ShopReview[]
 }
 
-export function ShopDetail({ shop }: ShopDetailProps) {
+export function ShopDetail({ shop, reviews = [] }: ShopDetailProps) {
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -146,6 +163,17 @@ export function ShopDetail({ shop }: ShopDetailProps) {
         </div>
       )}
 
+      {/* Hours */}
+      {shop.hoursJson != null && (
+        <div>
+          <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-[var(--color-text)]">
+            <Clock className="h-5 w-5" />
+            Hours
+          </h2>
+          <ShopHoursTable hoursJson={shop.hoursJson as Record<string, { open: string; close: string; closed?: boolean }>} />
+        </div>
+      )}
+
       {/* Map placeholder */}
       {shop.latitude && shop.longitude && (
         <div>
@@ -157,6 +185,14 @@ export function ShopDetail({ shop }: ShopDetailProps) {
           </div>
         </div>
       )}
+
+      {/* Reviews */}
+      <ShopReviewSection
+        shopId={shop.id}
+        reviews={reviews}
+        avgOverall={shop.avgOverallRating ?? null}
+        reviewCount={shop.reviewCount ?? 0}
+      />
     </div>
   )
 }

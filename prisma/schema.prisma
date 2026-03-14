@@ -74,6 +74,8 @@ model User {
   listings         Listing[]
   listingFavorites ListingFavorite[]
   shops           Shop[]
+  shopReviews     ShopReview[]
+  reviewHelpfulVotes ReviewHelpful[]
   coachProfile    CoachProfile?
   creatorProfile  CreatorProfile?
   quizSessions          QuizSession[]
@@ -810,31 +812,109 @@ model MerchProduct {
 // ============================================================
 
 model Shop {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   ownerId     String?
   name        String
-  slug        String   @unique
-  description String?  @db.Text
+  slug        String      @unique
+  description String?     @db.Text
   address     String
   city        String
   state       String
   zipCode     String?
-  country     String   @default("US")
+  country     String      @default("US")
   phone       String?
   email       String?
   websiteUrl  String?
   latitude    Float?
   longitude   Float?
   imageUrl    String?
-  services    Json     @default("[]")
-  brands      Json     @default("[]")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  owner       User?    @relation(fields: [ownerId], references: [id])
+  services    Json        @default("[]")
+  brands      Json        @default("[]")
+  shopType    ShopType    @default(OTHER)
+  partnerTier PartnerTier @default(NONE)
+  hoursJson   Json?       // { mon: { open: "09:00", close: "18:00" }, ... }
+  avgOverallRating    Float?
+  avgServiceRating    Float?
+  avgPricingRating    Float?
+  avgSelectionRating  Float?
+  reviewCount         Int    @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  owner       User?       @relation(fields: [ownerId], references: [id])
+  photos      ShopPhoto[]
+  reviews     ShopReview[]
 
   @@index([city, state])
   @@index([latitude, longitude])
   @@map("shops")
+}
+
+enum ShopType {
+  LOCAL_SHOP
+  CHAIN_STORE
+  ONLINE_RETAILER
+  RENTAL_SHOP
+  REPAIR_ONLY
+  SUSPENSION_SPECIALIST
+  WHEEL_BUILDER
+  CUSTOM_BUILDER
+  DEMO_CENTER
+  GUIDE_SERVICE
+  COACHING
+  TRAIL_ADVOCACY
+  OTHER
+}
+
+enum PartnerTier {
+  NONE
+  VERIFIED
+  PARTNER
+  PREMIER
+}
+
+model ShopPhoto {
+  id        String   @id @default(cuid())
+  shopId    String
+  url       String
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_photos")
+}
+
+model ShopReview {
+  id                  String    @id @default(cuid())
+  shopId              String
+  userId              String
+  overallRating       Int
+  serviceRating       Int
+  pricingRating       Int
+  selectionRating     Int
+  title               String?
+  body                String    @db.Text
+  bikeType            String?
+  ownerResponse       String?   @db.Text
+  ownerResponseAt     DateTime?
+  helpfulCount        Int       @default(0)
+  createdAt           DateTime  @default(now())
+  shop                Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user                User      @relation(fields: [userId], references: [id])
+  helpfulVotes        ReviewHelpful[]
+
+  @@map("shop_reviews")
+}
+
+model ReviewHelpful {
+  id        String     @id @default(cuid())
+  reviewId  String
+  userId    String
+  review    ShopReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id])
+
+  @@unique([reviewId, userId])
+  @@map("review_helpful")
 }
 
 // ============================================================

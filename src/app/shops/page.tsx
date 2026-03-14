@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import { MapIcon } from 'lucide-react'
 import { ShopList } from '@/modules/shops'
 // eslint-disable-next-line no-restricted-imports
 import { getShops } from '@/modules/shops/lib/queries'
@@ -37,11 +39,20 @@ export default async function ShopsPage({ searchParams }: ShopsPageProps) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-[var(--color-text)]">Bike Shops</h1>
-        <p className="text-[var(--color-text-muted)]">
-          Find mountain bike shops for service, parts, and gear.
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="mb-2 text-3xl font-bold text-[var(--color-text)]">Bike Shops</h1>
+          <p className="text-[var(--color-text-muted)]">
+            Find mountain bike shops for service, parts, and gear.
+          </p>
+        </div>
+        <Link
+          href="/shops/map"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg-secondary)]"
+        >
+          <MapIcon className="h-4 w-4" />
+          Map View
+        </Link>
       </div>
 
       {/* Filters */}
