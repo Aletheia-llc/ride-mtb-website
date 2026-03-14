@@ -313,3 +313,44 @@ export async function isListingFavorited(listingId: string, userId: string): Pro
   })
   return fav !== null
 }
+
+// ── 11. getListingOffers ──────────────────────────────────────
+
+export async function getListingOffers(listingId: string, userId: string) {
+  // Return offers for the listing; user must be the seller or a buyer
+  const listing = await db.listing.findUnique({
+    where: { id: listingId },
+    select: { sellerId: true },
+  })
+  if (!listing) return []
+
+  const isSeller = listing.sellerId === userId
+
+  return db.offer.findMany({
+    where: isSeller ? { listingId } : { listingId, buyerId: userId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      buyer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  })
+}
+
+// ── 12. getSellerProfileByUserId ──────────────────────────────
+
+export async function getSellerProfileByUserId(userId: string) {
+  return db.sellerProfile.findUnique({
+    where: { userId },
+    include: {
+      reviews: {
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      },
+    },
+  })
+}

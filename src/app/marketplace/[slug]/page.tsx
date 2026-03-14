@@ -5,7 +5,10 @@ import { ArrowLeft } from 'lucide-react'
 import { auth } from '@/lib/auth/config'
 import { ListingDetail } from '@/modules/marketplace'
 // eslint-disable-next-line no-restricted-imports
-import { getListingBySlug, isListingFavorited } from '@/modules/marketplace/lib/queries'
+import { getListingBySlug, isListingFavorited, getListingOffers, getSellerProfileByUserId } from '@/modules/marketplace/lib/queries'
+import { OfferForm } from '@/modules/marketplace/components/OfferForm'
+import { OffersList } from '@/modules/marketplace/components/OffersList'
+import { SellerProfileCard } from '@/modules/marketplace/components/SellerProfileCard'
 
 interface ListingPageProps {
   params: Promise<{ slug: string }>
@@ -31,9 +34,15 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
   if (!listing) notFound()
 
-  const isFavorited = session?.user?.id
-    ? await isListingFavorited(listing.id, session.user.id)
-    : false
+  const userId = session?.user?.id
+
+  const [isFavorited, offers, sellerProfile] = await Promise.all([
+    userId ? isListingFavorited(listing.id, userId) : Promise.resolve(false),
+    userId ? getListingOffers(listing.id, userId) : Promise.resolve([]),
+    getSellerProfileByUserId(listing.sellerId),
+  ])
+
+  const isOwnListing = userId === listing.sellerId
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -46,13 +55,52 @@ export default async function ListingPage({ params }: ListingPageProps) {
         Back to Marketplace
       </Link>
 
-      <ListingDetail
-        listing={listing}
-        favoriteCount={listing.favoriteCount ?? 0}
-        isFavorited={isFavorited}
-        isLoggedIn={!!session?.user}
-        currentUserId={session?.user?.id}
-      />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Main listing detail */}
+        <div className="lg:col-span-2">
+          <ListingDetail
+            listing={listing}
+            favoriteCount={listing.favoriteCount ?? 0}
+            isFavorited={isFavorited}
+            isLoggedIn={!!session?.user}
+            currentUserId={userId}
+          />
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Seller profile */}
+          <SellerProfileCard
+            profile={sellerProfile}
+            sellerName={listing.seller.name}
+          />
+
+          {/* Offer form — only for signed-in non-owners */}
+          {userId && !isOwnListing && listing.status === 'active' && (
+            <OfferForm
+              listingId={listing.id}
+              askingPrice={listing.price}
+              acceptsOffers={(listing as { acceptsOffers?: boolean }).acceptsOffers ?? true}
+            />
+          )}
+
+          {/* Offers list — seller sees all offers, buyer sees their own */}
+          {userId && offers.length > 0 && (
+            <OffersList
+              offers={offers.map((o) => ({
+                id: o.id,
+                amount: o.amount,
+                message: o.message,
+                status: o.status,
+                expiresAt: o.expiresAt,
+                createdAt: o.createdAt,
+                buyer: o.buyer,
+              }))}
+              isSeller={isOwnListing}
+            />
+          )}
+        </div>
+      </div>
     </div>
   )
 }
