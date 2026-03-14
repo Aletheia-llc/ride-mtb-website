@@ -6,14 +6,14 @@ import { requireAuth } from '@/lib/auth/guards'
 import { db } from '@/lib/db/client'
 
 export async function acceptOffer(offerId: string) {
-  const session = await requireAuth()
+  const user = await requireAuth()
 
   const offer = await db.offer.findUnique({
     where: { id: offerId },
     include: { listing: { select: { id: true, sellerId: true, slug: true } } },
   })
   if (!offer) throw new Error('Offer not found')
-  if (offer.listing.sellerId !== session.user.id) throw new Error('Not your listing')
+  if (offer.listing.sellerId !== user.id) throw new Error('Not your listing')
   if (offer.status !== 'pending') throw new Error('Offer is no longer pending')
 
   await db.offer.update({ where: { id: offerId }, data: { status: 'accepted', respondedAt: new Date() } })
@@ -28,14 +28,14 @@ export async function acceptOffer(offerId: string) {
 }
 
 export async function declineOffer(offerId: string) {
-  const session = await requireAuth()
+  const user = await requireAuth()
 
   const offer = await db.offer.findUnique({
     where: { id: offerId },
     include: { listing: { select: { sellerId: true, slug: true } } },
   })
   if (!offer) throw new Error('Offer not found')
-  if (offer.listing.sellerId !== session.user.id) throw new Error('Not your listing')
+  if (offer.listing.sellerId !== user.id) throw new Error('Not your listing')
 
   await db.offer.update({ where: { id: offerId }, data: { status: 'declined', respondedAt: new Date() } })
   revalidatePath(`/marketplace/${offer.listing.slug}`)
@@ -43,7 +43,7 @@ export async function declineOffer(offerId: string) {
 }
 
 export async function counterOffer(offerId: string, amount: number, message?: string) {
-  const session = await requireAuth()
+  const user = await requireAuth()
 
   if (amount <= 0 || amount > 999999) throw new Error('Invalid counter-offer amount')
 
@@ -52,7 +52,7 @@ export async function counterOffer(offerId: string, amount: number, message?: st
     include: { listing: { select: { id: true, sellerId: true, slug: true } } },
   })
   if (!offer) throw new Error('Offer not found')
-  if (offer.listing.sellerId !== session.user.id) throw new Error('Not your listing')
+  if (offer.listing.sellerId !== user.id) throw new Error('Not your listing')
   if (offer.status !== 'pending') throw new Error('Offer is no longer pending')
 
   await db.offer.update({ where: { id: offerId }, data: { status: 'countered', respondedAt: new Date() } })

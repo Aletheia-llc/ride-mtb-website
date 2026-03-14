@@ -13,7 +13,7 @@ const schema = z.object({
 })
 
 export async function makeOffer(input: { listingId: string; amount: number; message?: string }) {
-  const session = await requireAuth()
+  const user = await requireAuth()
   const { listingId, amount, message } = schema.parse(input)
 
   const listing = await db.listing.findUnique({
@@ -22,7 +22,7 @@ export async function makeOffer(input: { listingId: string; amount: number; mess
   })
   if (!listing) throw new Error('Listing not found or unavailable')
   if (!listing.acceptsOffers) throw new Error('This listing does not accept offers')
-  if (listing.sellerId === session.user.id) throw new Error('Cannot offer on your own listing')
+  if (listing.sellerId === user.id) throw new Error('Cannot offer on your own listing')
 
   if (listing.minOfferPercent) {
     const minAmount = listing.price * (listing.minOfferPercent / 100)
@@ -34,7 +34,7 @@ export async function makeOffer(input: { listingId: string; amount: number; mess
   const offer = await db.offer.create({
     data: {
       listingId,
-      buyerId: session.user.id,
+      buyerId: user.id,
       amount,
       message,
       expiresAt,

@@ -6,13 +6,13 @@ import { requireAuth } from '@/lib/auth/guards'
 import { db } from '@/lib/db/client'
 
 export async function createSellerProfile() {
-  const session = await requireAuth()
+  const user = await requireAuth()
 
-  const existing = await db.sellerProfile.findUnique({ where: { userId: session.user.id } })
+  const existing = await db.sellerProfile.findUnique({ where: { userId: user.id } })
   if (existing) return existing
 
   const profile = await db.sellerProfile.create({
-    data: { userId: session.user.id },
+    data: { userId: user.id },
   })
 
   revalidatePath('/marketplace/sell')
