@@ -30,6 +30,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           Creators
         </a>
+        <a
+          href="/admin/creators/campaigns"
+          className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
+        >
+          Campaigns
+        </a>
+        <a
+          href="/admin/creators/payouts"
+          className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
+        >
+          Payouts
+        </a>
       </nav>
       {children}
     </div>
