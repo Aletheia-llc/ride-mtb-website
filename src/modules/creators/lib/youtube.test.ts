@@ -33,7 +33,7 @@ describe('extractChannelHandle', () => {
   })
 
   it('extracts channel ID from /channel/ URL', () => {
-    expect(extractChannelHandle('https://www.youtube.com/channel/UCxxxxxx')).toBe('UCxxxxxx')
+    expect(extractChannelHandle('https://www.youtube.com/channel/UCaaaaaaaaaaaaaaaaaaaaaa')).toBe('UCaaaaaaaaaaaaaaaaaaaaaa')
   })
 
   it('returns null for non-channel URL', () => {

@@ -27,7 +27,7 @@ export function extractChannelHandle(url: string): string | null {
     if (!u.hostname.includes('youtube.com')) return null
     const match = u.pathname.match(/^\/@([\w-]+)/)
     if (match) return `@${match[1]}`
-    const channelMatch = u.pathname.match(/^\/channel\/(UC[\w-]+)/)
+    const channelMatch = u.pathname.match(/^\/channel\/(UC[\w-]{22})/)
     if (channelMatch) return channelMatch[1]
     return null
   } catch {
