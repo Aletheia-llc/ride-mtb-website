@@ -2,7 +2,7 @@
 
 import { requireAuth } from '@/lib/auth/guards'
 import { db } from '@/lib/db/client'
-import { getRecommendations } from '@/modules/onboarding/lib/recommendations'
+import { getRecommendations, type SkillLevel } from '@/modules/onboarding/lib/recommendations'
 
 export async function completeOnboarding() {
   const user = await requireAuth()
@@ -26,7 +26,7 @@ export async function completeOnboarding() {
   }
 
   return getRecommendations({
-    skillLevel: profile.skillLevel as any,
+    skillLevel: profile.skillLevel as SkillLevel | null,
     interests: profile.interests,
     location: profile.location,
   })

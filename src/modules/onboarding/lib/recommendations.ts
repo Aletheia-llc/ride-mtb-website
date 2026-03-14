@@ -1,6 +1,6 @@
 import { db } from '@/lib/db/client'
 
-type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert'
+export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert'
 
 const SKILL_TO_DIFFICULTY: Record<SkillLevel, 'beginner' | 'intermediate' | 'advanced'> = {
   beginner: 'beginner',

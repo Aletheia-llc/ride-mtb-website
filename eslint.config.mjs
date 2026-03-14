@@ -22,6 +22,29 @@ const eslintConfig = [
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    // Cross-module boundary enforcement: prevent one module importing another module's internals.
+    // Applies only to non-onboarding module source files (not test files, not app routes).
+    // Pattern: src/modules/[A]/** must not import from src/modules/[B]/* where A !== B.
+    files: [
+      "src/modules/creators/**/*.ts",
+      "src/modules/creators/**/*.tsx",
+      "src/modules/forum/**/*.ts",
+      "src/modules/forum/**/*.tsx",
+      "src/modules/learn/**/*.ts",
+      "src/modules/learn/**/*.tsx",
+      "src/modules/bikes/**/*.ts",
+      "src/modules/bikes/**/*.tsx",
+      "src/modules/feed/**/*.ts",
+      "src/modules/feed/**/*.tsx",
+      "src/modules/marketplace/**/*.ts",
+      "src/modules/marketplace/**/*.tsx",
+    ],
+    ignores: [
+      "src/modules/**/*.test.ts",
+      "src/modules/**/*.test.tsx",
+      "src/modules/**/*.spec.ts",
+      "src/modules/**/*.spec.tsx",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -34,6 +57,18 @@ const eslintConfig = [
           ],
         },
       ],
+    },
+  },
+  {
+    // Test files: allow `as any` casts for mock return values — common Vitest/Jest pattern
+    files: [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ];

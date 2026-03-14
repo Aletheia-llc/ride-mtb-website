@@ -17,7 +17,7 @@ const profileSchema = z.object({
   bio: z.string().max(500, 'Bio must be at most 500 characters').optional(),
   youtubeChannelUrl: z.string().max(200).optional(),
   licensingAttested: z.literal('true', {
-    errorMap: () => ({ message: 'You must agree to the content licensing terms to continue.' }),
+    error: 'You must agree to the content licensing terms to continue.',
   }),
 })
 
