@@ -10,7 +10,7 @@ const globalForDb = globalThis as unknown as {
 
 // Prefer DATABASE_DIRECT_URL (session pooler, aws-1-, no pgbouncer limitations).
 // Fall back to DATABASE_POOLED_URL trimmed to strip any trailing newlines from Vercel CLI.
-const pool = globalForDb.pool ?? new Pool({
+export const pool = globalForDb.pool ?? new Pool({
   connectionString: process.env.DATABASE_DIRECT_URL ?? process.env.DATABASE_POOLED_URL?.trim(),
   max: 2,
 })
