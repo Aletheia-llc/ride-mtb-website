@@ -12,12 +12,16 @@ declare module 'next-auth' {
       image?: string | null
       role: Role
       bannedAt?: Date | null
+      onboardingCompletedAt?: Date | null
+      onboardingStep?: number
     }
   }
 
   interface User {
     role?: Role
     bannedAt?: Date | null
+    onboardingCompletedAt?: Date | null
+    onboardingStep?: number
   }
 }
 
@@ -25,5 +29,7 @@ declare module '@auth/core/adapters' {
   interface AdapterUser {
     role?: Role
     bannedAt?: Date | null
+    onboardingCompletedAt?: Date | null
+    onboardingStep?: number
   }
 }
