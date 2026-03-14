@@ -1,16 +1,48 @@
 'use client'
 
 import { useState } from 'react'
+import { VideoList } from './VideoList'
+import { WalletTab } from './WalletTab'
 
 type Tab = 'videos' | 'analytics' | 'wallet' | 'settings'
+
+interface Video {
+  id: string
+  title: string
+  thumbnailUrl: string | null
+  status: 'queued' | 'processing' | 'transcoding' | 'pending_review' | 'live' | 'rejected'
+  viewCount: number
+  createdAt: Date
+  tags: Array<{ id: string; value: string; source: string; confirmed: boolean }>
+  _count: { impressions: number }
+}
+
+interface Transaction {
+  id: string
+  amountCents: number
+  type: string
+  createdAt: Date
+}
 
 interface CreatorDashboardProps {
   displayName: string
   status: string
   stripeConnected: boolean
+  videos: Video[]
+  balanceCents: number
+  transactions: Transaction[]
+  hasPendingPayout: boolean
 }
 
-export function CreatorDashboard({ displayName, status, stripeConnected }: CreatorDashboardProps) {
+export function CreatorDashboard({
+  displayName,
+  status,
+  stripeConnected,
+  videos,
+  balanceCents,
+  transactions,
+  hasPendingPayout,
+}: CreatorDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('videos')
 
   const tabs: { id: Tab; label: string }[] = [
@@ -52,34 +84,24 @@ export function CreatorDashboard({ displayName, status, stripeConnected }: Creat
         </nav>
       </div>
 
-      {activeTab === 'videos' && (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-12 text-center">
-          <p className="mb-3 text-4xl">🎬</p>
-          <h3 className="mb-2 text-lg font-semibold text-[var(--color-text)]">No videos yet</h3>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Video ingestion ships in Phase 2. Once live, your YouTube videos will appear here automatically.
-          </p>
-        </div>
-      )}
+      {activeTab === 'videos' && <VideoList videos={videos} />}
 
       {activeTab === 'analytics' && (
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-12 text-center">
           <p className="mb-3 text-4xl">📊</p>
           <h3 className="mb-2 text-lg font-semibold text-[var(--color-text)]">Analytics coming soon</h3>
           <p className="text-sm text-[var(--color-text-muted)]">
-            Views, earnings, and top videos will appear here once your content is live.
+            Views and earnings charts will appear once your content has data.
           </p>
         </div>
       )}
 
       {activeTab === 'wallet' && (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-12 text-center">
-          <p className="mb-3 text-4xl">💰</p>
-          <h3 className="mb-2 text-lg font-semibold text-[var(--color-text)]">$0.00 available</h3>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Earnings from pre-roll ads will appear here. Minimum payout is $50.
-          </p>
-        </div>
+        <WalletTab
+          balanceCents={balanceCents}
+          transactions={transactions}
+          hasPendingPayout={hasPendingPayout}
+        />
       )}
 
       {activeTab === 'settings' && (

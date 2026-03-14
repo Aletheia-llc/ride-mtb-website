@@ -1,3 +1,5 @@
 export { AdminCreatorPanel } from './components/AdminCreatorPanel'
-export { CreatorDashboard } from './components/CreatorDashboard'
 export { InviteButton } from './components/InviteButton'
+export { CreatorDashboard } from './components/CreatorDashboard'
+export { VideoList } from './components/VideoList'
+export { WalletTab } from './components/WalletTab'
