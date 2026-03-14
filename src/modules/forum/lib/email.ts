@@ -1,5 +1,5 @@
 import 'server-only'
-import { Resend } from 'resend'
+import sgMail from '@sendgrid/mail'
 
 function escapeHtml(str: string): string {
   return str
@@ -10,12 +10,13 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;')
 }
 
-function getResend() {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn('[email] RESEND_API_KEY not configured — email notifications disabled')
+function getSendGrid(): typeof sgMail | null {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('[email] SENDGRID_API_KEY not configured — email notifications disabled')
     return null
   }
-  return new Resend(process.env.RESEND_API_KEY)
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+  return sgMail
 }
 
 const FROM = 'Ride MTB <notifications@ride-mtb.com>'
@@ -48,13 +49,13 @@ export async function sendReplyNotification({
   emailNotifications,
 }: ReplyNotificationInput): Promise<void> {
   if (!emailNotifications) return
-  const resend = getResend()
-  if (!resend) return
+  const sg = getSendGrid()
+  if (!sg) return
 
   const threadUrl = `${BASE_URL}/forum/thread/${threadSlug}`
   const greeting = toName ? `Hi ${escapeHtml(toName)},` : 'Hi,'
 
-  await resend.emails.send({
+  await sg.send({
     from: FROM,
     to: toEmail,
     subject: `New reply in "${escapeHtml(threadTitle)}"`,
@@ -76,13 +77,13 @@ export async function sendMentionNotification({
   emailNotifications,
 }: MentionNotificationInput): Promise<void> {
   if (!emailNotifications) return
-  const resend = getResend()
-  if (!resend) return
+  const sg = getSendGrid()
+  if (!sg) return
 
   const threadUrl = `${BASE_URL}/forum/thread/${threadSlug}`
   const greeting = toName ? `Hi ${escapeHtml(toName)},` : 'Hi,'
 
-  await resend.emails.send({
+  await sg.send({
     from: FROM,
     to: toEmail,
     subject: `${escapeHtml(mentionerName)} mentioned you on Ride MTB`,
