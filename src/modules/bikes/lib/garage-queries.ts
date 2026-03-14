@@ -171,7 +171,21 @@ export async function createServiceLog(input: CreateServiceLogInput) {
   })
 }
 
-// ── 7. deleteServiceLog ───────────────────────────────────────
+// ── 7. getBikeWithDetails ─────────────────────────────────────
+
+export async function getBikeWithDetails(bikeId: string, userId: string) {
+  return db.userBike.findFirst({
+    where: { id: bikeId, userId },
+    include: {
+      components: { where: { isActive: true }, orderBy: { category: 'asc' } },
+      buildLog: { orderBy: { entryDate: 'desc' } },
+      maintenanceTasks: { orderBy: { isDue: 'desc' } },
+      serviceLogs: { orderBy: { serviceDate: 'desc' }, take: 5 },
+    },
+  })
+}
+
+// ── 8. deleteServiceLog ───────────────────────────────────────
 
 export async function deleteServiceLog(logId: string, userId: string) {
   const log = await db.bikeServiceLog.findUnique({

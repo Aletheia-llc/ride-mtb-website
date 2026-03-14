@@ -60,10 +60,12 @@ export function BikeCard({ bike }: BikeCardProps) {
           {bike.frameSize && (
             <span>Size {bike.frameSize}</span>
           )}
-          <span>
-            {bike._count.serviceLogs}{' '}
-            {bike._count.serviceLogs === 1 ? 'service entry' : 'service entries'}
-          </span>
+          {bike._count != null && (
+            <span>
+              {bike._count.serviceLogs}{' '}
+              {bike._count.serviceLogs === 1 ? 'service entry' : 'service entries'}
+            </span>
+          )}
         </div>
       </Card>
     </Link>

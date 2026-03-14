@@ -22,9 +22,13 @@ export interface UserBikeData {
   imageUrl: string | null
   isPrimary: boolean
   notes: string | null
+  frameMaterial?: string | null
+  travel?: number | null
+  purchaseYear?: number | null
+  purchasePrice?: number | null
   createdAt: Date
   updatedAt: Date
-  _count: {
+  _count?: {
     serviceLogs: number
   }
 }
