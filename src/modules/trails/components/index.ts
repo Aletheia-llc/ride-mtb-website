@@ -4,6 +4,9 @@ export { TrailList } from './TrailList'
 export { TrailDetailView } from './TrailDetail'
 export { FavoriteButton } from './FavoriteButton'
 export { TrailReviewForm } from './TrailReviewForm'
+export { ConditionBadge } from './ConditionBadge'
+export { ConditionReportForm } from './ConditionReportForm'
+export { TrailCompareView } from './TrailCompareView'
 
 // TrailMap and TrailMapEmbed are client-only components that import
 // mapbox-gl CSS. Consumers must use next/dynamic with { ssr: false }:

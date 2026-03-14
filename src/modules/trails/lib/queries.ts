@@ -279,7 +279,27 @@ export async function isTrailFavorited(
   return favorite !== null
 }
 
-// ── 10. getTrailSystemsInBounds ───────────────────────────────
+// ── 10. getRegions ────────────────────────────────────────────
+
+export async function getRegions() {
+  return db.trailRegion.findMany({
+    include: { _count: { select: { systems: true } } },
+    orderBy: { name: 'asc' },
+  })
+}
+
+// ── 11. getRecentConditionReports ─────────────────────────────
+
+export async function getRecentConditionReports(trailId: string, limit = 5) {
+  return db.conditionReport.findMany({
+    where: { trailId },
+    include: { user: { select: { name: true } } },
+    orderBy: { reportedAt: 'desc' },
+    take: limit,
+  })
+}
+
+// ── 12. getTrailSystemsInBounds ───────────────────────────────
 
 export async function getTrailSystemsInBounds(
   neLat: number,

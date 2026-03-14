@@ -62,9 +62,10 @@ model User {
   learnProgress      LearnProgress[]
   learnCerts         LearnCertificate[]
   learnChatMessages  LearnChatMessage[]
-  trailReviews    TrailReview[]
-  trailFavorites  TrailFavorite[]
-  rideLogs        RideLog[]
+  trailReviews      TrailReview[]
+  trailFavorites    TrailFavorite[]
+  rideLogs          RideLog[]
+  conditionReports  ConditionReport[]
   notifications   Notification[]
   events          Event[]
   eventRsvps      EventRsvp[]
@@ -502,7 +503,11 @@ model TrailSystem {
   trailCount    Int              @default(0)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+  regionId      String?
   trails        Trail[]
+  region        TrailRegion? @relation(fields: [regionId], references: [id])
+  pois          PointOfInterest[]
+  rideLogs      RideLog[]
   creatorVideos   CreatorVideo[]
 
   @@index([city, state])
@@ -528,10 +533,15 @@ model Trail {
   condition         TrailCondition?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+  currentCondition      ConditionType?
+  conditionReportedAt   DateTime?
   system            TrailSystem   @relation(fields: [trailSystemId], references: [id])
   gpsTrack          TrailGpsTrack?
   reviews           TrailReview[]
   favorites         TrailFavorite[]
+  conditionReports  ConditionReport[]
+  pois              PointOfInterest[]
+  rideLogs          RideLog[]
 
   @@index([trailSystemId, status])
   @@index([trailType])
@@ -589,17 +599,66 @@ model TrailFavorite {
 }
 
 model RideLog {
-  id        String    @id @default(cuid())
-  userId    String
-  trailId   String?
-  date      DateTime
-  duration  Int?
-  notes     String?   @db.Text
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id])
+  id              String    @id @default(cuid())
+  userId          String
+  trailId         String?
+  trailSystemId   String?
+  date            DateTime
+  duration        Int?
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id])
+  trail           Trail?       @relation(fields: [trailId], references: [id])
+  trailSystem     TrailSystem? @relation(fields: [trailSystemId], references: [id])
 
   @@index([userId, date])
   @@map("ride_logs")
+}
+
+model ConditionReport {
+  id          String        @id @default(cuid())
+  trailId     String
+  userId      String
+  condition   ConditionType
+  notes       String?       @db.VarChar(500)
+  reportedAt  DateTime      @default(now())
+  trail       Trail         @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id])
+
+  @@index([trailId, reportedAt])
+  @@map("condition_reports")
+}
+
+model PointOfInterest {
+  id              String   @id @default(cuid())
+  trailId         String?
+  trailSystemId   String?
+  type            PoiType
+  name            String
+  description     String?
+  lat             Float
+  lng             Float
+  distanceAlongMi Float?
+  createdAt       DateTime @default(now())
+  trail           Trail?       @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  trailSystem     TrailSystem? @relation(fields: [trailSystemId], references: [id], onDelete: Cascade)
+
+  @@map("points_of_interest")
+}
+
+model TrailRegion {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  state       String?
+  country     String        @default("US")
+  lat         Float?
+  lng         Float?
+  systems     TrailSystem[]
+  createdAt   DateTime      @default(now())
+
+  @@map("trail_regions")
 }
 
 // ============================================================
@@ -995,6 +1054,30 @@ enum TrailCondition {
   flooded
   fallen_trees
   construction
+}
+
+enum ConditionType {
+  DRY
+  TACKY
+  HERO_DIRT
+  DUSTY
+  MUDDY
+  WET
+  SOFT
+  SNOWY
+  ICY
+  CLOSED
+}
+
+enum PoiType {
+  TRAILHEAD
+  PARKING
+  WATER
+  RESTROOM
+  VIEWPOINT
+  FEATURE
+  HAZARD
+  SHUTTLE_STOP
 }
 
 enum EventType {
