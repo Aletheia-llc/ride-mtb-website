@@ -2,10 +2,12 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { TrailDetailView, TrailReviewForm, TrailMapDynamic as TrailMap, ElevationProfileDynamic as ElevationProfile } from '@/modules/trails'
+import { ConditionBadge } from '@/modules/trails/components/ConditionBadge'
+import { ConditionReportForm } from '@/modules/trails/components/ConditionReportForm'
 import { Card } from '@/ui/components'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
-import { getTrailBySlug, isTrailFavorited } from '@/modules/trails/lib/queries'
+import { getTrailBySlug, isTrailFavorited, getRecentConditionReports } from '@/modules/trails/lib/queries'
 
 interface Props {
   params: Promise<{ systemSlug: string; trailSlug: string }>
@@ -40,9 +42,10 @@ export default async function TrailDetailPage({ params }: Props) {
   }
 
   const currentUserId = session?.user?.id ?? null
-  const favorited = currentUserId
-    ? await isTrailFavorited(trail.id, currentUserId)
-    : false
+  const [favorited, conditionReports] = await Promise.all([
+    currentUserId ? isTrailFavorited(trail.id, currentUserId) : Promise.resolve(false),
+    getRecentConditionReports(trail.id),
+  ])
 
   // Prepare map data if GPS track exists
   const hasGpsData = !!trail.gpsTrack?.simplifiedTrack
@@ -111,6 +114,54 @@ export default async function TrailDetailPage({ params }: Props) {
           </Card>
         )}
       </TrailDetailView>
+
+      {/* Conditions section */}
+      <section className="mt-8">
+        <h2 className="mb-4 text-xl font-bold text-[var(--color-text)]">Trail Conditions</h2>
+        <Card className="space-y-4">
+          {/* Current condition badge */}
+          {(trail as unknown as { currentCondition?: string | null; conditionReportedAt?: Date | null }).currentCondition && (
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Current Condition</p>
+              <ConditionBadge
+                condition={(trail as unknown as { currentCondition: string }).currentCondition}
+                reportedAt={(trail as unknown as { conditionReportedAt?: Date | null }).conditionReportedAt}
+              />
+            </div>
+          )}
+
+          {/* Recent reports */}
+          {conditionReports.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Recent Reports</p>
+              <ul className="space-y-1">
+                {conditionReports.map(r => (
+                  <li key={r.id} className="flex items-center gap-3 text-sm">
+                    <ConditionBadge condition={r.condition} />
+                    <span className="text-[var(--color-text-muted)]">
+                      {r.user.name ?? 'Rider'} · {new Date(r.reportedAt).toLocaleDateString()}
+                    </span>
+                    {r.notes && <span className="truncate text-[var(--color-text)]">{r.notes}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Report form */}
+          {currentUserId && (
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Report Conditions</p>
+              <ConditionReportForm trailId={trail.id} />
+            </div>
+          )}
+          {!currentUserId && (
+            <p className="text-sm text-[var(--color-text-muted)]">
+              <a href="/auth/signin" className="text-[var(--color-primary)] hover:underline">Sign in</a> to report trail conditions.
+            </p>
+          )}
+        </Card>
+      </section>
 
       {/* Reviews section */}
       <section className="mt-10">
