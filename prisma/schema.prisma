@@ -1399,8 +1399,8 @@ model AdImpression {
   status        ImpressionStatus @default(pending)
   earningsCents Int              @default(0)
   createdAt     DateTime         @default(now())
-  campaign      AdCampaign       @relation(fields: [campaignId], references: [id])
-  video         CreatorVideo     @relation(fields: [videoId], references: [id])
+  campaign      AdCampaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  video         CreatorVideo     @relation(fields: [videoId], references: [id], onDelete: Cascade)
   transactions  WalletTransaction[]
 
   @@index([campaignId, status])
