@@ -25,7 +25,7 @@ onboardingStep        Int       @default(1)   // step to resume at (1–5); 6 = 
 onboardingCompletedAt DateTime?               // null = not finished
 ```
 
-Also add both fields to the session type in `src/lib/auth/types.ts` and populate them in the session callback in `src/lib/auth/config.ts` (same pattern as `role` and `bannedAt`).
+Also add both fields to all three declaration blocks in `src/lib/auth/types.ts` — `Session.user`, `User`, and `AdapterUser` — and populate them in the session callback in `src/lib/auth/config.ts` (same pattern as `role` and `bannedAt`).
 
 ---
 
@@ -37,7 +37,15 @@ Also add both fields to the session type in `src/lib/auth/types.ts` and populate
 | `/onboarding/[step]` | Renders step 1–5; server component validates step matches user's current step |
 | `/onboarding/complete` | Personalized welcome card; guards against direct access before completion |
 
-**Dashboard redirect:** The authenticated root layout (or dashboard layout) checks `session.user.onboardingCompletedAt`. If null, redirects to `/onboarding`. The `/onboarding/*` routes are excluded from this check.
+**Onboarding redirect:**
+
+The `/dashboard/page.tsx` guard is the sole enforcement point. After sign-in, NextAuth redirects to `callbackUrl` (default: `/dashboard`). The dashboard guard checks `session.user.onboardingCompletedAt` — if null, it redirects to `/onboarding`. This catches both new users arriving from OAuth and returning users who navigate directly to `/dashboard`.
+
+Note: Neither the `redirect` callback (receives only `{ url, baseUrl }`, no user) nor the `signIn` callback (receives OAuth profile payload, not DB-hydrated user — PrismaAdapter does not hydrate custom fields like `onboardingCompletedAt` in `signIn`) can reliably check this field. The `session` callback is the correct place to surface DB fields onto the session object, and the dashboard guard reads from there.
+
+All `/onboarding/*` routes call `requireAuth()` and redirect to `/signin` if unauthenticated.
+
+Users who navigate directly to `/forum`, `/learn`, etc. before completing onboarding are **not** blocked — they can explore the platform freely. The wizard is opt-out, not a hard gate.
 
 ---
 
@@ -108,8 +116,12 @@ After step 5, the client calls `completeOnboarding()` which sets `onboardingComp
 `recommendations.ts` takes the user's saved profile and returns three suggestions:
 
 **Course (`LearnCourse`):**
-- Query `LearnCourse` where the course is appropriate for the user's `skillLevel` and `ridingStyle`
-- Fallback: most popular/first available course if no match
+- Query `LearnCourse` matching the user's `skillLevel` mapped to `difficulty`. `LearnCourse` has no `ridingStyle` field — skill level is the only filter. Explicit mapping (all four `SkillLevel` values):
+  - `beginner → beginner`
+  - `intermediate → intermediate`
+  - `advanced → advanced`
+  - `expert → advanced`
+- Fallback: first available course ordered by `createdAt` if no match
 
 **Community (`ForumCategory`):**
 - Map the first item in `interests[]` to a `ForumCategory` slug (e.g., `"Forum"` → `"general-discussion"`, `"Trails"` → `"trails"`)
@@ -117,7 +129,7 @@ After step 5, the client calls `completeOnboarding()` which sets `onboardingComp
 
 **Trail (`TrailSystem`):**
 - If `location` is set: query nearest `TrailSystem` by city/state string match
-- Fallback: first featured `TrailSystem` ordered by trail count
+- Fallback: first `TrailSystem` ordered by `trailCount DESC` (`TrailSystem` has no `featured` field)
 
 The welcome card displays all three with a CTA each, plus a "Go to dashboard" button.
 
@@ -125,13 +137,13 @@ The welcome card displays all three with a CTA each, plus a "Go to dashboard" bu
 
 ## Auth Integration
 
-`src/lib/auth/config.ts` session callback additions:
+`src/lib/auth/config.ts` — `session` callback additions (same pattern as `role` and `bannedAt`):
 ```typescript
 session.user.onboardingCompletedAt = user.onboardingCompletedAt ?? null
 session.user.onboardingStep = user.onboardingStep ?? 1
 ```
 
-`src/lib/auth/types.ts` additions to `Session.user`:
+`src/lib/auth/types.ts` — add to all three declaration blocks (`Session.user`, `User`, `AdapterUser`):
 ```typescript
 onboardingCompletedAt?: Date | null
 onboardingStep?: number
