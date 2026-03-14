@@ -1456,7 +1456,6 @@ model InviteToken {
   used             Boolean  @default(false)
   createdAt        DateTime @default(now())
 
-  @@index([tokenHash])
   @@map("invite_tokens")
 }
 

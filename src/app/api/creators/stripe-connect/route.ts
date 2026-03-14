@@ -33,7 +33,7 @@ export async function GET() {
     const returnUrl = `${baseUrl}/creators/onboarding/complete`
     const refreshUrl = `${baseUrl}/api/creators/stripe-connect`
     const onboardingUrl = await createStripeOnboardingLink(stripeAccountId, returnUrl, refreshUrl)
-    return NextResponse.redirect(onboardingUrl)
+    return NextResponse.redirect(new URL(onboardingUrl))
   } catch (err) {
     console.error('Stripe Connect error:', err)
     return NextResponse.redirect(`${baseUrl}/creators/onboarding/stripe?error=stripe_unavailable`)

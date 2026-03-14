@@ -53,7 +53,7 @@ export default async function CreatorOnboardingPage({ searchParams }: Props) {
   // Mark token used + create creator profile atomically
   await db.$transaction([
     db.inviteToken.update({
-      where: { id: inviteRecord.id },
+      where: { id: inviteRecord.id, used: false },
       data: { used: true, claimedByUserId: user.id },
     }),
     db.creatorProfile.create({
