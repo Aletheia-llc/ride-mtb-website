@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { AdminCreatorPanel } from '@/modules/creators/components/AdminCreatorPanel'
+import { AdminCreatorPanel } from '@/modules/creators'
 
 export const metadata: Metadata = {
   title: 'Creator Management | Admin | Ride MTB',
