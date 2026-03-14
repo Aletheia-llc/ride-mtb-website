@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/guards'
 import { BookOpen, MessageSquare, Map, Bike, Flame, Trophy, Plus, ArrowRight } from 'lucide-react'
 import { Card } from '@/ui/components'
@@ -22,6 +22,10 @@ const QUICK_ACTIONS = [
 
 export default async function DashboardPage() {
   const sessionUser = await requireAuth()
+
+  if (!sessionUser.onboardingCompletedAt) {
+    redirect('/onboarding')
+  }
 
   const [profile, activities] = await Promise.all([
     getUserProfile(sessionUser.id),
