@@ -1,0 +1,14 @@
+{"type":"server-started","port":52623,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:52623","screen_dir":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005"}
+{"type":"screen-added","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/homepage-approach.html"}
+{"type":"screen-updated","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/homepage-approach.html"}
+{"type":"screen-added","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/feed-layout.html"}
+{"type":"screen-updated","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/feed-layout.html"}
+{"type":"screen-added","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/feed-content-types.html"}
+{"type":"screen-updated","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/feed-content-types.html"}
+{"type":"screen-added","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/pinkbike-style.html"}
+{"type":"screen-updated","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/pinkbike-style.html"}
+{"type":"screen-added","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/logged-out-state.html"}
+{"type":"screen-updated","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/logged-out-state.html"}
+{"source":"user-event","type":"click","text":"B\n    \n      Marketing hero above the feed\n      Full-width hero section at the top (\"The MTB platform built for riders — Learn, Ride, Connect\") with a Join CTA. Below it, the same 3-column layout with popular content. The hero collapses once logged in.\n      Best for: conversion, first impressions, brand impact","choice":"marketing-hero","id":null,"timestamp":1773272982655}
+{"type":"screen-added","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/waiting-1.html"}
+{"type":"screen-updated","file":"/Users/kylewarner/Documents/ride-mtb/.superpowers/brainstorm/25995-1773267005/waiting-1.html"}

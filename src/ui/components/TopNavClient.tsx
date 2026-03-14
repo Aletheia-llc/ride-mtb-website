@@ -157,7 +157,7 @@ export function TopNavClient({ session }: TopNavClientProps) {
               </>
             ) : (
               <Link
-                href="/auth/signin"
+                href="/signin"
                 className="flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium text-white transition-colors"
                 style={{ background: 'var(--color-primary)' }}
               >

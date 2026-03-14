@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default async function ForumBookmarksPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/auth/signin?callbackUrl=/forum/bookmarks')
+  if (!session?.user?.id) redirect('/signin?callbackUrl=/forum/bookmarks')
 
   const threads = await getBookmarkedThreads(session.user.id)
 

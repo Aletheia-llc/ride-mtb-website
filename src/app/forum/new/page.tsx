@@ -10,7 +10,7 @@ export const metadata = {
 
 export default async function NewForumThreadPage() {
   const session = await auth()
-  if (!session?.user) redirect('/auth/signin?callbackUrl=/forum/new')
+  if (!session?.user) redirect('/signin?callbackUrl=/forum/new')
 
   const categories = await db.forumCategory.findMany({
     orderBy: { sortOrder: 'asc' },

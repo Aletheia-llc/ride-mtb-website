@@ -58,7 +58,7 @@ function JoinCard() {
       <p className="font-semibold text-sm mb-1">Join Ride MTB</p>
       <p className="text-xs text-[var(--color-text-muted)] mb-3">Learn, ride, connect.</p>
       <Link
-        href="/auth/signup"
+        href="/signin"
         className="block text-center py-2 rounded text-sm font-semibold text-white"
         style={{ background: 'var(--color-primary)' }}
       >

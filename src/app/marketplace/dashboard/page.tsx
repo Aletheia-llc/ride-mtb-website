@@ -11,7 +11,7 @@ export const metadata = { title: 'My Listings | Marketplace | Ride MTB' }
 
 export default async function MarketplaceDashboardPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/auth/signin')
+  if (!session?.user?.id) redirect('/signin')
 
   const listings = await getSellerListings(session.user.id)
 

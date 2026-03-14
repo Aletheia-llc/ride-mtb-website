@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { DM_Sans } from 'next/font/google'
-import { PostHogProvider } from '@/lib/analytics/PostHogProvider'
+import { Providers } from './Providers'
 import './globals.css'
 
 const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans' })
@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={dmSans.variable}>
       <body>
-        <PostHogProvider>{children}</PostHogProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

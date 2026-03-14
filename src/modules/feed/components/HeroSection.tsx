@@ -20,13 +20,13 @@ export function HeroSection() {
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Link
-            href="/auth/signup"
+            href="/signin"
             className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-6 py-3 font-medium text-white transition-all hover:-translate-y-px hover:bg-[var(--color-primary-dark)] hover:shadow-[0_4px_20px_rgba(45,106,79,0.3)]"
           >
             Join Free
           </Link>
           <Link
-            href="/auth/signin"
+            href="/signin"
             className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-6 py-3 font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-border)]"
           >
             Sign In
