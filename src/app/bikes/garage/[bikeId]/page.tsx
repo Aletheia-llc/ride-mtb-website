@@ -4,9 +4,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Card, Badge } from '@/ui/components'
 import { BikeForm, ServiceLogList, DeleteBikeButton } from '@/modules/bikes'
+import { ComponentTable } from '@/modules/bikes/components/ComponentTable'
+import { BuildLogTimeline } from '@/modules/bikes/components/BuildLogTimeline'
+import { MaintenanceList } from '@/modules/bikes/components/MaintenanceList'
+import { BikeTabs } from '@/modules/bikes/components/garage/BikeTabs'
 import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
-import { getUserBikeById } from '@/modules/bikes/lib/garage-queries'
+import { getBikeWithDetails } from '@/modules/bikes/lib/garage-queries'
 import type { BikeCategory } from '@/modules/bikes'
 
 const categoryBadgeVariant: Record<BikeCategory, 'default' | 'success' | 'info' | 'warning' | 'error'> = {
@@ -33,12 +37,13 @@ const categoryLabel: Record<BikeCategory, string> = {
 
 interface Props {
   params: Promise<{ bikeId: string }>
+  searchParams: Promise<{ tab?: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { bikeId } = await params
   const user = await requireAuth()
-  const bike = await getUserBikeById(bikeId, user.id)
+  const bike = await getBikeWithDetails(bikeId, user.id)
 
   if (!bike) {
     return { title: 'Bike Not Found | Ride MTB' }
@@ -50,10 +55,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function BikeDetailPage({ params }: Props) {
+export default async function BikeDetailPage({ params, searchParams }: Props) {
   const { bikeId } = await params
+  const { tab = 'overview' } = await searchParams
   const user = await requireAuth()
-  const bike = await getUserBikeById(bikeId, user.id)
+  const bike = await getBikeWithDetails(bikeId, user.id)
 
   if (!bike) {
     notFound()
@@ -106,78 +112,115 @@ export default async function BikeDetailPage({ params }: Props) {
         </Card>
       )}
 
-      {/* Bike details */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {bike.wheelSize && (
-          <Card>
-            <p className="text-xs text-[var(--color-text-muted)]">Wheel Size</p>
-            <p className="mt-1 font-medium text-[var(--color-text)]">{bike.wheelSize}</p>
-          </Card>
+      {/* Tabs */}
+      <BikeTabs bikeId={bike.id} activeTab={tab} />
+
+      {/* Tab content */}
+      <div className="mt-6">
+        {tab === 'overview' && (
+          <>
+            {/* Bike details */}
+            <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {bike.wheelSize && (
+                <Card>
+                  <p className="text-xs text-[var(--color-text-muted)]">Wheel Size</p>
+                  <p className="mt-1 font-medium text-[var(--color-text)]">{bike.wheelSize}</p>
+                </Card>
+              )}
+              {bike.frameSize && (
+                <Card>
+                  <p className="text-xs text-[var(--color-text-muted)]">Frame Size</p>
+                  <p className="mt-1 font-medium text-[var(--color-text)]">{bike.frameSize}</p>
+                </Card>
+              )}
+              {bike.weight != null && (
+                <Card>
+                  <p className="text-xs text-[var(--color-text-muted)]">Weight</p>
+                  <p className="mt-1 font-medium text-[var(--color-text)]">{bike.weight} lbs</p>
+                </Card>
+              )}
+              {bike.travel != null && (
+                <Card>
+                  <p className="text-xs text-[var(--color-text-muted)]">Travel</p>
+                  <p className="mt-1 font-medium text-[var(--color-text)]">{bike.travel}mm</p>
+                </Card>
+              )}
+              <Card>
+                <p className="text-xs text-[var(--color-text-muted)]">Service Entries</p>
+                <p className="mt-1 font-medium text-[var(--color-text)]">{bike.serviceLogs.length}</p>
+              </Card>
+            </div>
+
+            {/* Notes */}
+            {bike.notes && (
+              <div className="mb-8">
+                <h2 className="mb-2 text-lg font-semibold text-[var(--color-text)]">Notes</h2>
+                <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{bike.notes}</p>
+              </div>
+            )}
+
+            {/* Recent service history */}
+            <section className="mb-8">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h2 className="text-xl font-bold text-[var(--color-text)]">
+                  Recent Service
+                </h2>
+                <Link
+                  href={`/bikes/garage/${bike.id}/service/new`}
+                  className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-dark)]"
+                >
+                  Log Service
+                </Link>
+              </div>
+              <ServiceLogList logs={bike.serviceLogs} bikeId={bike.id} />
+            </section>
+
+            {/* Edit form */}
+            <section className="mb-8">
+              <h2 className="mb-4 text-xl font-bold text-[var(--color-text)]">
+                Edit Bike
+              </h2>
+              <Card>
+                <BikeForm bike={bike} />
+              </Card>
+            </section>
+
+            {/* Danger zone */}
+            <section>
+              <h2 className="mb-4 text-xl font-bold text-red-600">
+                Danger Zone
+              </h2>
+              <Card className="border-red-200">
+                <p className="mb-3 text-sm text-[var(--color-text-muted)]">
+                  Permanently delete this bike and all its service history. This action cannot be undone.
+                </p>
+                <DeleteBikeButton bikeId={bike.id} />
+              </Card>
+            </section>
+          </>
         )}
-        {bike.frameSize && (
-          <Card>
-            <p className="text-xs text-[var(--color-text-muted)]">Frame Size</p>
-            <p className="mt-1 font-medium text-[var(--color-text)]">{bike.frameSize}</p>
-          </Card>
+
+        {tab === 'components' && (
+          <section>
+            <h2 className="mb-4 text-xl font-bold text-[var(--color-text)]">Components</h2>
+            <ComponentTable bikeId={bike.id} components={bike.components} />
+          </section>
         )}
-        {bike.weight != null && (
-          <Card>
-            <p className="text-xs text-[var(--color-text-muted)]">Weight</p>
-            <p className="mt-1 font-medium text-[var(--color-text)]">{bike.weight} lbs</p>
-          </Card>
+
+        {tab === 'build-log' && (
+          <section>
+            <h2 className="mb-4 text-xl font-bold text-[var(--color-text)]">Build Log</h2>
+            <BuildLogTimeline bikeId={bike.id} entries={bike.buildLog} />
+          </section>
         )}
-        <Card>
-          <p className="text-xs text-[var(--color-text-muted)]">Service Entries</p>
-          <p className="mt-1 font-medium text-[var(--color-text)]">{bike._count.serviceLogs}</p>
-        </Card>
+
+        {tab === 'maintenance' && (
+          <section>
+            <h2 className="mb-4 text-xl font-bold text-[var(--color-text)]">Maintenance</h2>
+            <MaintenanceList tasks={bike.maintenanceTasks} />
+          </section>
+        )}
       </div>
-
-      {/* Notes */}
-      {bike.notes && (
-        <div className="mb-8">
-          <h2 className="mb-2 text-lg font-semibold text-[var(--color-text)]">Notes</h2>
-          <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{bike.notes}</p>
-        </div>
-      )}
-
-      {/* Service History */}
-      <section className="mb-8">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-xl font-bold text-[var(--color-text)]">
-            Service History
-          </h2>
-          <Link
-            href={`/bikes/garage/${bike.id}/service/new`}
-            className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-dark)]"
-          >
-            Log Service
-          </Link>
-        </div>
-        <ServiceLogList logs={bike.serviceLogs} bikeId={bike.id} />
-      </section>
-
-      {/* Edit form */}
-      <section className="mb-8">
-        <h2 className="mb-4 text-xl font-bold text-[var(--color-text)]">
-          Edit Bike
-        </h2>
-        <Card>
-          <BikeForm bike={bike} />
-        </Card>
-      </section>
-
-      {/* Danger zone */}
-      <section>
-        <h2 className="mb-4 text-xl font-bold text-red-600">
-          Danger Zone
-        </h2>
-        <Card className="border-red-200">
-          <p className="mb-3 text-sm text-[var(--color-text-muted)]">
-            Permanently delete this bike and all its service history. This action cannot be undone.
-          </p>
-          <DeleteBikeButton bikeId={bike.id} />
-        </Card>
-      </section>
     </div>
   )
 }
