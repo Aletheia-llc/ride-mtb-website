@@ -20,3 +20,15 @@ export async function getCreatorByUserId(userId: string) {
     },
   })
 }
+
+export async function getCreatorVideos(creatorProfileId: string) {
+  return db.creatorVideo.findMany({
+    where: { creatorId: creatorProfileId },
+    include: {
+      tags: true,
+      _count: { select: { impressions: { where: { status: 'confirmed' } } } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
+}
