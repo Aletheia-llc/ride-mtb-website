@@ -3,6 +3,33 @@ import { db } from '@/lib/db/client'
 import { paginate } from '@/lib/db/helpers'
 import type { ShopSummary, ShopDetailData } from '../types'
 
+// ── getShopReviews ─────────────────────────────────────────
+
+export async function getShopReviews(shopId: string) {
+  return db.shopReview.findMany({
+    where: { shopId },
+    include: { user: { select: { name: true } } },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  })
+}
+
+// ── getShopWithDetails ─────────────────────────────────────
+
+export async function getShopWithDetails(slug: string) {
+  return db.shop.findUnique({
+    where: { slug },
+    include: {
+      photos: { orderBy: { sortOrder: 'asc' } },
+      reviews: {
+        include: { user: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      },
+    },
+  })
+}
+
 // ── getShops ──────────────────────────────────────────────
 
 interface ShopFilters {
@@ -96,6 +123,12 @@ export async function getShopBySlug(slug: string): Promise<ShopDetailData | null
     imageUrl: shop.imageUrl,
     services: Array.isArray(shop.services) ? (shop.services as string[]) : [],
     brands: Array.isArray(shop.brands) ? (shop.brands as string[]) : [],
+    hoursJson: shop.hoursJson ?? undefined,
+    avgOverallRating: shop.avgOverallRating,
+    avgServiceRating: shop.avgServiceRating,
+    avgPricingRating: shop.avgPricingRating,
+    avgSelectionRating: shop.avgSelectionRating,
+    reviewCount: shop.reviewCount,
     createdAt: shop.createdAt,
     updatedAt: shop.updatedAt,
   }

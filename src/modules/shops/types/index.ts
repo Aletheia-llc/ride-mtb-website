@@ -29,6 +29,12 @@ export interface ShopDetailData {
   imageUrl: string | null
   services: string[]
   brands: string[]
+  hoursJson?: unknown
+  avgOverallRating?: number | null
+  avgServiceRating?: number | null
+  avgPricingRating?: number | null
+  avgSelectionRating?: number | null
+  reviewCount?: number
   createdAt: Date
   updatedAt: Date
 }

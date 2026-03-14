@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { ShopDetail } from '@/modules/shops'
 // eslint-disable-next-line no-restricted-imports
-import { getShopBySlug } from '@/modules/shops/lib/queries'
+import { getShopBySlug, getShopReviews } from '@/modules/shops/lib/queries'
 
 interface ShopPageProps {
   params: Promise<{ slug: string }>
@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: ShopPageProps): Promise<Metad
 export default async function ShopPage({ params }: ShopPageProps) {
   const { slug } = await params
   const shop = await getShopBySlug(slug)
+  const reviews = shop ? await getShopReviews(shop.id) : []
 
   if (!shop) {
     notFound()
@@ -44,7 +45,7 @@ export default async function ShopPage({ params }: ShopPageProps) {
       </Link>
 
       {/* Shop detail */}
-      <ShopDetail shop={shop} />
+      <ShopDetail shop={shop} reviews={reviews} />
     </div>
   )
 }
