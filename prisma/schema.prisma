@@ -73,6 +73,16 @@ model User {
   mediaItems      MediaItem[]
   listings         Listing[]
   listingFavorites ListingFavorite[]
+  sellerProfile    SellerProfile?
+  offers           Offer[]                 @relation("OfferBuyer")
+  buyerConversations   ListingConversation[] @relation("ConvBuyer")
+  sellerConversations  ListingConversation[] @relation("ConvSeller")
+  listingMessages  ListingMessage[]        @relation("ListingMsgSender")
+  sellerReviews    SellerReview[]          @relation("SellerReviewer")
+  buyerTransactions    Transaction[]       @relation("TxBuyer")
+  sellerTransactions   Transaction[]       @relation("TxSeller")
+  listingSaves     ListingSave[]
+  listingReports   ListingReport[]
   shops           Shop[]
   coachProfile    CoachProfile?
   creatorProfile  CreatorProfile?
@@ -754,10 +764,21 @@ model Listing {
   location    String?
   imageUrls   Json          @default("[]")
   status      ListingStatus @default(active)
+  brand       String?
+  modelName   String?
+  year        Int?
+  acceptsOffers    Boolean  @default(true)
+  minOfferPercent  Int?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   seller      User          @relation(fields: [sellerId], references: [id])
   favorites   ListingFavorite[]
+  photos      ListingPhoto[]
+  offers      Offer[]
+  transaction Transaction?
+  saves       ListingSave[]
+  reports     ListingReport[]
+  conversations ListingConversation[] @relation("ConvListing")
 
   @@index([category, status])
   @@index([sellerId])
@@ -778,6 +799,184 @@ model ListingFavorite {
   @@index([userId, createdAt])
   @@index([listingId])
   @@map("listing_favorites")
+}
+
+enum OfferStatus {
+  pending
+  accepted
+  declined
+  countered
+  withdrawn
+  expired
+}
+
+enum TransactionStatus {
+  pending_payment
+  paid
+  shipped
+  delivered
+  completed
+  disputed
+  refunded
+  cancelled
+}
+
+model ListingPhoto {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  url       String
+  sortOrder Int      @default(0)
+  isCover   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("listing_photos")
+}
+
+model Offer {
+  id            String      @id @default(cuid())
+  listingId     String
+  listing       Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId       String
+  buyer         User        @relation("OfferBuyer", fields: [buyerId], references: [id])
+  amount        Float
+  message       String?
+  status        OfferStatus @default(pending)
+  parentOfferId String?
+  parentOffer   Offer?      @relation("CounterOffers", fields: [parentOfferId], references: [id])
+  counterOffers Offer[]     @relation("CounterOffers")
+  expiresAt     DateTime
+  respondedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([listingId, status])
+  @@index([buyerId])
+  @@map("offers")
+}
+
+model ListingConversation {
+  id            String         @id @default(cuid())
+  listingId     String
+  listing       Listing        @relation("ConvListing", fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId       String
+  buyer         User           @relation("ConvBuyer", fields: [buyerId], references: [id])
+  sellerId      String
+  seller        User           @relation("ConvSeller", fields: [sellerId], references: [id])
+  messages      ListingMessage[]
+  lastMessageAt DateTime?
+  buyerUnread   Int            @default(0)
+  sellerUnread  Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([listingId, buyerId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@map("listing_conversations")
+}
+
+model ListingMessage {
+  id             String              @id @default(cuid())
+  conversationId String
+  conversation   ListingConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User                @relation("ListingMsgSender", fields: [senderId], references: [id])
+  body           String              @db.Text
+  isSystemMessage Boolean            @default(false)
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("listing_messages")
+}
+
+model Transaction {
+  id                    String            @id @default(cuid())
+  listingId             String            @unique
+  listing               Listing           @relation(fields: [listingId], references: [id])
+  buyerId               String
+  buyer                 User              @relation("TxBuyer", fields: [buyerId], references: [id])
+  sellerId              String
+  seller                User              @relation("TxSeller", fields: [sellerId], references: [id])
+  salePrice             Float
+  shippingCost          Float             @default(0)
+  platformFee           Float             @default(0)
+  sellerPayout          Float             @default(0)
+  totalCharged          Float
+  stripePaymentIntentId String?
+  stripeTransferId      String?
+  trackingNumber        String?
+  trackingCarrier       String?
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
+  status                TransactionStatus @default(pending_payment)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@map("transactions")
+}
+
+model SellerProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  stripeAccountId String?
+  stripeOnboarded Boolean  @default(false)
+  isVerified      Boolean  @default(false)
+  totalSales      Int      @default(0)
+  totalRevenue    Float    @default(0)
+  averageRating   Float?
+  ratingCount     Int      @default(0)
+  isTrusted       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  reviews SellerReview[]
+
+  @@map("seller_profiles")
+}
+
+model SellerReview {
+  id          String        @id @default(cuid())
+  sellerId    String
+  seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  reviewerId  String
+  reviewer    User          @relation("SellerReviewer", fields: [reviewerId], references: [id])
+  listingId   String?
+  rating      Int
+  body        String?       @db.Text
+  createdAt   DateTime      @default(now())
+
+  @@unique([sellerId, reviewerId, listingId])
+  @@map("seller_reviews")
+}
+
+model ListingSave {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@map("listing_saves")
+}
+
+model ListingReport {
+  id         String   @id @default(cuid())
+  reporterId String
+  listingId  String
+  reason     String
+  body       String?  @db.Text
+  resolved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  reporter   User     @relation(fields: [reporterId], references: [id])
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_reports")
 }
 
 // ============================================================
