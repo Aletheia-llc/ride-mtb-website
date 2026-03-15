@@ -10,6 +10,7 @@ import { Card } from '@/ui/components'
 
 interface RiderFormProps {
   rider?: Rider
+  manufacturers: { id: string; name: string }[]
 }
 
 const DISCIPLINE_OPTIONS = [
@@ -18,7 +19,7 @@ const DISCIPLINE_OPTIONS = [
   { value: 'xc', label: 'XC' },
 ]
 
-export function RiderForm({ rider }: RiderFormProps) {
+export function RiderForm({ rider, manufacturers }: RiderFormProps) {
   const isNew = !rider
   const [state, formAction, pending] = useActionState<CreateRiderState | UpdateRiderState, FormData>(
     isNew ? createRider : updateRider,
@@ -192,6 +193,24 @@ export function RiderForm({ rider }: RiderFormProps) {
                 <p className="mt-1 text-xs text-red-600">{state.errors.photoUrl}</p>
               )}
             </div>
+          </div>
+
+          {/* Manufacturer */}
+          <div>
+            <label htmlFor="manufacturerId" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+              Manufacturer <span className="text-[var(--color-text-muted)] text-xs">(optional)</span>
+            </label>
+            <select
+              id="manufacturerId"
+              name="manufacturerId"
+              defaultValue={rider?.manufacturerId ?? ''}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+            >
+              <option value="">— None —</option>
+              {manufacturers.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Buttons */}

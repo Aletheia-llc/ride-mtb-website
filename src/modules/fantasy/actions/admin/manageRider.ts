@@ -42,6 +42,8 @@ export async function createRider(
   try {
     await requireAdmin()
 
+    const manufacturerId = (formData.get('manufacturerId') as string | null) || null
+
     const raw = {
       name: formData.get('name') as string,
       nationality: formData.get('nationality') as string,
@@ -73,6 +75,7 @@ export async function createRider(
         disciplines,
         uciId: uciId || undefined,
         photoUrl: photoUrl || undefined,
+        manufacturerId: manufacturerId ?? undefined,
       },
     })
 
@@ -95,6 +98,7 @@ export async function updateRider(
     await requireAdmin()
 
     const disciplinesRaw = formData.getAll('disciplines') as string[]
+    const manufacturerId = (formData.get('manufacturerId') as string | null) || null
 
     const raw = {
       id: formData.get('id') as string,
@@ -127,6 +131,7 @@ export async function updateRider(
     if (disciplines !== undefined) updateData.disciplines = disciplines
     if (uciId !== undefined) updateData.uciId = uciId
     if (photoUrl !== undefined) updateData.photoUrl = photoUrl || null
+    updateData.manufacturerId = manufacturerId
 
     await db.rider.update({ where: { id }, data: updateData })
 
