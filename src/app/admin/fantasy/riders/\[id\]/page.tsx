@@ -1,18 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createRider, updateRider } from '@/modules/fantasy/actions/admin/manageRider'
 import type { Discipline, Gender } from '@/generated/prisma/client'
 
 interface RiderFormPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
   searchParams: Record<string, string | string[] | undefined>
 }
 
 export default function RiderFormPage({ params }: RiderFormPageProps) {
   const router = useRouter()
-  const isNew = params.id === 'new'
+  const { id } = use(params)
+  const isNew = id === 'new'
 
   const [name, setName] = useState('')
   const [nationality, setNationality] = useState('')
@@ -41,7 +42,7 @@ export default function RiderFormPage({ params }: RiderFormPageProps) {
           uciId: uciId || undefined
         })
       } else {
-        await updateRider(params.id, {
+        await updateRider(id, {
           name,
           nationality,
           gender,

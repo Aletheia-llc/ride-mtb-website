@@ -8,11 +8,12 @@ export const metadata = {
   title: 'Manage Event | Admin',
 }
 
-export default async function AdminEventPage({ params }: { params: { id: string } }) {
+export default async function AdminEventPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   await requireAdmin()
 
   // Handle new event page
-  if (params.id === 'new') {
+  if (id === 'new') {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Create New Event</h1>
@@ -23,7 +24,7 @@ export default async function AdminEventPage({ params }: { params: { id: string 
 
   // Fetch event with relations
   const event = await db.fantasyEvent.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: {
       series: true,
       riderEntries: {
