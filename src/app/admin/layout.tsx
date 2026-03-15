@@ -54,6 +54,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           Coaching
         </a>
+        <a
+          href="/admin/affiliate"
+          className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
+        >
+          Affiliate
+        </a>
       </nav>
       {children}
     </div>
