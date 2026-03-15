@@ -34,7 +34,8 @@ export async function createSeasonPassCheckout(params: {
     success_url: `${params.returnUrl}?pass=success`,
     cancel_url: params.returnUrl,
   })
-  return session.url!
+  if (!session.url) throw new Error('Stripe did not return a checkout URL')
+  return session.url
 }
 
 /** Create a Stripe Checkout session for a mulligan pack purchase */
@@ -60,7 +61,8 @@ export async function createMulliganCheckout(params: {
     success_url: `${params.returnUrl}?mulligan=success`,
     cancel_url: params.returnUrl,
   })
-  return session.url!
+  if (!session.url) throw new Error('Stripe did not return a checkout URL')
+  return session.url
 }
 
 /** Verify a Stripe webhook signature for the fantasy webhook */

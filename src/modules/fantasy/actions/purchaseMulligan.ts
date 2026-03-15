@@ -8,12 +8,14 @@ import { redirect } from 'next/navigation'
 
 export async function purchaseMulligan(formData: FormData) {
   const session = await auth()
-  if (!session?.user?.id) redirect('/login')
+  if (!session?.user?.id) redirect('/signin')
 
   const pack = formData.get('pack') as MulliganPack
-  const returnUrl = formData.get('returnUrl') as string
+  const rawReturnUrl = formData.get('returnUrl') as string | null
+  const baseUrl = process.env.AUTH_URL ?? ''
+  const returnUrl = rawReturnUrl?.startsWith(baseUrl) ? rawReturnUrl : `${baseUrl}/fantasy`
 
-  if (!pack || !returnUrl || (pack !== '1' && pack !== '3')) {
+  if (!pack || (pack !== '1' && pack !== '3')) {
     throw new Error('Invalid pack selection')
   }
 

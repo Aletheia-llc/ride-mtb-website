@@ -8,13 +8,15 @@ import { redirect } from 'next/navigation'
 
 export async function purchaseSeasonPass(formData: FormData) {
   const session = await auth()
-  if (!session?.user?.id) redirect('/login')
+  if (!session?.user?.id) redirect('/signin')
 
   const seriesId = formData.get('seriesId') as string
   const season = parseInt(formData.get('season') as string)
-  const returnUrl = formData.get('returnUrl') as string
+  const rawReturnUrl = formData.get('returnUrl') as string | null
+  const baseUrl = process.env.AUTH_URL ?? ''
+  const returnUrl = rawReturnUrl?.startsWith(baseUrl) ? rawReturnUrl : `${baseUrl}/fantasy`
 
-  if (!seriesId || !season || !returnUrl) {
+  if (!seriesId || !season) {
     throw new Error('Missing required fields')
   }
 

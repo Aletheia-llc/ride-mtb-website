@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client'
 export async function getSeriesHub(seriesSlug: string) {
   const [discipline, seasonStr] = seriesSlug.split('-')
   const season = parseInt(seasonStr)
+  if (!discipline || isNaN(season)) return null
 
   const series = await db.fantasySeries.findUnique({
     where: { discipline_season: { discipline: discipline as 'dh' | 'ews' | 'xc', season } },
