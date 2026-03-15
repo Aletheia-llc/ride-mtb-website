@@ -29,7 +29,8 @@ export async function pickManufacturer(
     return { error: 'Your manufacturer pick is locked for this season — no changes allowed after Round 1.' }
   }
 
-  // Check pick window: open until Round 1 rosterDeadline
+  // Check pick window: open until Round 1 rosterDeadline.
+  // If no Round 1 event exists yet, the window is open by design (pre-season setup).
   const round1 = await db.fantasyEvent.findFirst({
     where: { seriesId },
     orderBy: { raceDate: 'asc' },
