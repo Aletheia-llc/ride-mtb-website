@@ -110,6 +110,8 @@ model User {
   mulliganBalance          MulliganBalance?
   mulliganPurchases        MulliganPurchase[]
   mulliganUses             MulliganUse[]
+  manufacturerPicks  ManufacturerPick[]
+  manufacturerScores ManufacturerEventScore[]
 
   @@map("users")
 }
@@ -2320,6 +2322,8 @@ model FantasySeries {
   passes            SeasonPassPurchase[]
   seasonScores      FantasySeasonScore[]
   leagues           FantasyLeague[]
+  manufacturerPicks  ManufacturerPick[]
+  manufacturerScores ManufacturerEventScore[]
   createdAt         DateTime        @default(now())
 
   @@unique([discipline, season])
@@ -2345,6 +2349,7 @@ model FantasyEvent {
   results          RaceResult[]
   expertPicks      ExpertPick[]
   mulliganUses     MulliganUse[]
+  manufacturerScores ManufacturerEventScore[]
   createdAt        DateTime          @default(now())
 
   @@index([seriesId, raceDate])
@@ -2364,8 +2369,60 @@ model Rider {
   expertPicks  ExpertPick[]
   picks        FantasyPick[]
   createdAt    DateTime          @default(now())
+  manufacturerId String?
+  manufacturer   BikeManufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: SetNull)
+  manufacturerScores ManufacturerEventScore[]
 
   @@map("riders")
+}
+
+model BikeManufacturer {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  logoUrl  String?
+  riders   Rider[]
+  picks    ManufacturerPick[]
+
+  @@map("bike_manufacturers")
+}
+
+model ManufacturerPick {
+  id             String           @id @default(cuid())
+  userId         String
+  seriesId       String
+  season         Int
+  manufacturerId String
+  lockedAt       DateTime?
+  createdAt      DateTime         @default(now())
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  series         FantasySeries    @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  manufacturer   BikeManufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  eventScores    ManufacturerEventScore[]
+
+  @@unique([userId, seriesId, season])
+  @@map("manufacturer_picks")
+}
+
+model ManufacturerEventScore {
+  id                  String           @id @default(cuid())
+  userId              String
+  seriesId            String
+  season              Int
+  eventId             String
+  manufacturerPickId  String
+  points              Int
+  riderId             String
+  riderFinishPosition Int
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  series              FantasySeries    @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  event               FantasyEvent     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  manufacturerPick    ManufacturerPick @relation(fields: [manufacturerPickId], references: [id], onDelete: Cascade)
+  rider               Rider            @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seriesId, season, eventId])
+  @@index([seriesId, season, userId])
+  @@map("manufacturer_event_scores")
 }
 
 model RiderEventEntry {
@@ -2432,6 +2489,7 @@ model FantasyEventScore {
   rank         Int?
   isDropRound  Boolean     @default(false)
   isOverBudget Boolean     @default(false)
+  manufacturerPoints Int @default(0)
   team         FantasyTeam  @relation(fields: [teamId], references: [id], onDelete: Cascade)
   event        FantasyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
