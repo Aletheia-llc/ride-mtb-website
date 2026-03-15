@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   BookOpen, Map, MessageSquare,
   ShoppingBag, User, LogIn, Mail, Wallet, Bike, LayoutDashboard,
-  ChevronDown, Search,
+  ChevronDown, Search, Heart,
 } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationBell } from './NotificationBell'
@@ -119,6 +119,14 @@ export function TopNavClient({ session }: TopNavClientProps) {
               <Search size={16} />
             </button>
             <ThemeToggle />
+            <Link
+              href="/donate"
+              className="hidden sm:flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: '#22c55e' }}
+            >
+              <Heart size={11} />
+              Support
+            </Link>
             {session?.user?.id && (
               <>
                 <Link
