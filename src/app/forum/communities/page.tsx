@@ -120,7 +120,7 @@ export default async function ForumCommunitiesPage({ searchParams }: Communities
                 {/* Cover */}
                 {community.coverImageUrl ? (
                   <div className="relative h-28 overflow-hidden">
-                    <Image src={community.coverImageUrl} alt="" fill className="object-cover" />
+                    <Image src={community.coverImageUrl} alt="" fill className="object-cover" unoptimized />
                   </div>
                 ) : (
                   <div

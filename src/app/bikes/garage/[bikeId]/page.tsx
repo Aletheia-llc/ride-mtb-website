@@ -108,6 +108,7 @@ export default async function BikeDetailPage({ params, searchParams }: Props) {
             width={800}
             height={256}
             className="h-64 w-full object-cover"
+            unoptimized
           />
         </Card>
       )}

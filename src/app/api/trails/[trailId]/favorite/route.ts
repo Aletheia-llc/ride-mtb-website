@@ -7,18 +7,23 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ trailId: string }> },
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { trailId } = await params
+
+    if (!trailId) {
+      return NextResponse.json({ error: 'Trail ID is required' }, { status: 400 })
+    }
+
+    const result = await toggleTrailFavorite(trailId, session.user.id)
+
+    return NextResponse.json(result)
+  } catch (err) {
+    console.error('[api/trails/[trailId]/favorite]', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
-
-  const { trailId } = await params
-
-  if (!trailId) {
-    return NextResponse.json({ error: 'Trail ID is required' }, { status: 400 })
-  }
-
-  const result = await toggleTrailFavorite(trailId, session.user.id)
-
-  return NextResponse.json(result)
 }

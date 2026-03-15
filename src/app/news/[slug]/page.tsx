@@ -117,6 +117,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             height={506}
             className="h-full w-full object-cover"
             priority
+            unoptimized
           />
         </div>
       )}

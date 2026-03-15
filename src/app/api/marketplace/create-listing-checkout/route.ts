@@ -14,82 +14,97 @@ const LISTING_FEE_CENTS = 299 // $2.99
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const body = (await request.json()) as { listingId: string; listingTitle: string }
-  const { listingId, listingTitle } = body
+    const body = (await request.json()) as { listingId: string; listingTitle: string }
+    const { listingId, listingTitle } = body
 
-  if (!listingId || !listingTitle) {
-    return NextResponse.json({ error: 'Missing listingId or listingTitle' }, { status: 400 })
-  }
+    if (!listingId || !listingTitle) {
+      return NextResponse.json({ error: 'Missing listingId or listingTitle' }, { status: 400 })
+    }
 
-  // eslint-disable-next-line no-restricted-imports
-  const { db } = await import('@/lib/db/client')
+    // eslint-disable-next-line no-restricted-imports
+    const { db } = await import('@/lib/db/client')
 
-  const listing = await db.listing.findUnique({
-    where: { id: listingId },
-    select: { sellerId: true, status: true, title: true },
-  })
+    const listing = await db.listing.findUnique({
+      where: { id: listingId },
+      select: { sellerId: true, status: true, title: true },
+    })
 
-  if (!listing || listing.sellerId !== session.user.id) {
-    return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
-  }
+    if (!listing || listing.sellerId !== session.user.id) {
+      return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
+    }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if ((listing.status as any) !== 'draft') {
-    return NextResponse.json({ error: 'Listing is already active' }, { status: 400 })
-  }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((listing.status as any) !== 'draft') {
+      return NextResponse.json({ error: 'Listing is already active' }, { status: 400 })
+    }
 
-  // Check if payment already exists
-  const existingPayment = await db.listingPayment.findUnique({
-    where: { listingId },
-    select: { stripeSessionId: true, status: true },
-  })
+    // Check if payment already exists
+    const existingPayment = await db.listingPayment.findUnique({
+      where: { listingId },
+      select: { stripeSessionId: true, status: true },
+    })
 
-  if (existingPayment?.status === 'paid') {
-    return NextResponse.json({ error: 'Listing fee already paid' }, { status: 400 })
-  }
+    if (existingPayment?.status === 'paid') {
+      return NextResponse.json({ error: 'Listing fee already paid' }, { status: 400 })
+    }
 
-  const stripe = getStripe()
+    const stripe = getStripe()
 
-  const checkoutSession = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    line_items: [
-      {
-        price_data: {
-          currency: 'usd',
-          unit_amount: LISTING_FEE_CENTS,
-          product_data: {
-            name: 'Listing Fee',
-            description: `Activate listing: ${listingTitle}`,
-          },
-        },
-        quantity: 1,
+    // DB upsert FIRST — create a pending payment record before calling Stripe.
+    // If Stripe fails after a successful DB write, the pending record is harmless
+    // (the webhook will never fire, so it stays pending and can be cleaned up).
+    // The previous ordering (Stripe first, DB second) risked a dangling Stripe
+    // session if the DB write failed after a successful charge initiation.
+    await db.listingPayment.upsert({
+      where: { listingId },
+      update: { status: 'pending' },
+      create: {
+        listingId,
+        userId: session.user.id,
+        stripeSessionId: 'pending',
+        amount: LISTING_FEE_CENTS,
       },
-    ],
-    success_url: `${BASE_URL}/marketplace/${listingId}?payment=success`,
-    cancel_url: `${BASE_URL}/marketplace/listings/new?step=review&listingId=${listingId}`,
-    metadata: {
-      listingId,
-      userId: session.user.id,
-      type: 'listing_fee',
-    },
-  })
+    })
 
-  // Upsert the ListingPayment record
-  await db.listingPayment.upsert({
-    where: { listingId },
-    update: { stripeSessionId: checkoutSession.id, status: 'pending' },
-    create: {
-      listingId,
-      userId: session.user.id,
-      stripeSessionId: checkoutSession.id,
-      amount: LISTING_FEE_CENTS,
-    },
-  })
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            unit_amount: LISTING_FEE_CENTS,
+            product_data: {
+              name: 'Listing Fee',
+              description: `Activate listing: ${listingTitle}`,
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${BASE_URL}/marketplace/${listingId}?payment=success`,
+      cancel_url: `${BASE_URL}/marketplace/listings/new?step=review&listingId=${listingId}`,
+      metadata: {
+        listingId,
+        userId: session.user.id,
+        type: 'listing_fee',
+      },
+    })
 
-  return NextResponse.json({ url: checkoutSession.url })
+    // Stamp the real Stripe session ID now that we have it
+    await db.listingPayment.update({
+      where: { listingId },
+      data: { stripeSessionId: checkoutSession.id },
+    })
+
+    return NextResponse.json({ url: checkoutSession.url })
+  } catch (err) {
+    console.error('[api/marketplace/create-listing-checkout]', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
 }
