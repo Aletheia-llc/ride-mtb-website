@@ -52,12 +52,22 @@ export async function POST(req: NextRequest) {
         const { userId, pack } = meta
         const mulliganCount = pack === '3' ? 3 : 1
 
-        // Upsert mulligan balance
-        await db.mulliganBalance.upsert({
-          where: { userId },
-          update: { totalPurchased: { increment: mulliganCount } },
-          create: { userId, totalPurchased: mulliganCount, totalUsed: 0 },
-        })
+        // Idempotent: only process if this session hasn't been processed before
+        const purchase = await db.mulliganPurchase.create({
+          data: {
+            userId,
+            stripeSessionId: session.id,
+            count: mulliganCount,
+          },
+        }).catch(() => null) // null = already processed (unique constraint violation)
+
+        if (purchase) {
+          await db.mulliganBalance.upsert({
+            where: { userId },
+            update: { totalPurchased: { increment: mulliganCount } },
+            create: { userId, totalPurchased: mulliganCount, totalUsed: 0 },
+          })
+        }
       }
       break
     }
@@ -100,28 +110,35 @@ async function ensureChampionshipLeagueMembership(
   seriesId: string,
   season: number
 ) {
-  // Find or create the championship league for this series+season
+  // Find or create championship league (handle concurrent creation race)
   let league = await db.fantasyLeague.findFirst({
     where: { seriesId, season, isChampionship: true },
     select: { id: true },
   })
 
   if (!league) {
-    // Lazy-create championship league on first season pass purchase
-    // Use the first season pass holder as creator
     const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase()
-    league = await db.fantasyLeague.create({
-      data: {
-        name: 'Championship League',
-        seriesId,
-        season,
-        isChampionship: true,
-        isPublic: false,
-        inviteCode,
-        createdByUserId: userId,
-      },
-      select: { id: true },
-    })
+    try {
+      league = await db.fantasyLeague.create({
+        data: {
+          name: 'Championship League',
+          seriesId,
+          season,
+          isChampionship: true,
+          isPublic: false,
+          inviteCode,
+          createdByUserId: userId,
+        },
+        select: { id: true },
+      })
+    } catch {
+      // Another concurrent request created the league — re-fetch
+      league = await db.fantasyLeague.findFirst({
+        where: { seriesId, season, isChampionship: true },
+        select: { id: true },
+      })
+      if (!league) throw new Error('Championship league creation failed unexpectedly')
+    }
   }
 
   // Auto-join (idempotent)

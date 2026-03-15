@@ -108,6 +108,7 @@ model User {
   fantasyLeagueMemberships FantasyLeagueMember[]
   seasonPasses             SeasonPassPurchase[]
   mulliganBalance          MulliganBalance?
+  mulliganPurchases        MulliganPurchase[]
   mulliganUses             MulliganUse[]
 
   @@map("users")
@@ -2513,6 +2514,17 @@ model MulliganBalance {
   user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("mulligan_balances")
+}
+
+model MulliganPurchase {
+  id              String   @id @default(cuid())
+  userId          String
+  stripeSessionId String   @unique
+  count           Int
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mulligan_purchases")
 }
 
 model MulliganUse {
