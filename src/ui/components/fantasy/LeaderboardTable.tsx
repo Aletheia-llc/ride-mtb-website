@@ -1,5 +1,6 @@
 interface LeaderboardEntry {
   rank: number
+  userId?: string
   name: string | null
   username: string | null
   avatarUrl: string | null
@@ -24,7 +25,7 @@ export function LeaderboardTable({ entries, currentUserId }: { entries: Leaderbo
       <tbody>
         {entries.map(e => (
           <tr key={e.rank}
-            className={`border-b border-[var(--color-border)] ${e.username === currentUserId ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
+            className={`border-b border-[var(--color-border)] ${(e.userId ?? e.username) === currentUserId ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
             <td className="py-2 pr-3 font-bold text-[var(--color-text-muted)]">{e.rank}</td>
             <td className="py-2">
               <div className="flex items-center gap-2">

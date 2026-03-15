@@ -16,7 +16,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ se
     <div className="py-8 space-y-6">
       <h1 className="text-2xl font-extrabold">{seriesData.name} — Leaderboard</h1>
       {entries.length > 0
-        ? <LeaderboardTable entries={entries} currentUserId={session?.user?.username ?? undefined} />
+        ? <LeaderboardTable entries={entries} currentUserId={session?.user?.id ?? undefined} />
         : <p className="text-sm text-[var(--color-text-muted)]">No scores yet. Standings will appear after the first event is scored.</p>
       }
     </div>
