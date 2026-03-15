@@ -6,6 +6,11 @@ import { requireAdmin } from '@/lib/auth/guards'
 import { db } from '@/lib/db/client'
 import type { Discipline, SeriesStatus } from '@/generated/prisma/client'
 
+export type EnsureChampionshipLeagueState = {
+  errors: Record<string, string>
+  success?: boolean
+}
+
 const createSeriesSchema = z.object({
   name: z.string().min(1, 'Series name is required'),
   discipline: z.enum(['dh', 'ews', 'xc']),
@@ -154,5 +159,51 @@ export async function updateSeries(
       throw error
     }
     return { errors: { general: 'Failed to update series. Please try again.' } }
+  }
+}
+
+export async function ensureChampionshipLeague(
+  _prevState: EnsureChampionshipLeagueState,
+  formData: FormData,
+): Promise<EnsureChampionshipLeagueState> {
+  try {
+    const adminUser = await requireAdmin()
+    const seriesId = formData.get('seriesId') as string
+    const season = parseInt(formData.get('season') as string)
+
+    if (!seriesId || !season) {
+      return { errors: { general: 'Missing series ID or season.' } }
+    }
+
+    // Find or create the championship league for this series+season
+    const existing = await db.fantasyLeague.findFirst({
+      where: { seriesId, season, isChampionship: true },
+      select: { id: true },
+    })
+
+    if (!existing) {
+      const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase()
+      await db.fantasyLeague.create({
+        data: {
+          name: 'Championship League',
+          seriesId,
+          season,
+          isChampionship: true,
+          isPublic: false,
+          inviteCode,
+          createdByUserId: adminUser.id,
+        },
+      })
+    }
+
+    revalidatePath('/admin/fantasy/series')
+    revalidatePath(`/admin/fantasy/series/${seriesId}`)
+
+    return { errors: {}, success: true }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
+      throw error
+    }
+    return { errors: { general: 'Failed to ensure championship league. Please try again.' } }
   }
 }

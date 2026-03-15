@@ -125,6 +125,14 @@ export async function pickRider(input: PickRiderInput): Promise<PickRiderResult>
       [teamId, input.eventId, input.riderId, isWildcard, marketPriceCents]
     )
 
+    // Ensure mulligan_balance row exists for this user (created with 0 if not present)
+    await client.query(
+      `INSERT INTO mulligan_balances (id, "userId", "totalPurchased", "totalUsed")
+       VALUES (gen_random_uuid(), $1, 0, 0)
+       ON CONFLICT ("userId") DO NOTHING`,
+      [userId]
+    )
+
     await client.query('COMMIT')
 
     // Enqueue price recalculation (outside transaction)
