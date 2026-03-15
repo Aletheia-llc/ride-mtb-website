@@ -16,7 +16,10 @@ export function DeleteServiceLogButton({ logId, bikeId }: DeleteServiceLogButton
     if (!confirm('Delete this service entry?')) return
 
     startTransition(async () => {
-      await deleteServiceLogAction(logId, bikeId)
+      const result = await deleteServiceLogAction(logId, bikeId)
+      if (!result.success && result.errors.general) {
+        alert(result.errors.general)
+      }
     })
   }
 

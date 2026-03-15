@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
@@ -30,24 +31,26 @@ export async function submitShopReview(_prev: ReviewState, formData: FormData): 
     const existing = await db.shopReview.findFirst({ where: { shopId, userId: user.id } })
     if (existing) return { errors: { general: 'You have already reviewed this shop' } }
 
-    await db.shopReview.create({ data: { ...data, shopId, userId: user.id } })
+    await db.$transaction(async (tx) => {
+      await tx.shopReview.create({ data: { ...data, shopId, userId: user.id } })
 
-    // Update shop aggregate ratings
-    const agg = await db.shopReview.aggregate({
-      where: { shopId },
-      _avg: { overallRating: true, serviceRating: true, pricingRating: true, selectionRating: true },
-      _count: { id: true },
+      const agg = await tx.shopReview.aggregate({
+        where: { shopId },
+        _avg: { overallRating: true, serviceRating: true, pricingRating: true, selectionRating: true },
+        _count: { id: true },
+      })
+      await tx.shop.update({
+        where: { id: shopId },
+        data: {
+          avgOverallRating: agg._avg.overallRating ?? undefined,
+          avgServiceRating: agg._avg.serviceRating ?? undefined,
+          avgPricingRating: agg._avg.pricingRating ?? undefined,
+          avgSelectionRating: agg._avg.selectionRating ?? undefined,
+          reviewCount: agg._count.id,
+        },
+      })
     })
-    await db.shop.update({
-      where: { id: shopId },
-      data: {
-        avgOverallRating: agg._avg.overallRating ?? undefined,
-        avgServiceRating: agg._avg.serviceRating ?? undefined,
-        avgPricingRating: agg._avg.pricingRating ?? undefined,
-        avgSelectionRating: agg._avg.selectionRating ?? undefined,
-        reviewCount: agg._count.id,
-      },
-    })
+    revalidatePath('/shops')
     return { errors: {}, success: true }
   } catch {
     return { errors: { general: 'Something went wrong' } }
