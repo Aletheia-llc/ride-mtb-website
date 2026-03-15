@@ -13,7 +13,14 @@ export async function getGlobalLeaderboard(seriesId: string, season: number, pag
     },
   })
 
-  return scores.map((s, i) => ({
+  return scores.map((s: {
+    rank: number | null
+    totalPoints: number
+    eventsPlayed: number
+    bestEventScore: number | null
+    worstEventScore: number | null
+    team: { user: { id: string; name: string | null; username: string | null; avatarUrl: string | null } }
+  }, i: number) => ({
     rank: s.rank ?? page * pageSize + i + 1,
     userId: s.team.user.id,
     name: s.team.user.name,

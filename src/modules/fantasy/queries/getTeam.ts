@@ -14,7 +14,7 @@ export async function getTeamForEvent(userId: string, seriesId: string, season: 
   const series = await db.fantasySeries.findUnique({ where: { id: seriesId }, select: { salaryCap: true } })
 
   const picks = team?.picks ?? []
-  const totalCost = picks.reduce((s, p) => s + p.priceAtPick, 0)
+  const totalCost = picks.reduce((s: number, p: { priceAtPick: number }) => s + p.priceAtPick, 0)
   const remaining = (series?.salaryCap ?? 150_000_000) - totalCost
 
   return {

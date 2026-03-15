@@ -7,7 +7,14 @@ export async function getRidersForEvent(eventId: string) {
     orderBy: { marketPriceCents: 'desc' },
   })
 
-  return entries.map(e => ({
+  return entries.map((e: {
+    riderId: string
+    rider: { name: string; nationality: string; photoUrl: string | null; gender: string }
+    basePriceCents: number
+    marketPriceCents: number
+    ownershipPct: number | null
+    fantasyPoints: number | null
+  }) => ({
     riderId: e.riderId,
     name: e.rider.name,
     nationality: e.rider.nationality,
