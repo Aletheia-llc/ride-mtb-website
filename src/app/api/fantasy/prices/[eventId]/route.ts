@@ -3,12 +3,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { redis } from '@/lib/redis'
 import { db } from '@/lib/db/client'
 import type { PriceSnapshot } from '@/modules/fantasy/worker/pricesRecalculate'
+import { auth } from '@/lib/auth/config'
 
 interface RouteParams {
   params: Promise<{ eventId: string }>
 }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { eventId } = await params
 
   const redisKey = `fantasy:prices:${eventId}`

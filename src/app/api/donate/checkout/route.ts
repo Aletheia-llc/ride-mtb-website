@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { auth } from '@/lib/auth/config'
+import { rateLimit } from '@/lib/rate-limit'
 
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY
@@ -15,6 +17,17 @@ const MAX_CENTS = 100_000_00 // $100,000
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
+  const authSession = await auth()
+  if (!authSession?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    await rateLimit({ userId: authSession.user.id, action: 'donate-checkout', maxPerMinute: 10 })
+  } catch {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+  }
+
   let amountCents: number
   try {
     const body = (await request.json()) as { amountCents?: unknown }

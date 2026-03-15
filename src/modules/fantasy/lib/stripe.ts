@@ -68,7 +68,7 @@ export async function createMulliganCheckout(params: {
 /** Verify a Stripe webhook signature for the fantasy webhook */
 export async function constructFantasyStripeEvent(body: string, signature: string) {
   const stripe = getStripe()
-  const secret = process.env.FANTASY_STRIPE_WEBHOOK_SECRET ?? process.env.STRIPE_WEBHOOK_SECRET
+  const secret = process.env.FANTASY_STRIPE_WEBHOOK_SECRET
   if (!secret) throw new Error('FANTASY_STRIPE_WEBHOOK_SECRET is not configured')
   return stripe.webhooks.constructEvent(body, signature, secret)
 }
