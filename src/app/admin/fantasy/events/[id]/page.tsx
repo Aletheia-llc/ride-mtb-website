@@ -64,6 +64,10 @@ export default async function AdminEventPage({ params }: { params: Promise<{ id:
             {event.series.name} ({event.series.discipline.toUpperCase()}) · {event.location}, {event.country}
           </p>
         </div>
+        <Link href={`/admin/fantasy/expert-picks/${event.id}`}
+          className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 transition">
+          Expert Picks
+        </Link>
       </div>
 
       {/* Add Rider Section */}
