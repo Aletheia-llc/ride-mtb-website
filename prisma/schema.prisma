@@ -87,6 +87,7 @@ model User {
   sellerTransactions   Transaction[]       @relation("TxSeller")
   listingSaves     ListingSave[]
   listingReports   ListingReport[]
+  listingPayments  ListingPayment[]        @relation("ListingPayments")
   shops           Shop[]
   shopReviews     ShopReview[]
   reviewHelpfulVotes ReviewHelpful[]
@@ -972,6 +973,7 @@ model Listing {
   saves       ListingSave[]
   reports     ListingReport[]
   conversations ListingConversation[] @relation("ConvListing")
+  payment     ListingPayment?
 
   @@index([category, status])
   @@index([sellerId])
@@ -1692,6 +1694,7 @@ enum ItemCondition {
 }
 
 enum ListingStatus {
+  draft
   active
   sold
   reserved
@@ -2179,4 +2182,30 @@ model Article {
   @@index([status, publishedAt])
   @@index([slug])
   @@map("articles")
+}
+
+enum ListingPaymentStatus {
+  pending
+  paid
+  failed
+
+  @@map("listing_payment_status")
+}
+
+model ListingPayment {
+  id                    String               @id @default(cuid())
+  listingId             String               @unique
+  userId                String
+  stripeSessionId       String               @unique
+  stripePaymentIntentId String?
+  amount                Int                  @default(299)
+  currency              String               @default("usd")
+  status                ListingPaymentStatus @default(pending)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user    User    @relation("ListingPayments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("listing_payments")
 }
