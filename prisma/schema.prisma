@@ -103,6 +103,12 @@ model User {
   coachApplications    CoachApplication[] @relation("CoachApplications")
   reviewedApplications CoachApplication[] @relation("CoachApplicationReviewer")
   affiliateClicks  AffiliateClick[] @relation("AffiliateClicks")
+  fantasyTeams             FantasyTeam[]
+  fantasyLeaguesCreated    FantasyLeague[]           @relation("LeagueCreator")
+  fantasyLeagueMemberships FantasyLeagueMember[]
+  seasonPasses             SeasonPassPurchase[]
+  mulliganBalance          MulliganBalance?
+  mulliganUses             MulliganUse[]
 
   @@map("users")
 }
@@ -1546,6 +1552,7 @@ enum XpModule {
   shops
   media
   coaching
+  fantasy
 }
 
 enum XpEvent {
@@ -1568,6 +1575,10 @@ enum XpEvent {
   listing_created
   listing_favorited
   bike_quiz_completed
+  fantasy_team_scored
+  fantasy_top_10_pct
+  fantasy_season_completed
+  fantasy_league_won
 }
 
 enum TrailSystemType {
@@ -2290,3 +2301,331 @@ model AffiliateClick {
   @@index([linkId, createdAt])
   @@map("affiliate_clicks")
 }
+
+// ============================================================
+// FANTASY MTB RACING
+// ============================================================
+
+model FantasySeries {
+  id                String          @id @default(cuid())
+  name              String
+  discipline        Discipline
+  season            Int
+  status            SeriesStatus    @default(upcoming)
+  salaryCap         Int             @default(150000000)
+  sensitivityFactor Float           @default(1.5)
+  events            FantasyEvent[]
+  teams             FantasyTeam[]
+  passes            SeasonPassPurchase[]
+  seasonScores      FantasySeasonScore[]
+  leagues           FantasyLeague[]
+  createdAt         DateTime        @default(now())
+
+  @@unique([discipline, season])
+  @@map("fantasy_series")
+}
+
+model FantasyEvent {
+  id               String            @id @default(cuid())
+  seriesId         String
+  name             String
+  location         String
+  country          String
+  raceDate         DateTime
+  rosterDeadline   DateTime
+  status           EventStatus       @default(upcoming)
+  scraperUrl       String
+  scraperUrlStages String?
+  series           FantasySeries     @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  riderEntries     RiderEventEntry[]
+  picks            FantasyPick[]
+  scores           FantasyEventScore[]
+  results          RaceResult[]
+  expertPicks      ExpertPick[]
+  mulliganUses     MulliganUse[]
+  createdAt        DateTime          @default(now())
+
+  @@index([seriesId, raceDate])
+  @@map("fantasy_events")
+}
+
+model Rider {
+  id           String            @id @default(cuid())
+  name         String
+  nationality  String
+  photoUrl     String?
+  uciId        String?           @unique
+  gender       Gender
+  disciplines  Discipline[]
+  eventEntries RiderEventEntry[]
+  results      RaceResult[]
+  expertPicks  ExpertPick[]
+  picks        FantasyPick[]
+  createdAt    DateTime          @default(now())
+
+  @@map("riders")
+}
+
+model RiderEventEntry {
+  id                 String       @id @default(cuid())
+  riderId            String
+  eventId            String
+  basePriceCents     Int
+  marketPriceCents   Int
+  ownershipPct       Float?
+  finishPosition     Int?
+  qualifyingPosition Int?
+  fantasyPoints      Int?
+  bonusPoints        Int?
+  dnsDnf             Boolean      @default(false)
+  partialCompletion  Boolean      @default(false)
+  rider              Rider        @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  event              FantasyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([riderId, eventId])
+  @@index([eventId])
+  @@map("rider_event_entries")
+}
+
+model FantasyTeam {
+  id           String              @id @default(cuid())
+  userId       String
+  seriesId     String
+  season       Int
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  series       FantasySeries       @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  picks        FantasyPick[]
+  eventScores  FantasyEventScore[]
+  seasonScore  FantasySeasonScore?
+  mulliganUses MulliganUse[]
+
+  @@unique([userId, seriesId, season])
+  @@map("fantasy_teams")
+}
+
+model FantasyPick {
+  id          String       @id @default(cuid())
+  teamId      String
+  eventId     String
+  riderId     String
+  isWildcard  Boolean      @default(false)
+  priceAtPick Int
+  lockedAt    DateTime?
+  team        FantasyTeam  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  event       FantasyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  rider       Rider        @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, eventId, riderId])
+  @@index([teamId, eventId])
+  @@map("fantasy_picks")
+}
+
+model FantasyEventScore {
+  id           String      @id @default(cuid())
+  teamId       String
+  eventId      String
+  basePoints   Int         @default(0)
+  bonusPoints  Int         @default(0)
+  totalPoints  Int         @default(0)
+  rank         Int?
+  isDropRound  Boolean     @default(false)
+  isOverBudget Boolean     @default(false)
+  team         FantasyTeam  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  event        FantasyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, eventId])
+  @@index([eventId, totalPoints])
+  @@map("fantasy_event_scores")
+}
+
+model FantasySeasonScore {
+  id              String        @id @default(cuid())
+  teamId          String        @unique
+  seriesId        String
+  season          Int
+  totalPoints     Int           @default(0)
+  eventsPlayed    Int           @default(0)
+  bestEventScore  Int?
+  worstEventScore Int?
+  rank            Int?
+  team            FantasyTeam   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  series          FantasySeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@index([seriesId, season, totalPoints])
+  @@map("fantasy_season_scores")
+}
+
+model FantasyLeague {
+  id              String              @id @default(cuid())
+  name            String
+  avatarUrl       String?
+  seriesId        String
+  season          Int
+  createdByUserId String
+  inviteCode      String              @unique
+  isPublic        Boolean             @default(true)
+  isSurvivor      Boolean             @default(false)
+  isChampionship  Boolean             @default(false)
+  members         FantasyLeagueMember[]
+  series          FantasySeries       @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  createdBy       User                @relation("LeagueCreator", fields: [createdByUserId], references: [id])
+  createdAt       DateTime            @default(now())
+
+  @@index([seriesId, season])
+  @@map("fantasy_leagues")
+}
+
+model FantasyLeagueMember {
+  id           String        @id @default(cuid())
+  leagueId     String
+  userId       String
+  joinedAt     DateTime      @default(now())
+  eliminatedAt DateTime?
+  league       FantasyLeague @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, userId])
+  @@map("fantasy_league_members")
+}
+
+model SeasonPassPurchase {
+  id              String        @id @default(cuid())
+  userId          String
+  seriesId        String
+  season          Int
+  stripeSessionId String        @unique
+  status          PassStatus    @default(active)
+  createdAt       DateTime      @default(now())
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  series          FantasySeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seriesId, season])
+  @@map("season_pass_purchases")
+}
+
+model MulliganBalance {
+  id             String @id @default(cuid())
+  userId         String @unique
+  totalPurchased Int    @default(0)
+  totalUsed      Int    @default(0)
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mulligan_balances")
+}
+
+model MulliganUse {
+  id      String      @id @default(cuid())
+  userId  String
+  teamId  String
+  eventId String
+  usedAt  DateTime    @default(now())
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team    FantasyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  event   FantasyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, eventId])
+  @@map("mulligan_uses")
+}
+
+model ExpertPick {
+  id                String       @id @default(cuid())
+  eventId           String
+  riderId           String
+  slot              Int
+  publishedAt       DateTime?
+  publishedByUserId String?
+  event             FantasyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  rider             Rider        @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, slot])
+  @@unique([eventId, riderId])
+  @@map("expert_picks")
+}
+
+model RaceResult {
+  id                 String         @id @default(cuid())
+  eventId            String
+  riderId            String
+  status             ResultStatus   @default(pending)
+  finishPosition     Int?
+  qualifyingPosition Int?
+  dnsDnf             Boolean        @default(false)
+  partialCompletion  Boolean        @default(false)
+  stageResults       Json?
+  rawHtmlUrl         String?
+  scrapedAt          DateTime?
+  confirmedAt        DateTime?
+  confirmedByUserId  String?
+  overrides          ResultOverride[]
+  event              FantasyEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  rider              Rider          @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, riderId])
+  @@map("race_results")
+}
+
+model ResultOverride {
+  id                 String     @id @default(cuid())
+  raceResultId       String
+  previousPosition   Int?
+  newPosition        Int?
+  previousDnsDnf     Boolean
+  newDnsDnf          Boolean
+  reason             String
+  overriddenByUserId String
+  createdAt          DateTime   @default(now())
+  raceResult         RaceResult @relation(fields: [raceResultId], references: [id], onDelete: Cascade)
+
+  @@map("result_overrides")
+}
+
+enum Discipline {
+  dh
+  ews
+  xc
+
+  @@map("Discipline")
+}
+
+enum SeriesStatus {
+  upcoming
+  active
+  completed
+
+  @@map("SeriesStatus")
+}
+
+enum EventStatus {
+  upcoming
+  roster_open
+  locked
+  results_pending
+  scored
+
+  @@map("EventStatus")
+}
+
+enum PassStatus {
+  active
+  refunded
+
+  @@map("PassStatus")
+}
+
+enum Gender {
+  male
+  female
+
+  @@map("Gender")
+}
+
+enum ResultStatus {
+  pending
+  scraped
+  confirmed
+  scored
+  override_pending
+
+  @@map("ResultStatus")
+}
+
