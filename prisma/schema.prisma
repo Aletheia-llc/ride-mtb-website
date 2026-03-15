@@ -263,7 +263,7 @@ model ForumPost {
   editedAt  DateTime?
   deletedAt DateTime?
   thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  author    User        @relation(fields: [authorId], references: [id])
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
   votes     ForumVote[]
   reports   ForumReport[]
 
@@ -278,7 +278,7 @@ model ForumVote {
   userId String
   value  Int
   post   ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user   User      @relation(fields: [userId], references: [id])
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
   @@map("forum_votes")
@@ -331,7 +331,7 @@ model ForumReport {
   createdAt    DateTime            @default(now())
 
   reporter     User        @relation("forumReporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  moderator    User?       @relation("forumModerator", fields: [moderatorId], references: [id])
+  moderator    User?       @relation("forumModerator", fields: [moderatorId], references: [id], onDelete: SetNull)
   post         ForumPost?  @relation(fields: [postId], references: [id], onDelete: Cascade)
   thread       ForumThread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
@@ -452,7 +452,7 @@ model LearnQuizAttempt {
   answers     Json
   completedAt DateTime?
   createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   quiz        LearnQuiz @relation(fields: [quizId], references: [id])
 
   @@index([userId, quizId])
@@ -464,7 +464,7 @@ model LearnProgress {
   userId   String
   quizId   String
   bestTier Tier
-  user     User   @relation(fields: [userId], references: [id])
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   quiz     LearnQuiz @relation(fields: [quizId], references: [id])
 
   @@unique([userId, quizId])
@@ -597,7 +597,7 @@ model TrailReview {
   bikeType        String?
   createdAt       DateTime @default(now())
   trail           Trail    @relation(fields: [trailId], references: [id])
-  user            User     @relation(fields: [userId], references: [id])
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([trailId, userId])
   @@index([trailId, createdAt])
@@ -610,7 +610,7 @@ model TrailFavorite {
   userId    String
   createdAt DateTime @default(now())
   trail     Trail    @relation(fields: [trailId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([trailId, userId])
   @@map("trail_favorites")
@@ -625,7 +625,7 @@ model RideLog {
   duration        Int?
   notes           String?   @db.Text
   createdAt       DateTime  @default(now())
-  user            User      @relation(fields: [userId], references: [id])
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   trail           Trail?       @relation(fields: [trailId], references: [id])
   trailSystem     TrailSystem? @relation(fields: [trailSystemId], references: [id])
 
@@ -641,7 +641,7 @@ model ConditionReport {
   notes       String?       @db.VarChar(500)
   reportedAt  DateTime      @default(now())
   trail       Trail         @relation(fields: [trailId], references: [id], onDelete: Cascade)
-  user        User          @relation(fields: [userId], references: [id])
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([trailId, reportedAt])
   @@map("condition_reports")
@@ -711,7 +711,7 @@ model Event {
   isFeatured            Boolean  @default(false)
   resultsUrl            String?
   resultsPosted         Boolean  @default(false)
-  creator     User        @relation(fields: [creatorId], references: [id])
+  creator     User        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   rsvps       EventRsvp[]
   comments    EventComment[]
 
@@ -729,7 +729,7 @@ model EventComment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent    EventComment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies   EventComment[] @relation("CommentReplies")
 
@@ -747,7 +747,7 @@ model OrganizerProfile {
   isVerified  Boolean  @default(false)
   eventCount  Int      @default(0)
   createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   events      Event[]
 
   @@map("organizer_profiles")
@@ -760,7 +760,7 @@ model EventRsvp {
   status    RsvpStatus @default(going)
   createdAt DateTime   @default(now())
   event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User       @relation(fields: [userId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
   @@map("event_rsvps")
@@ -785,7 +785,7 @@ model GearReview {
   imageUrl     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([category])
   @@index([userId])
@@ -886,7 +886,7 @@ model BuildLogEntry {
   entryDate   DateTime @default(now())
   createdAt   DateTime @default(now())
   bike        UserBike @relation(fields: [bikeId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([bikeId, entryDate])
   @@map("build_log_entries")
@@ -1030,7 +1030,7 @@ model Offer {
   listingId     String
   listing       Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
   buyerId       String
-  buyer         User        @relation("OfferBuyer", fields: [buyerId], references: [id])
+  buyer         User        @relation("OfferBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
   amount        Float
   message       String?
   status        OfferStatus @default(pending)
@@ -1052,9 +1052,9 @@ model ListingConversation {
   listingId     String
   listing       Listing        @relation("ConvListing", fields: [listingId], references: [id], onDelete: Cascade)
   buyerId       String
-  buyer         User           @relation("ConvBuyer", fields: [buyerId], references: [id])
+  buyer         User           @relation("ConvBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
   sellerId      String
-  seller        User           @relation("ConvSeller", fields: [sellerId], references: [id])
+  seller        User           @relation("ConvSeller", fields: [sellerId], references: [id], onDelete: Cascade)
   messages      ListingMessage[]
   lastMessageAt DateTime?
   buyerUnread   Int            @default(0)
@@ -1073,7 +1073,7 @@ model ListingMessage {
   conversationId String
   conversation   ListingConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
-  sender         User                @relation("ListingMsgSender", fields: [senderId], references: [id])
+  sender         User                @relation("ListingMsgSender", fields: [senderId], references: [id], onDelete: Cascade)
   body           String              @db.Text
   isSystemMessage Boolean            @default(false)
   createdAt      DateTime            @default(now())
@@ -1113,7 +1113,7 @@ model Transaction {
 model SellerProfile {
   id              String   @id @default(cuid())
   userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id])
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   stripeAccountId String?
   stripeOnboarded Boolean  @default(false)
   isVerified      Boolean  @default(false)
@@ -1134,8 +1134,8 @@ model SellerReview {
   id          String        @id @default(cuid())
   sellerId    String
   seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  reviewerId  String
-  reviewer    User          @relation("SellerReviewer", fields: [reviewerId], references: [id])
+  reviewerId  String?
+  reviewer    User?         @relation("SellerReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
   listingId   String?
   rating      Int
   body        String?       @db.Text
@@ -1159,13 +1159,13 @@ model ListingSave {
 
 model ListingReport {
   id         String   @id @default(cuid())
-  reporterId String
+  reporterId String?
   listingId  String
   reason     String
   body       String?  @db.Text
   resolved   Boolean  @default(false)
   createdAt  DateTime @default(now())
-  reporter   User     @relation(fields: [reporterId], references: [id])
+  reporter   User?    @relation(fields: [reporterId], references: [id], onDelete: SetNull)
   listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@map("listing_reports")
@@ -1402,7 +1402,7 @@ model ShopReview {
   helpfulCount        Int       @default(0)
   createdAt           DateTime  @default(now())
   shop                Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  user                User      @relation(fields: [userId], references: [id])
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   helpfulVotes        ReviewHelpful[]
 
   @@map("shop_reviews")
@@ -1413,7 +1413,7 @@ model ReviewHelpful {
   reviewId  String
   userId    String
   review    ShopReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  user      User       @relation(fields: [userId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, userId])
   @@map("review_helpful")
@@ -1525,6 +1525,7 @@ enum XpEvent {
   ride_logged
   review_submitted
   event_attended
+  event_created
   streak_bonus
   listing_created
   listing_favorited
