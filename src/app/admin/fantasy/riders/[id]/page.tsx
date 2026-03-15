@@ -1,26 +1,156 @@
-import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
-import { db } from '@/lib/db/client'
-import { RiderForm } from '../RiderForm'
+'use client'
 
-export const metadata: Metadata = {
-  title: 'Edit Rider | Admin | Ride MTB',
-}
+import { use, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createRider, updateRider } from '@/modules/fantasy/actions/admin/manageRider'
+import type { Discipline, Gender } from '@/generated/prisma/client'
 
-interface EditRiderPageProps {
+interface RiderFormPageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-export default async function EditRiderPage({ params }: EditRiderPageProps) {
-  const { id } = await params
+export default function RiderFormPage({ params }: RiderFormPageProps) {
+  const router = useRouter()
+  const { id } = use(params)
+  const isNew = id === 'new'
 
-  const rider = await db.rider.findUnique({
-    where: { id },
-  })
+  const [name, setName] = useState('')
+  const [nationality, setNationality] = useState('')
+  const [gender, setGender] = useState<Gender>('male')
+  const [disciplines, setDisciplines] = useState<Discipline[]>([])
+  const [uciId, setUciId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  if (!rider) {
-    notFound()
+  function toggleDiscipline(d: Discipline) {
+    setDisciplines(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
   }
 
-  return <RiderForm rider={rider} />
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSaving(true)
+
+    try {
+      const fd = new FormData()
+      fd.append('name', name)
+      fd.append('nationality', nationality)
+      fd.append('gender', gender)
+      for (const d of disciplines) fd.append('disciplines', d)
+      if (uciId) fd.append('uciId', uciId)
+
+      if (isNew) {
+        const result = await createRider({ errors: {} }, fd)
+        if (Object.keys(result.errors).length > 0) {
+          setError(Object.values(result.errors)[0] ?? 'Validation error')
+          setSaving(false)
+          return
+        }
+      } else {
+        fd.append('id', id)
+        const result = await updateRider({ errors: {} }, fd)
+        if (Object.keys(result.errors).length > 0) {
+          setError(Object.values(result.errors)[0] ?? 'Validation error')
+          setSaving(false)
+          return
+        }
+      }
+      router.push('/admin/fantasy/riders')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      setSaving(false)
+    }
+  }
+
+  const isValid = name && nationality && disciplines.length > 0
+
+  return (
+    <div className="p-6 max-w-lg mx-auto">
+      <h1 className="text-2xl font-bold mb-6">{isNew ? 'New Rider' : 'Edit Rider'}</h1>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-800 rounded text-sm">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Full Name</label>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
+            className="w-full border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Nationality (ISO code, e.g. US, GB, FR)</label>
+          <input
+            value={nationality}
+            onChange={e => setNationality(e.target.value.toUpperCase())}
+            required
+            maxLength={3}
+            className="w-full border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Gender</label>
+          <select
+            value={gender}
+            onChange={e => setGender(e.target.value as Gender)}
+            className="w-full border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Disciplines *</label>
+          <div className="flex gap-4">
+            {(['dh', 'ews', 'xc'] as const).map(d => (
+              <label key={d} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={disciplines.includes(d)}
+                  onChange={() => toggleDiscipline(d)}
+                />
+                {d.toUpperCase()}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">UCI ID (optional)</label>
+          <input
+            value={uciId}
+            onChange={e => setUciId(e.target.value)}
+            className="w-full border border-[var(--color-border)] rounded px-3 py-2 bg-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          <button
+            type="submit"
+            disabled={!isValid || saving}
+            className="flex-1 bg-green-600 text-white py-2 rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition"
+          >
+            {saving ? 'Saving...' : isNew ? 'Create Rider' : 'Save Changes'}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex-1 bg-gray-600 text-white py-2 rounded font-medium hover:bg-gray-700 transition"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  )
 }

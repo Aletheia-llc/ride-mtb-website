@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { requireAdmin } from '@/lib/auth/guards'
 
 export const metadata: Metadata = {
@@ -60,12 +61,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           Affiliate
         </a>
-        <a
+        <Link
           href="/admin/fantasy/series"
           className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
         >
           Fantasy
-        </a>
+        </Link>
       </nav>
       {children}
     </div>

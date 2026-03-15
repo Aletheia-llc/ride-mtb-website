@@ -134,7 +134,7 @@ export async function updateSeries(
 
     const { id, name, status, salaryCap, sensitivityFactor } = parsed.data
 
-    const updateData: Record<string, any> = {}
+    const updateData: { name?: string; status?: SeriesStatus; salaryCap?: number; sensitivityFactor?: number } = {}
     if (name !== undefined) updateData.name = name
     if (status !== undefined) updateData.status = status as SeriesStatus
     if (salaryCap !== undefined) updateData.salaryCap = salaryCap
