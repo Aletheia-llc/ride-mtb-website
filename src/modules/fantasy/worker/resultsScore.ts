@@ -3,6 +3,7 @@
 
 import { pool } from '@/lib/db/client'
 import { getBasePoints, getBonusPoints, computeTeamTotal } from '../lib/scoring'
+import { MANUFACTURER_POSITION_POINTS } from '../constants/scoring'
 import { grantXP } from '@/modules/xp/lib/engine'
 
 export async function handleResultsScore(payload: { eventId: string }) {
@@ -268,6 +269,78 @@ export async function handleResultsScore(payload: { eventId: string }) {
       await client.query(
         `UPDATE fantasy_season_scores SET rank = $1 WHERE id = $2`,
         [i + 1, seasonScores.rows[i].id]
+      )
+    }
+
+    // 7.5 — Manufacturer Cup scoring pass
+    // For each active ManufacturerPick for this series+season, find the top-finishing
+    // brand rider for this event, compute half-table points, upsert ManufacturerEventScore,
+    // and add manufacturerPoints to the user's FantasyEventScore.
+
+    const mfrPicks = await client.query(
+      `SELECT mp.id AS "manufacturerPickId", mp."userId", mp."manufacturerId"
+       FROM manufacturer_picks mp
+       WHERE mp."seriesId" = $1 AND mp.season = $2
+         AND mp."lockedAt" IS NOT NULL`,
+      [seriesId, season]
+    )
+
+    // Load all rider event entries with manufacturer info for this event
+    const mfrRiderEntries = await client.query(
+      `SELECT ree."riderId", ree."finishPosition", ree."dnsDnf", ree."partialCompletion",
+              r."manufacturerId"
+       FROM rider_event_entries ree
+       JOIN riders r ON r.id = ree."riderId"
+       WHERE ree."eventId" = $1`,
+      [eventId]
+    )
+
+    for (const pick of mfrPicks.rows) {
+      const { manufacturerPickId, userId, manufacturerId } = pick
+
+      // Find top finisher for this brand
+      const eligible = mfrRiderEntries.rows.filter(
+        (e: { manufacturerId: string | null; dnsDnf: boolean; partialCompletion: boolean; finishPosition: number | null }) =>
+          e.manufacturerId === manufacturerId &&
+          !e.dnsDnf &&
+          !e.partialCompletion &&
+          e.finishPosition !== null
+      ).sort((a: { finishPosition: number }, b: { finishPosition: number }) => a.finishPosition - b.finishPosition)
+
+      if (eligible.length === 0) {
+        // No eligible riders this event — skip (0-pt placeholder not needed)
+        continue
+      }
+
+      const topRider = eligible[0] as { riderId: string; finishPosition: number }
+      const mfrPoints = MANUFACTURER_POSITION_POINTS[topRider.finishPosition] ?? 0
+
+      // Upsert ManufacturerEventScore
+      await client.query(
+        `INSERT INTO manufacturer_event_scores
+           (id, "userId", "seriesId", season, "eventId", "manufacturerPickId", points, "riderId", "riderFinishPosition")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT ("userId", "seriesId", season, "eventId") DO UPDATE SET
+           points = EXCLUDED.points,
+           "riderId" = EXCLUDED."riderId",
+           "riderFinishPosition" = EXCLUDED."riderFinishPosition",
+           "manufacturerPickId" = EXCLUDED."manufacturerPickId"`,
+        [userId, seriesId, season, eventId, manufacturerPickId, mfrPoints, topRider.riderId, topRider.finishPosition]
+      )
+
+      if (mfrPoints === 0) continue
+
+      // Add manufacturer points to the user's FantasyEventScore for this event
+      await client.query(
+        `UPDATE fantasy_event_scores fes
+         SET
+           "manufacturerPoints" = $1,
+           "totalPoints" = "totalPoints" + $1
+         FROM fantasy_teams ft
+         WHERE ft.id = fes."teamId"
+           AND ft."userId" = $2
+           AND fes."eventId" = $3`,
+        [mfrPoints, userId, eventId]
       )
     }
 
