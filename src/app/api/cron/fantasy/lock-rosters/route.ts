@@ -57,6 +57,27 @@ export async function GET(request: Request) {
 
     if (!lockSucceeded) continue
 
+    // --- Lock manufacturer picks if this is Round 1 ---
+    try {
+      const round1Check = await pool.query(
+        `SELECT id FROM fantasy_events
+         WHERE "seriesId" = $1
+         ORDER BY "raceDate" ASC
+         LIMIT 1`,
+        [event.seriesId]
+      )
+      if (round1Check.rows[0]?.id === event.id) {
+        await pool.query(
+          `UPDATE manufacturer_picks
+           SET "lockedAt" = NOW()
+           WHERE "seriesId" = $1 AND season = $2 AND "lockedAt" IS NULL`,
+          [event.seriesId, event.season]
+        )
+      }
+    } catch (err) {
+      console.error(`Failed to lock manufacturer picks for event ${event.id}:`, err)
+    }
+
     // --- Boss work (outside transaction) ---
     try {
       const boss = await getBoss()

@@ -1,9 +1,13 @@
 // src/app/fantasy/[series]/page.tsx
 import { getSeriesHub } from '@/modules/fantasy/queries/getSeriesHub'
+import { getManufacturerPick } from '@/modules/fantasy/queries/getManufacturerPick'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { auth } from '@/lib/auth'
+import { db } from '@/lib/db/client'
 import { SeasonPassCTA } from '@/ui/components/fantasy/SeasonPassCTA'
 import { ExpertPicksPanel } from '@/ui/components/fantasy/ExpertPicksPanel'
+import { ManufacturerPickCard } from '@/ui/components/fantasy/ManufacturerPickCard'
 
 type SeriesEvent = NonNullable<Awaited<ReturnType<typeof getSeriesHub>>>['events'][number]
 
@@ -12,8 +16,24 @@ export default async function SeriesHubPage({ params }: { params: Promise<{ seri
   const seriesData = await getSeriesHub(series)
   if (!seriesData) notFound()
 
+  const session = await auth()
+  const userId = session?.user?.id ?? null
+
   // Find the next open event (if any) to show expert picks for
   const openEvent = seriesData.events.find((e: SeriesEvent) => e.status === 'roster_open') ?? null
+
+  // Manufacturer Cup data
+  const manufacturers = await db.bikeManufacturer.findMany({
+    select: { id: true, name: true, slug: true, logoUrl: true },
+    orderBy: { name: 'asc' },
+  })
+  const currentPick = userId
+    ? await getManufacturerPick(userId, seriesData.id, seriesData.season)
+    : null
+
+  // Pick window closes when Round 1 rosterDeadline passes
+  const round1 = seriesData.events[0] ?? null
+  const pickWindowClosed = round1 ? new Date(round1.rosterDeadline) < new Date() : false
 
   return (
     <div className="py-8 space-y-6">
@@ -46,6 +66,17 @@ export default async function SeriesHubPage({ params }: { params: Promise<{ seri
         season={seriesData.season}
         seriesSlug={series}
       />
+
+      {/* Manufacturer Cup Pick — only shown to signed-in users */}
+      {userId && (
+        <ManufacturerPickCard
+          seriesId={seriesData.id}
+          season={seriesData.season}
+          currentPick={currentPick}
+          manufacturers={manufacturers}
+          pickWindowClosed={pickWindowClosed}
+        />
+      )}
 
       {/* Expert Picks for the open event */}
       {openEvent && (
