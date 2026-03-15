@@ -98,6 +98,7 @@ model User {
   cartItems             CartItem[]
   wishlistItems         WishlistItem[]
   dropSubscription      DropSubscriber?
+  articles   Article[]  @relation("ArticleAuthor")
 
   @@map("users")
 }
@@ -2135,4 +2136,47 @@ enum PayoutRequestStatus {
 enum WalletTransactionType {
   earning
   payout
+}
+
+// ============================================================
+// EDITORIAL / NEWS
+// ============================================================
+
+enum ArticleStatus {
+  draft
+  published
+
+  @@map("article_status")
+}
+
+enum ArticleCategory {
+  news
+  gear_review
+  trail_spotlight
+  how_to
+  culture
+
+  @@map("article_category")
+}
+
+model Article {
+  id            String          @id @default(cuid())
+  title         String
+  slug          String          @unique
+  excerpt       String?
+  body          Json            @default("{}")
+  coverImageUrl String?
+  status        ArticleStatus   @default(draft)
+  category      ArticleCategory @default(news)
+  tags          String[]        @default([])
+  authorId      String
+  publishedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  author User @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([status, publishedAt])
+  @@index([slug])
+  @@map("articles")
 }
