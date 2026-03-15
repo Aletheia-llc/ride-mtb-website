@@ -13,7 +13,7 @@ export type OfferItem = {
   buyer: {
     id: string
     name: string | null
-    email: string
+    image: string | null
   }
 }
 
@@ -126,7 +126,7 @@ export function OffersList({ offers, isSeller }: OffersListProps) {
               </div>
               {isSeller && (
                 <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-                  From: {offer.buyer.name ?? offer.buyer.email}
+                  From: {offer.buyer.name ?? 'Anonymous'}
                 </p>
               )}
               {offer.message && (

@@ -334,7 +334,7 @@ export async function getListingOffers(listingId: string, userId: string) {
         select: {
           id: true,
           name: true,
-          email: true,
+          image: true,
         },
       },
     },
@@ -353,4 +353,18 @@ export async function getSellerProfileByUserId(userId: string) {
       },
     },
   })
+}
+
+// ── 13. getTrustLevel ─────────────────────────────────────────
+
+export function getTrustLevel(profile: {
+  isVerified: boolean
+  isTrusted: boolean
+  totalSales: number
+  ratingCount: number
+}): 'trusted' | 'established' | 'new' | 'unverified' {
+  if (profile.isVerified && profile.isTrusted && profile.totalSales >= 10) return 'trusted'
+  if (profile.totalSales >= 3 || profile.ratingCount >= 3) return 'established'
+  if (profile.totalSales >= 1) return 'new'
+  return 'unverified'
 }

@@ -19,18 +19,3 @@ export async function createSellerProfile() {
   return profile
 }
 
-export async function getSellerProfile(userId: string) {
-  return db.sellerProfile.findUnique({
-    where: { userId },
-    include: { reviews: { orderBy: { createdAt: 'desc' }, take: 10 } },
-  })
-}
-
-function getTrustLevel(profile: { isVerified: boolean; isTrusted: boolean; totalSales: number; ratingCount: number }) {
-  if (profile.isVerified && profile.isTrusted && profile.totalSales >= 10) return 'trusted'
-  if (profile.totalSales >= 3 || profile.ratingCount >= 3) return 'established'
-  if (profile.totalSales >= 1) return 'new'
-  return 'unverified'
-}
-
-export { getTrustLevel }

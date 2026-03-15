@@ -1,4 +1,5 @@
-import { getTrustLevel } from '../actions/createSellerProfile'
+// eslint-disable-next-line no-restricted-imports
+import { getTrustLevel } from '../lib/queries'
 
 export type SellerProfileData = {
   id: string
