@@ -6,9 +6,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Dynamic import to avoid loading DB client during build
-  const { resetExpiredStreaks } = await import('@/modules/xp/lib/engine')
-  const count = await resetExpiredStreaks()
+  try {
+    // Dynamic import to avoid loading DB client during build
+    const { resetExpiredStreaks } = await import('@/modules/xp/lib/engine')
+    const count = await resetExpiredStreaks()
 
-  return NextResponse.json({ reset: count, timestamp: new Date().toISOString() })
+    return NextResponse.json({ reset: count, timestamp: new Date().toISOString() })
+  } catch (err) {
+    console.error('[cron/xp-streaks]', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
 }
