@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
@@ -28,6 +29,7 @@ export async function addComponent(_prev: ComponentState, formData: FormData): P
     if (!bike) return { errors: { general: 'Bike not found' } }
 
     await db.bikeComponent.create({ data: { ...parsed.data } })
+    revalidatePath(`/bikes/garage/${parsed.data.bikeId}`)
     return { errors: {}, success: true }
   } catch {
     return { errors: { general: 'Something went wrong' } }

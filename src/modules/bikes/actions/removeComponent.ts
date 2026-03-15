@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
@@ -12,6 +13,7 @@ export async function removeComponent(componentId: string): Promise<{ success: b
     })
     if (!component || component.bike.userId !== user.id) return { success: false, error: 'Not found' }
     await db.bikeComponent.update({ where: { id: componentId }, data: { isActive: false, removedAt: new Date() } })
+    revalidatePath(`/bikes/garage/${component.bikeId}`)
     return { success: true }
   } catch {
     return { success: false, error: 'Something went wrong' }

@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
@@ -22,6 +23,7 @@ export async function createMaintenanceTask(_prev: MaintenanceState, formData: F
     const bike = await db.userBike.findFirst({ where: { id: parsed.data.bikeId, userId: user.id } })
     if (!bike) return { errors: { general: 'Bike not found' } }
     await db.maintenanceTask.create({ data: parsed.data })
+    revalidatePath(`/bikes/garage/${parsed.data.bikeId}`)
     return { errors: {}, success: true }
   } catch {
     return { errors: { general: 'Something went wrong' } }
@@ -40,6 +42,7 @@ export async function completeMaintenanceTask(taskId: string, currentMileage?: n
       where: { id: taskId },
       data: { lastCompletedAt: new Date(), lastMileage: currentMileage ?? null, isDue: false },
     })
+    revalidatePath(`/bikes/garage/${task.bikeId}`)
     return { success: true }
   } catch {
     return { success: false }
