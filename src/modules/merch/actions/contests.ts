@@ -119,25 +119,22 @@ export async function adminSelectWinner(contestId: string, submissionId: string)
   if (!submission) throw new Error('Submission not found')
   if (submission.contestId !== contestId) throw new Error('Submission does not belong to this contest')
 
-  // Clear any previous winner in this contest
-  await db.designSubmission.updateMany({
-    where: { contestId, isWinner: true },
-    data: { isWinner: false },
-  })
-
-  // Mark new winner
-  await db.designSubmission.update({
-    where: { id: submissionId },
-    data: { isWinner: true },
-  })
-
-  // Update contest
-  await db.designContest.update({
-    where: { id: contestId },
-    data: {
-      winnerSubmissionId: submissionId,
-      status: 'winner_announced',
-    },
+  await db.$transaction(async (tx) => {
+    // Clear any previous winner
+    await tx.designSubmission.updateMany({
+      where: { contestId, isWinner: true },
+      data: { isWinner: false },
+    })
+    // Mark new winner
+    await tx.designSubmission.update({
+      where: { id: submissionId },
+      data: { isWinner: true },
+    })
+    // Update contest status
+    await tx.designContest.update({
+      where: { id: contestId },
+      data: { winnerSubmissionId: submissionId, status: 'winner_announced' },
+    })
   })
 
   // TODO: grantXp(submission.userId, 200, 'merch', 'Design contest winner')
@@ -385,16 +382,12 @@ export async function voteForDesign(submissionId: string) {
     )
   }
 
-  await db.designVote.create({
-    data: {
-      submissionId,
-      userId: user.id,
-    },
-  })
-
-  await db.designSubmission.update({
-    where: { id: submissionId },
-    data: { voteCount: { increment: 1 } },
+  await db.$transaction(async (tx) => {
+    await tx.designVote.create({ data: { submissionId, userId: user.id } })
+    await tx.designSubmission.update({
+      where: { id: submissionId },
+      data: { voteCount: { increment: 1 } },
+    })
   })
 
   revalidatePath(`/merch/contests/${submission.contestId}`)
@@ -414,19 +407,14 @@ export async function removeVote(submissionId: string) {
 
   if (!vote) throw new Error("You haven't voted for this design")
 
-  await db.designVote.delete({
-    where: { id: vote.id },
+  const submission = await db.$transaction(async (tx) => {
+    await tx.designVote.delete({ where: { id: vote.id } })
+    const updated = await tx.designSubmission.update({
+      where: { id: submissionId },
+      data: { voteCount: { decrement: 1 } },
+    })
+    return updated
   })
-
-  await db.designSubmission.update({
-    where: { id: submissionId },
-    data: { voteCount: { decrement: 1 } },
-  })
-
-  const submission = await db.designSubmission.findUnique({
-    where: { id: submissionId },
-  })
-
   if (submission) {
     revalidatePath(`/merch/contests/${submission.contestId}`)
   }
