@@ -2468,7 +2468,7 @@ model FantasyLeague {
   isChampionship  Boolean             @default(false)
   members         FantasyLeagueMember[]
   series          FantasySeries       @relation(fields: [seriesId], references: [id], onDelete: Cascade)
-  createdBy       User                @relation("LeagueCreator", fields: [createdByUserId], references: [id])
+  createdBy       User                @relation("LeagueCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
   createdAt       DateTime            @default(now())
 
   @@index([seriesId, season])
