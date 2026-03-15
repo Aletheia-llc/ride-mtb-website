@@ -101,7 +101,7 @@ export async function createEventAction(
 
     await grantXP({
       userId: user.id,
-      event: 'event_attended',
+      event: 'event_created',
       module: 'events',
       refId: event.id,
     })
