@@ -10,6 +10,8 @@ export async function handleResultsScore(payload: { eventId: string }) {
   const { eventId } = payload
   const client = await pool.connect()
   try {
+    await client.query('BEGIN')
+
     // 1. Load event + series
     const eventRes = await client.query(
       `SELECT e.id, e."seriesId", s."salaryCap", s.discipline, s.season
@@ -372,6 +374,11 @@ export async function handleResultsScore(payload: { eventId: string }) {
     )
 
     console.log(`[fantasy.results.score] Scored event ${eventId}: ${allScores.length} teams`)
+
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
   } finally {
     client.release()
   }
