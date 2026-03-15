@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
+import { rateLimit } from '@/lib/rate-limit'
 
 const TEN_MINUTES_MS = 10 * 60 * 1000
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  // Fraud risk mitigation: limit impression confirmations per IP to 100 per 10 minutes
+  // (≈10/min) to prevent bot-driven CPM inflation while allowing legitimate video players.
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown'
+  try {
+    await rateLimit({ identifier: ip, action: 'ad-impression', maxPerMinute: 10 })
+  } catch {
+    return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 })
+  }
+
   const impressionId = req.nextUrl.searchParams.get('impressionId')
   const event = req.nextUrl.searchParams.get('event') ?? 'impression'
 
