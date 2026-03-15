@@ -122,8 +122,8 @@ export default async function LearnPage() {
             </Link>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((course) => (
-              <CourseCard key={course.id} course={course} />
+            {featured.map((course, i) => (
+              <CourseCard key={course.id} course={course} priority={i === 0} />
             ))}
           </div>
         </section>

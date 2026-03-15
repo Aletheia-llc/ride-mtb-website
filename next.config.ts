@@ -51,6 +51,9 @@ const withPWA = withPWAInit({
 })
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
   serverExternalPackages: ['@react-pdf/renderer'],
   images: {
     remotePatterns: [

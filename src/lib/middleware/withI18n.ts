@@ -22,14 +22,12 @@ export function withI18n(next: NextMiddleware): NextMiddleware {
       return intlResponse
     }
 
-    // Otherwise let the rest of the middleware chain run, but carry over any
-    // locale headers / cookies that next-intl set on the response
+    // Otherwise let the rest of the middleware chain run, but carry over the
+    // locale cookie only (skip x-middleware-rewrite — the app has no [locale]
+    // route segments so forwarding that header causes all routes to 404).
     const response = await next(request, event)
 
     if (response instanceof NextResponse) {
-      intlResponse.headers.forEach((value, key) => {
-        response.headers.set(key, value)
-      })
       intlResponse.cookies.getAll().forEach(({ name, value }) => {
         response.cookies.set(name, value)
       })

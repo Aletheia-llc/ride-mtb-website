@@ -15,9 +15,10 @@ interface CourseCardProps {
     modules: { id: string; youtubeVideoId: string | null }[]
   }
   progress?: { completed: number; total: number } | null
+  priority?: boolean
 }
 
-export function CourseCard({ course, progress }: CourseCardProps) {
+export function CourseCard({ course, progress, priority }: CourseCardProps) {
   const firstVideoModule = course.modules.find((m) => m.youtubeVideoId)
   const thumbnailUrl = firstVideoModule?.youtubeVideoId
     ? `https://img.youtube.com/vi/${firstVideoModule.youtubeVideoId}/mqdefault.jpg`
@@ -34,6 +35,7 @@ export function CourseCard({ course, progress }: CourseCardProps) {
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              priority={priority}
             />
           </div>
         ) : (

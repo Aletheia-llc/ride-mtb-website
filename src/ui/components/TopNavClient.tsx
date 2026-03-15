@@ -24,9 +24,10 @@ const NAV_LINKS: { label: string; href: string; Icon: React.ComponentType<{ size
 
 interface TopNavClientProps {
   session: Session | null
+  features: { marketplace: boolean }
 }
 
-export function TopNavClient({ session }: TopNavClientProps) {
+export function TopNavClient({ session, features }: TopNavClientProps) {
   const [activeNav, setActiveNav] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -74,7 +75,9 @@ export function TopNavClient({ session }: TopNavClientProps) {
           </Link>
 
           <nav className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-0.5">
-            {NAV_LINKS.map(({ label, href, Icon, megaKey }) => {
+            {NAV_LINKS
+              .filter(({ href }) => href !== '/marketplace' || features.marketplace)
+              .map(({ label, href, Icon, megaKey }) => {
               const isActive = megaKey !== null && activeNav === megaKey
               return (
                 <div
