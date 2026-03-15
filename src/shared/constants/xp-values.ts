@@ -20,6 +20,10 @@ export const XP_VALUES: Record<XpEvent, number> = {
   listing_created: 10,
   listing_favorited: 2,
   bike_quiz_completed: 15,
+  fantasy_team_scored: 10,
+  fantasy_top_10_pct: 25,
+  fantasy_season_completed: 50,
+  fantasy_league_won: 100,
 }
 
 export const STREAK_MULTIPLIERS: Record<number, number> = {

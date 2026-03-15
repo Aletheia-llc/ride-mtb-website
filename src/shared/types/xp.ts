@@ -1,4 +1,4 @@
-export type XpModule = 'forum' | 'learn' | 'trails' | 'bikes' | 'events' | 'reviews' | 'rides' | 'marketplace' | 'merch' | 'shops' | 'media' | 'coaching'
+export type XpModule = 'forum' | 'learn' | 'trails' | 'bikes' | 'events' | 'reviews' | 'rides' | 'marketplace' | 'merch' | 'shops' | 'media' | 'coaching' | 'fantasy'
 
 export type XpEvent =
   | 'forum_post_created' | 'forum_thread_created' | 'forum_vote_received'
@@ -7,6 +7,7 @@ export type XpEvent =
   | 'ride_logged' | 'review_submitted' | 'event_attended' | 'event_created' | 'streak_bonus'
   | 'listing_created' | 'listing_favorited'
   | 'bike_quiz_completed'
+  | 'fantasy_team_scored' | 'fantasy_top_10_pct' | 'fantasy_season_completed' | 'fantasy_league_won'
 
 export interface XpGrantResult {
   granted: boolean
