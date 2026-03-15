@@ -60,6 +60,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           Affiliate
         </a>
+        <a
+          href="/admin/fantasy/series"
+          className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
+        >
+          Fantasy
+        </a>
       </nav>
       {children}
     </div>
