@@ -12,7 +12,7 @@ Fantasy MTB Racing is a season-long fantasy sports platform built into Ride MTB 
 
 Launch series: UCI DH World Cup, Enduro World Series (EWS), UCI XC World Cup. Crankworx (multi-discipline) is planned for Phase 7.
 
-**Monetization:** Free casual play per event. Paid season passes ($29.99/series/season) unlock prize eligibility, drop round, mulligans, and expert picks. Mulligan packs sold individually as a la carte upsells.
+**Monetization:** Free casual play per event. Paid season passes ($29.99/series/season) unlock prize eligibility, drop round, and expert picks. Mulligan packs sold separately as à la carte upsells available to all users (free and paid).
 
 **Prizes:** Cash prizes funded by season pass revenue + sponsored gear from MTB brand partners (Trek, Fox, Shimano, etc.).
 
@@ -28,9 +28,13 @@ All UI and business logic: team selection, dashboard, leaderboards, rider resear
 **2. Fly.io video worker (extended)**
 New pg-boss job types added to the existing worker service — no new deployment required:
 - `results.scrape` — fetch race results from UCI/EWS/XCO websites
+- `results.confirm` — thin Vercel server action that enqueues `results.score` after admin approval (not a Fly.io job; runs on Vercel)
 - `results.score` — calculate fantasy points after admin confirms results
+- `results.override` — admin edits one result; re-enqueues `results.score` for that event (Vercel server action)
 - `prices.recalculate` — recompute all rider prices for an event after a pick/drop
 - `prices.reveal` — write final ownership % to database at roster deadline
+
+Note: `results.confirm` and `results.override` are Vercel server actions that enqueue Fly.io worker jobs — they are not themselves Fly.io worker job types.
 
 **3. Upstash Redis (existing)**
 Price cache: keys `fantasy:prices:{eventId}:{riderId}` hold current market prices. Updated by the worker on every pick/drop. Read by the 15-second polling endpoint. Fast reads, low write volume (only on picks/drops, not continuous).
@@ -53,8 +57,9 @@ Roster window opens (2 weeks before race day)
     → Other users see updated price on next poll
 
 Roster deadline reached
-  → prices.reveal job runs → final ownership % written to RiderEventEntry
-  → All FantasyPick records locked (lockedAt timestamp set)
+  → Batch: set FantasyPick.lockedAt for all picks in that event (FIRST)
+  → prices.reveal job runs → final ownership % written to RiderEventEntry (SECOND)
+  → lockedAt must precede reveal so the ownership calculation is computed over the final locked roster
   → Ownership data published to event forum thread
 
 Race day
@@ -99,7 +104,7 @@ Each series represents one professional racing circuit for one season.
 | `discipline` | Enum | `dh \| ews \| xc` |
 | `season` | Int | Year |
 | `status` | Enum | `upcoming \| active \| completed` |
-| `salaryCap` | Int | Default 1,500,000 (cents) |
+| `salaryCap` | Int | Default 150,000,000 (cents = $1,500,000) |
 | `sensitivityFactor` | Float | Prediction market tuning, default 1.5 |
 
 ### Events
@@ -118,7 +123,7 @@ Each event is one race round within a series.
 | `scraperUrl` | String | Primary results page URL |
 | `scraperUrlStages` | String? | EWS stage results URL (nullable) |
 
-Roster window opens automatically 2 weeks before `raceDate`. Admin can manually open/close early.
+Roster window opens automatically 2 weeks before `raceDate` via a daily Vercel cron job (`/api/cron/fantasy/open-rosters`) that scans for events where `status = upcoming` and `raceDate ≤ now() + 14 days`, setting them to `roster_open`. Admin can manually open/close early via the admin panel.
 
 ### Rider Database
 
@@ -223,6 +228,24 @@ At roster deadline, `prices.reveal` job:
 
 ## Team Selection & Roster Management
 
+### Route Structure
+
+```
+/fantasy/                         → Landing page: active series cards, user's teams, quick stats
+/fantasy/[series]/                → Series hub: event list, current standings snapshot
+/fantasy/[series]/team            → Team selection for the current open event
+/fantasy/[series]/team/[eventId]  → Team view for a specific event (read-only if locked)
+/fantasy/[series]/leaderboard     → Global + championship leaderboard for the series
+/fantasy/[series]/riders          → Rider research page
+/fantasy/leagues/                 → All leagues the user belongs to
+/fantasy/leagues/[leagueId]/      → Individual league leaderboard
+/fantasy/leagues/create           → Create new league
+```
+
+Championship League auto-joins on season pass purchase — `FantasyLeagueMember` record created in the `checkout.session.completed` webhook handler. No separate opt-in required.
+
+---
+
 ### Team Building UI — `/fantasy/{series}/team`
 
 Three-panel layout:
@@ -236,7 +259,7 @@ Three-panel layout:
 **Panel 2 — Rider List**
 - All entered riders for the event
 - Default sort: market price descending
-- Filters: gender, nationality, team, price range, wildcard-eligible only
+- Filters: gender, nationality, price range, wildcard-eligible only (trade team filter deferred — `Rider` has no `team` field in this spec)
 - Search by name
 - Each row: rider photo, name, flag, base price, current market price, price trend arrow (↑↓ since roster opened), ownership indicator (lock icon until post-deadline)
 - Click row to expand rider detail
@@ -250,17 +273,29 @@ Three-panel layout:
 
 ### Budget Validation
 
-All budget validation is server-side. On every pick:
+All budget validation is server-side. A maximum of 6 picks per team per event is enforced server-side — the server action rejects the pick if `COUNT(active picks for this team + event) >= 6` before inserting. On every pick, the server action uses `SELECT FOR UPDATE` on the `FantasyTeam` row to prevent race conditions from concurrent picks:
+
 ```
-new_total = current_team_cost - dropped_rider_price + new_rider_price
-if new_total > salary_cap → reject with error message
+BEGIN TRANSACTION
+  SELECT ... FROM fantasy_teams WHERE id = teamId FOR UPDATE
+  current_cost = SUM(priceAtPick) for all active picks this event
+  new_total = current_cost - dropped_rider_price + new_rider_price
+  if new_total > salary_cap → ROLLBACK, return error
+  INSERT/DELETE FantasyPick
+COMMIT
 ```
 
-If market price increases push an existing team over budget between polls, a warning banner appears on next page load. Over-budget teams are not scored at the deadline.
+This prevents two concurrent picks from both passing validation while only one should.
+
+`isWildcard` is **never trusted from the client**. The server action re-derives it: `isWildcard = marketPriceCents < 20000000` (i.e., under $200K at time of pick). The client-submitted value is ignored.
+
+Wildcard slot eligibility is locked to the `priceAtPick` value — subsequent market price increases that push a rider above $200K do **not** invalidate the wildcard slot. The eligibility check at roster lock uses `FantasyPick.priceAtPick`, not the current market price. This prevents penalizing users for market movement they cannot control after locking in a pick.
+
+If market price increases push an existing team over budget between polls, a warning banner appears on next page load. Over-budget teams (where `SUM(priceAtPick) > salaryCap` at roster lock) receive `isOverBudget = true` on their `FantasyEventScore` and score 0 for that event.
 
 ### Roster Lock
 
-- At `rosterDeadline`, all `FantasyPick.lockedAt` timestamps are set in a batch update
+- At `rosterDeadline`, all `FantasyPick.lockedAt` timestamps are set in a batch update; over-budget status is recorded on `FantasyEventScore.isOverBudget` (event-scoped) during scoring, not on `FantasyTeam`
 - Locked picks cannot be changed — UI shows read-only team view
 - Email sent 24 hours before lock to all users with incomplete or unsaved teams
 - Email sent at lock to confirm final team
@@ -280,12 +315,13 @@ A mulligan is a safety net for missed roster deadlines.
 - **Cost:** $5 each, or 3 for $10 (purchased via Stripe, stored as `MulliganBalance`)
 - **Trigger:** Roster deadline passes with no locked team for that event
 - **Auto-pick logic:**
-  1. Load previous event's team
-  2. For any rider now over budget at current prices, swap with the cheapest eligible rider in the same slot type (open/wildcard) not already on the team
-  3. Lock the resulting team
-  4. Consume 1 mulligan from `MulliganBalance`, write `MulliganUse` record
-  5. Email user confirming their auto-picked team
-- Mulligans are consumed in order — if user has 0 mulligans, no team is entered and they score 0 for that event
+  1. Load previous event's team (each rider's locked `priceAtPick` from that prior event)
+  2. Re-price the auto-picked team using those **previous event `priceAtPick` values** (not current market prices) to avoid penalizing users for market movements during their absence
+  3. For any rider whose previous `priceAtPick` would put the team over budget in the new event, swap with the cheapest eligible rider in the same slot type (open/wildcard) not already on the team — "cheapest" measured by current `marketPriceCents`
+  4. Within a single database transaction: set `FantasyPick.lockedAt` for all new picks AND `SELECT FOR UPDATE` on `MulliganBalance`, increment `totalUsed`, AND write `MulliganUse` record — lock + consumption must be atomic. Available balance = `totalPurchased - totalUsed`.
+  5. Enqueue `prices.recalculate` for the event (outside the transaction)
+  6. Email user confirming their auto-picked team
+- If user has 0 mulligans (`totalPurchased - totalUsed = 0`), no team is entered and they score 0 for that event
 
 ---
 
@@ -340,22 +376,23 @@ Consistent across all three series:
 
 1. Admin confirms race results (or approves scraped results)
 2. `results.score` job enqueues
-3. Worker calculates `fantasyPoints` + `bonusPoints` per `RiderEventEntry`
-4. Worker calculates `totalPoints` per `FantasyTeam` for that event
-5. Writes `FantasyEventScore` records for all teams
-6. Updates `FantasySeasonScore` cumulative totals
-7. Recalculates global leaderboard ranks
-8. Recalculates all league standings
-9. Grants XP:
+3. Worker copies `finishPosition` and `dnsDnf` from each `RaceResult` into the corresponding `RiderEventEntry` — `RaceResult` is the source of truth for finish position; `RiderEventEntry` holds the denormalized copy used for scoring queries and display
+4. Worker calculates `fantasyPoints` + `bonusPoints` per `RiderEventEntry`
+5. Worker calculates `totalPoints` per `FantasyTeam` for that event; checks `SUM(priceAtPick)` vs `salaryCap` — over-budget teams receive `totalPoints = 0` and `isOverBudget = true` on `FantasyEventScore`
+6. Writes `FantasyEventScore` records for all teams as **upserts** on `(teamId, eventId)` — idempotent, safe to re-run after result overrides
+7. Updates `FantasySeasonScore` cumulative totals
+8. Recalculates global leaderboard ranks
+9. Recalculates all league standings
+10. Grants XP:
    - `fantasy_team_scored`: 10 XP (all participants)
    - `fantasy_top_10_pct`: 25 XP (top 10% finishers that event)
    - `fantasy_season_completed`: 50 XP (at season end)
    - `fantasy_league_won`: 100 XP (friend/survivor league winner)
-10. Sends score notification email to all participants
+11. Sends score notification email to all participants
 
 ### Drop Round (Season Pass Holders Only)
 
-At season end, the single lowest-scoring event is excluded from each season pass holder's cumulative total. Applied automatically — `FantasyEventScore.isDropRound = true` on the worst event. Drop round is reflected in real-time on the leaderboard throughout the season (always showing best possible season total).
+After each event is scored, the scoring worker re-evaluates which `FantasyEventScore` record is the current worst event for each season pass holder and sets `isDropRound = true` on it (clearing the flag from any prior worst event). This means the leaderboard always reflects the running best possible season total — the drop round is applied continuously, not just at season end. At season end, the final `isDropRound = true` event is the one officially excluded from the grand prize calculation.
 
 ---
 
@@ -407,7 +444,11 @@ Available to free and paid users. Usable across any series. Stored as `MulliganB
 
 - Season passes and mulligan packs purchased via Stripe Checkout sessions
 - Webhook endpoint: `/api/fantasy/stripe/webhook`
-- Handles: `checkout.session.completed` (provision access), `charge.refunded` (revoke if before first scored event)
+- Handles:
+  - `checkout.session.completed` — provision season pass or mulligan balance
+  - `checkout.session.expired` — log and discard; no action needed
+  - `payment_intent.payment_failed` — log failure, notify user by email with retry link
+  - `charge.refunded` — revoke season pass if before first scored event of the season
 - Uses existing `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` env vars
 - `SeasonPassPurchase` and `MulliganBalance` updated on webhook receipt
 
@@ -444,10 +485,10 @@ Enabled as an option when creating a friend league.
 
 Rules:
 - Each event, the lowest-scoring team is eliminated
-- Tied last place: eliminated by lowest season total; further tie = coin flip
+- Tied last place: eliminated by lowest season total; further tie = lowest `userId` (deterministic, no randomness)
 - Last team standing wins
 - If only 1 team remains before season end, survivor league ends early
-- Eliminated users remain in the league as spectators
+- Eliminated users remain in the league as spectators and are shown in the leaderboard below active members, marked with an "Eliminated after [Event Name]" badge
 
 ### Leaderboard Display
 
@@ -510,13 +551,19 @@ New pg-boss job types in the existing Fly.io worker. Each series has its own scr
 - Parse: Same cheerio parser with XC-specific selectors
 - Match riders: UCI ID
 
-Each scraper stores the raw HTML response for debugging. Parsing failures move job to dead-letter and notify admin to enter results manually.
+Each scraper uploads the raw HTML response to object storage (Cloudflare R2 or equivalent) and stores the resulting URL in `RaceResult.rawHtmlUrl` for debugging — not stored directly in Postgres to avoid row bloat. Parsing failures move the job to dead-letter and notify admin to enter results manually.
 
 ### Result States
 
+These are internal `RaceResult` processing states — distinct from `FantasyEvent.status` (which tracks roster lifecycle). A `FantasyEvent` reaches `results_pending` status when `results.scrape` fires; it transitions to `scored` after `results.score` completes.
+
 ```
+RaceResult internal state:
 pending → scraped → confirmed → scored
                               ↘ override_pending → scored
+
+FantasyEvent.status lifecycle:
+upcoming → roster_open → locked → results_pending → scored
 ```
 
 ### Admin Results Panel — `/admin/fantasy/results`
@@ -544,7 +591,7 @@ model FantasySeries {
   discipline        Discipline      // dh | ews | xc
   season            Int
   status            SeriesStatus    // upcoming | active | completed
-  salaryCap         Int             @default(150000000) // cents
+  salaryCap         Int             @default(150000000) // stored in cents; $1,500,000 = 150,000,000
   sensitivityFactor Float           @default(1.5)
   events            FantasyEvent[]
   teams             FantasyTeam[]
@@ -621,13 +668,13 @@ model RiderEventEntry {
 
 ```prisma
 model FantasyTeam {
-  id       String        @id @default(cuid())
-  userId   String
-  seriesId String
-  season   Int
-  user     User          @relation(...)
-  series   FantasySeries @relation(...)
-  picks    FantasyPick[]
+  id          String        @id @default(cuid())
+  userId      String
+  seriesId    String
+  season      Int
+  user        User          @relation(...)
+  series      FantasySeries @relation(...)
+  picks       FantasyPick[]
   eventScores FantasyEventScore[]
   seasonScore FantasySeasonScore?
 
@@ -657,16 +704,17 @@ model FantasyPick {
 
 ```prisma
 model FantasyEventScore {
-  id          String    @id @default(cuid())
-  teamId      String
-  eventId     String
-  basePoints  Int
-  bonusPoints Int
-  totalPoints Int
-  rank        Int       // global rank for this event
-  isDropRound Boolean   @default(false)
-  team        FantasyTeam  @relation(...)
-  event       FantasyEvent @relation(...)
+  id           String    @id @default(cuid())
+  teamId       String
+  eventId      String
+  basePoints   Int
+  bonusPoints  Int
+  totalPoints  Int
+  rank         Int       // global rank for this event
+  isDropRound  Boolean   @default(false)
+  isOverBudget Boolean   @default(false) // true if SUM(priceAtPick) > salaryCap at roster lock; totalPoints forced to 0
+  team         FantasyTeam  @relation(...)
+  event        FantasyEvent @relation(...)
 
   @@unique([teamId, eventId])
   @@index([eventId, totalPoints])
@@ -676,10 +724,10 @@ model FantasyEventScore {
 model FantasySeasonScore {
   id              String    @id @default(cuid())
   teamId          String    @unique
-  seriesId        String
-  season          Int
+  seriesId        String    // denormalized from FantasyTeam for query convenience
+  season          Int       // denormalized from FantasyTeam for query convenience
   totalPoints     Int       @default(0)
-  eventsPlayed    Int       @default(0)
+  eventsPlayed    Int       @default(0) // incremented when FantasyEventScore.totalPoints > 0 (i.e., team was scored)
   bestEventScore  Int?
   worstEventScore Int?
   rank            Int?
@@ -695,20 +743,28 @@ model FantasySeasonScore {
 
 ```prisma
 model FantasyLeague {
-  id            String   @id @default(cuid())
-  name          String
-  seriesId      String
-  season        Int
+  id              String   @id @default(cuid())
+  name            String
+  seriesId        String
+  season          Int
   createdByUserId String
-  inviteCode    String   @unique @default(cuid()) // 6-char, trimmed in app
-  isPublic      Boolean  @default(true)
-  isSurvivor    Boolean  @default(false)
-  members       FantasyLeagueMember[]
-  createdAt     DateTime @default(now())
+  inviteCode      String   @unique // 6-char nanoid generated in application layer before insert (Prisma has no native nanoid default)
+  isPublic        Boolean  @default(true)
+  isSurvivor      Boolean  @default(false)
+  isChampionship  Boolean  @default(false) // one per series per season, created by admin migration/seed, not user-created
+  members         FantasyLeagueMember[]
+  series          FantasySeries @relation(...)
+  createdBy       User          @relation(...)
+  createdAt       DateTime @default(now())
 
   @@index([seriesId, season])
   @@map("fantasy_leagues")
 }
+
+// Championship League creation: one record seeded per FantasySeries per season (isChampionship = true).
+// Created via admin tool at `/admin/fantasy/series` when a series is activated.
+// The checkout.session.completed webhook looks up the Championship League by (seriesId, season, isChampionship = true)
+// and inserts a FantasyLeagueMember for the purchaser. No separate opt-in required.
 
 model FantasyLeagueMember {
   id           String    @id @default(cuid())
@@ -768,12 +824,13 @@ model ExpertPick {
   eventId         String
   riderId         String
   slot            Int      // 1–6
-  publishedAt     DateTime?
-  publishedByUserId String
+  publishedAt       DateTime?
+  publishedByUserId String?   // nullable — null while draft, set on publish
   event           FantasyEvent @relation(...)
   rider           Rider        @relation(...)
 
   @@unique([eventId, slot])
+  @@unique([eventId, riderId])  // prevent same rider in two slots
   @@map("expert_picks")
 }
 ```
@@ -787,7 +844,7 @@ model RaceResult {
   riderId          String
   finishPosition   Int
   stageResults     Json?    // EWS stage breakdown
-  rawHtml          String?  // scraper debug storage
+  rawHtmlUrl       String?  // reference to raw HTML stored in object storage (S3/R2) for scraper debugging — not stored in Postgres
   scrapedAt        DateTime?
   confirmedAt      DateTime?
   confirmedByUserId String?
@@ -840,6 +897,11 @@ enum PassStatus {
   active
   refunded
 }
+
+enum Gender {
+  male
+  female
+}
 ```
 
 ### XP Additions
@@ -865,7 +927,7 @@ FANTASY: 'fantasy',
 | Scenario | Handling |
 |----------|----------|
 | Scraper parse failure | Job → dead-letter, admin notified, manual entry form shown |
-| Over-budget team at deadline | Team not scored (0 pts), user notified by email |
+| Over-budget team at deadline | Team not scored (0 pts), `FantasyEventScore.isOverBudget = true`, user notified by email |
 | Redis unavailable | Fall back to Postgres price read (slower but correct), alert fired |
 | Stripe webhook failure | Idempotent retry — `stripeSessionId` unique constraint prevents double-provisioning |
 | Scoring job failure | Dead-letter after 3 retries, admin notified, manual re-trigger available |
