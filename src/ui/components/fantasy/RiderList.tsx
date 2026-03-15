@@ -1,7 +1,9 @@
+// src/ui/components/fantasy/RiderList.tsx
 'use client'
 
 import { useState } from 'react'
 import { formatPrice } from '@/modules/fantasy/lib/pricing'
+import type { LivePrices } from '@/modules/fantasy/hooks/useLivePrices'
 
 interface RiderRow {
   riderId: string
@@ -14,12 +16,24 @@ interface RiderRow {
   isOnTeam: boolean
 }
 
+function PriceTrend({ cents, prev }: { cents: number; prev: number | null }) {
+  if (prev === null || cents === prev) {
+    return <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+  }
+  if (cents > prev) {
+    return <span style={{ color: '#16a34a' }}>↑</span>
+  }
+  return <span style={{ color: '#dc2626' }}>↓</span>
+}
+
 export function RiderList({
   riders,
   onSelect,
+  livePrices,
 }: {
   riders: RiderRow[]
   onSelect: (riderId: string) => void
+  livePrices?: LivePrices
 }) {
   const [search, setSearch] = useState('')
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all')
@@ -65,29 +79,40 @@ export function RiderList({
             </tr>
           </thead>
           <tbody>
-            {filtered.map(r => (
-              <tr key={r.riderId}
-                className={`border-t border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] cursor-pointer ${r.isOnTeam ? 'opacity-50' : ''}`}
-                onClick={() => !r.isOnTeam && onSelect(r.riderId)}>
-                <td className="py-2 px-3">
-                  <p className="font-medium">{r.name}</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">
-                    {r.nationality}
-                    {r.isWildcardEligible && <span className="ml-1 text-amber-600">⭐WC</span>}
-                  </p>
-                </td>
-                <td className="py-2 px-3 text-right font-mono text-xs">{formatPrice(r.marketPriceCents)}</td>
-                <td className="py-2 px-3 text-right text-[var(--color-text-muted)] hidden md:table-cell">
-                  {r.fantasyPoints ?? '—'}
-                </td>
-                <td className="py-2 px-3">
-                  {r.isOnTeam
-                    ? <span className="text-xs text-green-600">✓</span>
-                    : <span className="text-xs text-blue-600">+</span>
-                  }
-                </td>
-              </tr>
-            ))}
+            {filtered.map(r => {
+              const live = livePrices?.[r.riderId]
+              const displayCents = live?.cents ?? r.marketPriceCents
+              const prevCents = live?.prev ?? null
+
+              return (
+                <tr key={r.riderId}
+                  className={`border-t border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] cursor-pointer ${r.isOnTeam ? 'opacity-50' : ''}`}
+                  onClick={() => !r.isOnTeam && onSelect(r.riderId)}>
+                  <td className="py-2 px-3">
+                    <p className="font-medium">{r.name}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {r.nationality}
+                      {r.isWildcardEligible && <span className="ml-1 text-amber-600">⭐WC</span>}
+                    </p>
+                  </td>
+                  <td className="py-2 px-3 text-right font-mono text-xs">
+                    <span className="mr-1">
+                      <PriceTrend cents={displayCents} prev={prevCents} />
+                    </span>
+                    {formatPrice(displayCents)}
+                  </td>
+                  <td className="py-2 px-3 text-right text-[var(--color-text-muted)] hidden md:table-cell">
+                    {r.fantasyPoints ?? '—'}
+                  </td>
+                  <td className="py-2 px-3">
+                    {r.isOnTeam
+                      ? <span className="text-xs text-green-600">✓</span>
+                      : <span className="text-xs text-blue-600">+</span>
+                    }
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
