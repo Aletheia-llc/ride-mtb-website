@@ -335,7 +335,7 @@ export async function handleResultsScore(payload: { eventId: string }) {
         `UPDATE fantasy_event_scores fes
          SET
            "manufacturerPoints" = $1,
-           "totalPoints" = "totalPoints" + $1
+           "totalPoints" = "totalPoints" - "manufacturerPoints" + $1
          FROM fantasy_teams ft
          WHERE ft.id = fes."teamId"
            AND ft."userId" = $2
