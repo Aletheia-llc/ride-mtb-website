@@ -22,7 +22,14 @@ export async function getBoss(): Promise<PgBoss> {
   return globalForBoss.boss
 }
 
-export type JobName = 'video.ingest' | 'video.transcode' | 'video.tag'
+export type JobName =
+  | 'video.ingest'
+  | 'video.transcode'
+  | 'video.tag'
+  | 'fantasy.prices.recalculate'
+  | 'fantasy.prices.reveal'
+  | 'fantasy.results.scrape'
+  | 'fantasy.results.score'
 
 export interface VideoIngestPayload {
   youtubeVideoId: string
