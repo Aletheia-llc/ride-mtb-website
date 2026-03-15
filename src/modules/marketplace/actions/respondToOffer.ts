@@ -16,11 +16,20 @@ export async function acceptOffer(offerId: string) {
   if (offer.listing.sellerId !== user.id) throw new Error('Not your listing')
   if (offer.status !== 'pending') throw new Error('Offer is no longer pending')
 
-  await db.offer.update({ where: { id: offerId }, data: { status: 'accepted', respondedAt: new Date() } })
-  // Decline all other pending offers on this listing
-  await db.offer.updateMany({
-    where: { listingId: offer.listingId, status: 'pending', id: { not: offerId } },
-    data: { status: 'declined', respondedAt: new Date() },
+  await db.$transaction(async (tx) => {
+    const alreadyAccepted = await tx.offer.findFirst({
+      where: { listingId: offer.listingId, status: 'accepted' },
+    })
+    if (alreadyAccepted) throw new Error('Another offer was already accepted')
+
+    await tx.offer.update({
+      where: { id: offerId },
+      data: { status: 'accepted', respondedAt: new Date() },
+    })
+    await tx.offer.updateMany({
+      where: { listingId: offer.listingId, status: 'pending', id: { not: offerId } },
+      data: { status: 'declined', respondedAt: new Date() },
+    })
   })
 
   revalidatePath(`/marketplace/${offer.listing.slug}`)
@@ -55,18 +64,23 @@ export async function counterOffer(offerId: string, amount: number, message?: st
   if (offer.listing.sellerId !== user.id) throw new Error('Not your listing')
   if (offer.status !== 'pending') throw new Error('Offer is no longer pending')
 
-  await db.offer.update({ where: { id: offerId }, data: { status: 'countered', respondedAt: new Date() } })
-
   const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000)
-  const counter = await db.offer.create({
-    data: {
-      listingId: offer.listingId,
-      buyerId: offer.buyerId,
-      amount,
-      message,
-      parentOfferId: offerId,
-      expiresAt,
-    },
+
+  const counter = await db.$transaction(async (tx) => {
+    await tx.offer.update({
+      where: { id: offerId },
+      data: { status: 'countered', respondedAt: new Date() },
+    })
+    return tx.offer.create({
+      data: {
+        listingId: offer.listingId,
+        buyerId: offer.buyerId,
+        amount,
+        message,
+        parentOfferId: offerId,
+        expiresAt,
+      },
+    })
   })
 
   revalidatePath(`/marketplace/${offer.listing.slug}`)
