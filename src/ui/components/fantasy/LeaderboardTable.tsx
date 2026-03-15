@@ -24,7 +24,7 @@ export function LeaderboardTable({ entries, currentUserId }: { entries: Leaderbo
       </thead>
       <tbody>
         {entries.map(e => (
-          <tr key={e.rank}
+          <tr key={e.userId ?? e.rank}
             className={`border-b border-[var(--color-border)] ${(e.userId ?? e.username) === currentUserId ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
             <td className="py-2 pr-3 font-bold text-[var(--color-text-muted)]">{e.rank}</td>
             <td className="py-2">

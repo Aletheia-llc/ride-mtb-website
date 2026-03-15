@@ -43,7 +43,7 @@ export async function getChampionshipLeaderboard(
      )
      AND fss."seriesId" = $1
      AND fss.season = $2
-     ORDER BY fss."totalPoints" DESC, fss.rank ASC NULLS LAST`,
+     ORDER BY fss."totalPoints" DESC, fss."eventsPlayed" ASC NULLS LAST`,
     [seriesId, season]
   )
 
