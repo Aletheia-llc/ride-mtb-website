@@ -3,8 +3,12 @@ import { auth } from '@/lib/auth'
 import { getSeriesHub } from '@/modules/fantasy/queries/getSeriesHub'
 import { getGlobalLeaderboard } from '@/modules/fantasy/queries/getLeaderboard'
 import { getChampionshipLeaderboard } from '@/modules/fantasy/queries/getChampionshipLeaderboard'
+import { getManufacturerCupLeaderboard } from '@/modules/fantasy/queries/getManufacturerCupLeaderboard'
 import { LeaderboardTable } from '@/ui/components/fantasy/LeaderboardTable'
+import { ManufacturerCupTable } from '@/ui/components/fantasy/ManufacturerCupTable'
 import { notFound } from 'next/navigation'
+
+type Tab = 'global' | 'championship' | 'manufacturer'
 
 interface PageProps {
   params: Promise<{ series: string }>
@@ -14,7 +18,8 @@ interface PageProps {
 export default async function LeaderboardPage({ params, searchParams }: PageProps) {
   const { series } = await params
   const { tab } = await searchParams
-  const activeTab = tab === 'championship' ? 'championship' : 'global'
+  const activeTab: Tab =
+    tab === 'championship' ? 'championship' : tab === 'manufacturer' ? 'manufacturer' : 'global'
 
   const session = await auth()
   const seriesData = await getSeriesHub(series)
@@ -24,6 +29,11 @@ export default async function LeaderboardPage({ params, searchParams }: PageProp
     getGlobalLeaderboard(seriesData.id, seriesData.season),
     getChampionshipLeaderboard(seriesData.id, seriesData.season),
   ])
+
+  const mfrEntries =
+    activeTab === 'manufacturer'
+      ? await getManufacturerCupLeaderboard(seriesData.id, seriesData.season)
+      : []
 
   const entries = activeTab === 'championship' ? championshipEntries : globalEntries
 
@@ -53,6 +63,16 @@ export default async function LeaderboardPage({ params, searchParams }: PageProp
         >
           Championship ({championshipEntries.length})
         </a>
+        <a
+          href={`/fantasy/${series}/leaderboard?tab=manufacturer`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            activeTab === 'manufacturer'
+              ? 'border-green-600 text-green-700'
+              : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+          }`}
+        >
+          Manufacturer Cup
+        </a>
       </div>
 
       {activeTab === 'championship' && championshipEntries.length === 0 && (
@@ -70,7 +90,14 @@ export default async function LeaderboardPage({ params, searchParams }: PageProp
         </div>
       )}
 
-      {entries.length > 0 && (
+      {activeTab === 'manufacturer' && (
+        <ManufacturerCupTable
+          entries={mfrEntries}
+          currentUserId={session?.user?.id ?? undefined}
+        />
+      )}
+
+      {activeTab !== 'manufacturer' && entries.length > 0 && (
         <LeaderboardTable
           entries={entries}
           currentUserId={session?.user?.id ?? undefined}
