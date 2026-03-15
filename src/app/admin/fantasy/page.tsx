@@ -9,9 +9,10 @@ export const metadata = {
 export default async function AdminFantasyHub() {
   await requireAdmin()
 
-  const [seriesCount, riderCount, eventData] = await Promise.all([
+  const [seriesCount, riderCount, activeEventCount, openEvents] = await Promise.all([
     db.fantasySeries.count(),
     db.rider.count(),
+    db.fantasyEvent.count({ where: { status: { in: ['roster_open', 'results_pending'] } } }),
     db.fantasyEvent.findMany({
       where: { status: { in: ['roster_open', 'results_pending'] } },
       include: { series: { select: { name: true } } },
@@ -38,16 +39,16 @@ export default async function AdminFantasyHub() {
 
         <Link href="/admin/fantasy/events"
           className="border border-[var(--color-border)] rounded-lg p-4 text-center hover:bg-[var(--color-bg-secondary)] transition">
-          <p className="text-3xl font-bold">{eventData.length}</p>
+          <p className="text-3xl font-bold">{activeEventCount}</p>
           <p className="text-sm text-[var(--color-text-muted)]">Active Events</p>
         </Link>
       </div>
 
-      {eventData.length > 0 && (
+      {openEvents.length > 0 && (
         <div>
           <h2 className="font-semibold mb-3">Events Needing Attention</h2>
           <div className="space-y-2">
-            {eventData.map(e => (
+            {openEvents.map(e => (
               <div key={e.id} className="flex justify-between items-center border border-[var(--color-border)] rounded p-3 text-sm hover:bg-[var(--color-bg-hover)] transition">
                 <div>
                   <span className="font-medium">{e.name}</span>

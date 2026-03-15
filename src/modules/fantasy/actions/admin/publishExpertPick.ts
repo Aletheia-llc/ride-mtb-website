@@ -66,19 +66,28 @@ export async function setExpertPick(data: {
     }
 
     // Check if rider is in event roster
-    const inEvent = await db.fantasyRosterEntry.findUnique({
-      where: { eventId_riderId: { eventId, riderId } },
+    const inEvent = await db.riderEventEntry.findUnique({
+      where: { riderId_eventId: { riderId, eventId } },
       select: { id: true },
     })
     if (!inEvent) {
       return { errors: { general: 'Rider is not in this event roster' } }
     }
 
+    // Check if this slot is already published
+    const existing = await db.expertPick.findUnique({
+      where: { eventId_slot: { eventId, slot } },
+      select: { publishedAt: true },
+    })
+    if (existing?.publishedAt) {
+      return { errors: { general: 'Cannot change a published pick. Picks are locked after publishing.' } }
+    }
+
     // Upsert the pick
     await db.expertPick.upsert({
       where: { eventId_slot: { eventId, slot } },
       create: { eventId, riderId, slot, publishedAt: null, publishedByUserId: null },
-      update: { riderId, publishedAt: null, publishedByUserId: null },
+      update: { riderId },
     })
 
     revalidatePath(`/admin/fantasy/expert-picks/${eventId}`)
