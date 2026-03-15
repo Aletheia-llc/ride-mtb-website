@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const result = await db.fantasyEvent.updateMany({
     where: {
       status: 'upcoming',
-      raceDate: { lte: twoWeeksFromNow },
+      raceDate: { gte: new Date(), lte: twoWeeksFromNow },
     },
     data: { status: 'roster_open' },
   })
