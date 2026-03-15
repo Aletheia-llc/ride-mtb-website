@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  switch (event.type) {
+  switch (event.type as string) {
     case 'account.updated': {
       const account = event.data.object as {
         id: string

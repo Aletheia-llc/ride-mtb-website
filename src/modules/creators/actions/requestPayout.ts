@@ -3,6 +3,7 @@
 import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
+// eslint-disable-next-line no-restricted-imports
 import { getWalletBalance, hasPendingPayout } from '@/modules/creators/lib/wallet'
 
 const MINIMUM_PAYOUT_CENTS = 5000

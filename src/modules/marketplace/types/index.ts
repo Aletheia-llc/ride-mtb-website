@@ -16,7 +16,7 @@ export type ListingCategory =
 
 export type ItemCondition = 'new' | 'like_new' | 'good' | 'fair' | 'poor'
 
-export type ListingStatus = 'active' | 'sold' | 'reserved' | 'expired' | 'removed'
+export type ListingStatus = 'draft' | 'active' | 'sold' | 'reserved' | 'expired' | 'removed'
 
 export interface ListingSummary {
   id: string
@@ -90,6 +90,7 @@ export const conditionBadgeVariant: Record<ItemCondition, 'success' | 'info' | '
 }
 
 export const statusLabels: Record<ListingStatus, string> = {
+  draft: 'Draft',
   active: 'Active',
   sold: 'Sold',
   reserved: 'Reserved',

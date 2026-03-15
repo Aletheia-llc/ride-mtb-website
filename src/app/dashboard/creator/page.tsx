@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/guards'
 import { getCreatorByUserId, getCreatorVideos } from '@/modules/creators/lib/queries'
+// eslint-disable-next-line no-restricted-imports
 import { getWalletBalance, getWalletTransactions, hasPendingPayout } from '@/modules/creators/lib/wallet'
 import { CreatorDashboard } from '@/modules/creators'
 

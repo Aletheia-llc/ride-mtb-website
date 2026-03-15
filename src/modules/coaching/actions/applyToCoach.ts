@@ -25,7 +25,6 @@ export async function applyToCoachAction(_prev: ApplyState, formData: FormData):
 
   const hourlyRate = hourlyRateRaw ? parseFloat(hourlyRateRaw) : null
 
-  // @ts-expect-error — model added to schema, not yet pushed
   await db.coachApplication.upsert({
     where: { userId: user.id },
     update: { title, bio, hourlyRate, location, calcomLink, specialties, status: 'pending', reviewNote: null },

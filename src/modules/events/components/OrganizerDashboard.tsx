@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 type EventItem = { id: string; title: string; slug: string; startDate: Date; status: string; _count?: { rsvps?: number } }
 type Organizer = { orgName: string; bio: string | null; isVerified: boolean; events: EventItem[] }
 
@@ -16,7 +18,7 @@ export function OrganizerDashboard({ organizer }: { organizer: Organizer }) {
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-[var(--color-text)]">Your Events</h2>
-        <a href="/events/new" className="rounded bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white">+ New Event</a>
+        <Link href="/events/new" className="rounded bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white">+ New Event</Link>
       </div>
 
       {organizer.events.length === 0 ? (
@@ -26,7 +28,7 @@ export function OrganizerDashboard({ organizer }: { organizer: Organizer }) {
           {organizer.events.map(event => (
             <div key={event.id} className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
               <div>
-                <a href={`/events/${event.slug}`} className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{event.title}</a>
+                <Link href={`/events/${event.slug}`} className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{event.title}</Link>
                 <p className="text-xs text-[var(--color-text-muted)]">{new Date(event.startDate).toLocaleDateString()}</p>
               </div>
               <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${event.status === 'published' ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-500'}`}>

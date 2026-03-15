@@ -1,3 +1,4 @@
+import Link from 'next/link'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
 import { CalendarView } from '@/modules/events/components/CalendarView'
@@ -13,7 +14,7 @@ export default async function EventsCalendarPage() {
     <main className="mx-auto max-w-5xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[var(--color-text)]">Event Calendar</h1>
-        <a href="/events" className="text-sm text-[var(--color-primary)] hover:underline">List View</a>
+        <Link href="/events" className="text-sm text-[var(--color-primary)] hover:underline">List View</Link>
       </div>
       <CalendarView events={events} />
     </main>

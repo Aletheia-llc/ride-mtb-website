@@ -30,7 +30,7 @@ export default async function CoachApplyPage() {
         </p>
         {existing?.status === 'pending' && (
           <div className="mt-4 rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
-            Your application is under review. We'll notify you when it's processed.
+            Your application is under review. We&apos;ll notify you when it&apos;s processed.
           </div>
         )}
         {existing?.status === 'rejected' && existing.reviewNote && (

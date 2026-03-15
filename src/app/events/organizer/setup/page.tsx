@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useActionState } from 'react'
 import { createOrganizerProfile } from '@/modules/events/actions/createOrganizerProfile'
 
@@ -14,7 +15,7 @@ export default function OrganizerSetupPage() {
     <main className="mx-auto max-w-md px-4 py-8 text-center">
       <p className="text-2xl mb-4">Done!</p>
       <h1 className="text-xl font-bold text-[var(--color-text)] mb-2">You&apos;re set up!</h1>
-      <a href="/events/organizer" className="text-[var(--color-primary)] underline">Go to your dashboard</a>
+      <Link href="/events/organizer" className="text-[var(--color-primary)] underline">Go to your dashboard</Link>
     </main>
   )
 

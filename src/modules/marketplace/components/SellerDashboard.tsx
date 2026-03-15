@@ -27,6 +27,7 @@ interface SellerDashboardProps {
 }
 
 const statusColors: Record<ListingStatus, string> = {
+  draft: 'text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)]',
   active: 'text-green-600 bg-green-500/10',
   sold: 'text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)]',
   reserved: 'text-yellow-600 bg-yellow-500/10',

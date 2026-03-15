@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState } from 'react'
 import { removeFromCart, updateCartQuantity } from '@/modules/merch/actions/cart'
 
@@ -109,13 +110,13 @@ export function CartPageClient({ items }: CartPageClientProps) {
     return (
       <div className="text-center py-16">
         <p className="text-[var(--color-text-muted)] text-lg">Your cart is empty.</p>
-        <a
+        <Link
           href="/merch"
           className="mt-4 inline-block px-6 py-2 rounded font-medium text-white"
           style={{ background: 'var(--color-primary)' }}
         >
           Browse Merch
-        </a>
+        </Link>
       </div>
     )
   }

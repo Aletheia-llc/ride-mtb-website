@@ -11,7 +11,6 @@ export async function reviewApplicationAction(formData: FormData): Promise<void>
   const action = formData.get('action') as 'approve' | 'reject'
   const reviewNote = (formData.get('reviewNote') as string)?.trim() || undefined
 
-  // @ts-expect-error — model added to schema, not yet pushed
   const application = await db.coachApplication.findUnique({
     where: { id: applicationId },
     select: { userId: true, title: true, bio: true, specialties: true, certifications: true, hourlyRate: true, location: true, calcomLink: true },
@@ -21,19 +20,19 @@ export async function reviewApplicationAction(formData: FormData): Promise<void>
 
   if (action === 'approve') {
     await db.$transaction([
-      // @ts-expect-error — model added to schema, not yet pushed
       db.coachApplication.update({
         where: { id: applicationId },
         data: { status: 'approved', reviewNote, reviewedBy: admin.id, reviewedAt: new Date() },
       }),
       db.coachProfile.upsert({
         where: { userId: application.userId },
-        update: { title: application.title, bio: application.bio, specialties: application.specialties, certifications: application.certifications, hourlyRate: application.hourlyRate, location: application.location, calcomLink: application.calcomLink, isActive: true },
-        create: { userId: application.userId, title: application.title, bio: application.bio, specialties: application.specialties, certifications: application.certifications, hourlyRate: application.hourlyRate, location: application.location, calcomLink: application.calcomLink },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        update: { title: application.title, bio: application.bio, specialties: application.specialties as any, certifications: application.certifications as any, hourlyRate: application.hourlyRate, location: application.location, calcomLink: application.calcomLink, isActive: true },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        create: { userId: application.userId, title: application.title, bio: application.bio, specialties: application.specialties as any, certifications: application.certifications as any, hourlyRate: application.hourlyRate, location: application.location, calcomLink: application.calcomLink },
       }),
     ])
   } else {
-    // @ts-expect-error — model added to schema, not yet pushed
     await db.coachApplication.update({
       where: { id: applicationId },
       data: { status: 'rejected', reviewNote, reviewedBy: admin.id, reviewedAt: new Date() },
