@@ -3,6 +3,7 @@
 import { db } from '@/lib/db/client'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { requireAdmin } from '@/lib/auth/guards'
 
 export type ManufacturerFormState = {
   errors?: {
@@ -17,6 +18,7 @@ export async function createManufacturer(
   _prev: ManufacturerFormState,
   formData: FormData
 ): Promise<ManufacturerFormState> {
+  await requireAdmin()
   const name = (formData.get('name') as string | null)?.trim() ?? ''
   const slug = (formData.get('slug') as string | null)?.trim() ?? ''
   const logoUrl = (formData.get('logoUrl') as string | null)?.trim() || undefined
@@ -46,6 +48,7 @@ export async function updateManufacturer(
   _prev: ManufacturerFormState,
   formData: FormData
 ): Promise<ManufacturerFormState> {
+  await requireAdmin()
   const id = formData.get('id') as string
   const name = (formData.get('name') as string | null)?.trim() ?? ''
   const slug = (formData.get('slug') as string | null)?.trim() ?? ''
@@ -73,6 +76,7 @@ export async function updateManufacturer(
 }
 
 export async function deleteManufacturer(id: string): Promise<void> {
+  await requireAdmin()
   await db.bikeManufacturer.delete({ where: { id } })
   revalidatePath('/admin/fantasy/manufacturers')
 }

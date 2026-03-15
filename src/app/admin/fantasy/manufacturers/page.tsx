@@ -33,7 +33,7 @@ export default async function AdminManufacturersPage() {
             <tr key={m.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]">
               <td className="py-2 pr-4">
                 {m.logoUrl
-                  ? <Image src={m.logoUrl} alt={m.name} width={32} height={32} className="rounded" />
+                  ? <Image src={m.logoUrl} alt={m.name} width={32} height={32} className="rounded" unoptimized />
                   : <span className="text-[var(--color-text-muted)] text-xs">—</span>
                 }
               </td>

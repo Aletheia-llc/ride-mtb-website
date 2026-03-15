@@ -13,6 +13,7 @@ vi.mock('@/lib/db/client', () => ({
 }))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
+vi.mock('@/lib/auth/guards', () => ({ requireAdmin: vi.fn().mockResolvedValue(undefined) }))
 
 import { db } from '@/lib/db/client'
 
