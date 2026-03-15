@@ -178,6 +178,85 @@ export async function handleResultsScore(payload: { eventId: string }) {
         "worstEventScore" = EXCLUDED."worstEventScore"
     `, [seriesId, season])
 
+    // Step: Drop round — mark worst event as isDropRound for season pass holders
+    // Only applied when the team has 2+ scored events (no point dropping a single result)
+    const passHolderTeamsRes = await client.query(
+      `SELECT DISTINCT ft.id AS "teamId"
+       FROM fantasy_teams ft
+       JOIN season_pass_purchases spp
+         ON spp."userId" = ft."userId"
+         AND spp."seriesId" = ft."seriesId"
+         AND spp.season = ft.season
+         AND spp.status = 'active'
+       WHERE ft."seriesId" = $1 AND ft.season = $2`,
+      [seriesId, season]
+    )
+
+    for (const row of passHolderTeamsRes.rows) {
+      const teamId: string = row.teamId
+
+      // Count scored events for this team
+      const countRes = await client.query(
+        `SELECT COUNT(*) AS count FROM fantasy_event_scores WHERE "teamId" = $1`,
+        [teamId]
+      )
+      if (parseInt(countRes.rows[0].count) < 2) continue
+
+      // Find the worst event
+      const worstRes = await client.query(
+        `SELECT id FROM fantasy_event_scores
+         WHERE "teamId" = $1
+         ORDER BY "totalPoints" ASC
+         LIMIT 1`,
+        [teamId]
+      )
+      if (worstRes.rows.length === 0) continue
+      const worstId: string = worstRes.rows[0].id
+
+      // Clear all existing drop round flags for this team
+      await client.query(
+        `UPDATE fantasy_event_scores SET "isDropRound" = false WHERE "teamId" = $1`,
+        [teamId]
+      )
+
+      // Mark new worst as drop round
+      await client.query(
+        `UPDATE fantasy_event_scores SET "isDropRound" = true WHERE id = $1`,
+        [worstId]
+      )
+    }
+
+    // Recompute season totals now that isDropRound flags are updated
+    // (re-run the same UPSERT — the FILTER (WHERE NOT isDropRound) picks up the new flags)
+    if (passHolderTeamsRes.rows.length > 0) {
+      await client.query(`
+        INSERT INTO fantasy_season_scores (id, "teamId", "seriesId", season, "totalPoints", "eventsPlayed", "bestEventScore", "worstEventScore")
+        SELECT
+          gen_random_uuid(),
+          fes."teamId",
+          $1,
+          $2,
+          COALESCE(SUM(fes."totalPoints") FILTER (WHERE NOT fes."isDropRound"), 0),
+          COUNT(fes.id),
+          MAX(fes."totalPoints"),
+          MIN(fes."totalPoints")
+        FROM fantasy_event_scores fes
+        JOIN fantasy_teams ft ON ft.id = fes."teamId"
+        JOIN season_pass_purchases spp
+          ON spp."userId" = ft."userId"
+          AND spp."seriesId" = ft."seriesId"
+          AND spp.season = ft.season
+          AND spp.status = 'active'
+        WHERE ft."seriesId" = $1 AND ft.season = $2
+        GROUP BY fes."teamId"
+        ON CONFLICT ("teamId") DO UPDATE SET
+          "totalPoints" = EXCLUDED."totalPoints",
+          "eventsPlayed" = EXCLUDED."eventsPlayed",
+          "bestEventScore" = EXCLUDED."bestEventScore",
+          "worstEventScore" = EXCLUDED."worstEventScore"
+      `, [seriesId, season])
+    }
+
     // 7. Assign season ranks
     const seasonScores = await client.query(
       `SELECT id, "totalPoints" FROM fantasy_season_scores
