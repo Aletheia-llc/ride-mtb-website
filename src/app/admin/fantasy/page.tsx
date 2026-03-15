@@ -9,10 +9,11 @@ export const metadata = {
 export default async function AdminFantasyHub() {
   await requireAdmin()
 
-  const [seriesCount, riderCount, activeEventCount, openEvents] = await Promise.all([
+  const [seriesCount, riderCount, activeEventCount, manufacturerCount, openEvents] = await Promise.all([
     db.fantasySeries.count(),
     db.rider.count(),
     db.fantasyEvent.count({ where: { status: { in: ['roster_open', 'results_pending'] } } }),
+    db.bikeManufacturer.count(),
     db.fantasyEvent.findMany({
       where: { status: { in: ['roster_open', 'results_pending'] } },
       include: { series: { select: { name: true } } },
@@ -24,7 +25,7 @@ export default async function AdminFantasyHub() {
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Fantasy MTB Admin</h1>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <Link href="/admin/fantasy/series"
           className="border border-[var(--color-border)] rounded-lg p-4 text-center hover:bg-[var(--color-bg-secondary)] transition">
           <p className="text-3xl font-bold">{seriesCount}</p>
@@ -41,6 +42,12 @@ export default async function AdminFantasyHub() {
           className="border border-[var(--color-border)] rounded-lg p-4 text-center hover:bg-[var(--color-bg-secondary)] transition">
           <p className="text-3xl font-bold">{activeEventCount}</p>
           <p className="text-sm text-[var(--color-text-muted)]">Active Events</p>
+        </Link>
+
+        <Link href="/admin/fantasy/manufacturers"
+          className="border border-[var(--color-border)] rounded-lg p-4 text-center hover:bg-[var(--color-bg-secondary)] transition">
+          <p className="text-3xl font-bold">{manufacturerCount}</p>
+          <p className="text-sm text-[var(--color-text-muted)]">Manufacturers</p>
         </Link>
       </div>
 
