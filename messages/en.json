@@ -1,0 +1,23 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "notFound": "Not found",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back"
+  },
+  "nav": {
+    "home": "Home",
+    "forum": "Forum",
+    "news": "News",
+    "trails": "Trails",
+    "events": "Events",
+    "coaching": "Coaching",
+    "marketplace": "Buy & Sell",
+    "shop": "Shop",
+    "merch": "Merch"
+  }
+}
