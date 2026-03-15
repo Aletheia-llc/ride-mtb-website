@@ -149,10 +149,12 @@ Riders are global records shared across series.
 | `basePriceCents` | Int | Admin-set seed price at season start |
 | `marketPriceCents` | Int | Live prediction market price |
 | `ownershipPct` | Float? | Revealed post-lock only |
-| `finishPosition` | Int? | Set after race |
+| `finishPosition` | Int? | Set after race; null for DNS/DNF or EWS partial completion |
+| `qualifyingPosition` | Int? | DH/XC only; used for fastest qualifier bonus |
 | `fantasyPoints` | Int? | Base points after scoring |
 | `bonusPoints` | Int? | Bonus points after scoring |
 | `dnsDnf` | Boolean | Default false |
+| `partialCompletion` | Boolean | EWS only: rider completed ≥1 stage but has no overall finish position; 0 base points, no penalty |
 
 ### Seed Pricing Convention
 
@@ -290,7 +292,11 @@ BEGIN TRANSACTION
   wildcard_count = COUNT(current_picks WHERE isWildcard = true)
   if new_pick.isWildcard AND wildcard_count >= 2 → ROLLBACK, return error
 
-  new_total = current_cost - dropped_rider_price + new_rider_price
+  // budget check: branch on whether this is a swap or a pure add
+  if this is a swap (dropping one rider, picking another):
+    new_total = current_cost - dropped_rider_price + new_rider_price
+  else: // pure add (no rider being dropped)
+    new_total = current_cost + new_rider_price
   if new_total > salary_cap → ROLLBACK, return error
   INSERT/DELETE FantasyPick
 COMMIT
@@ -364,7 +370,7 @@ Consistent across all three series:
 | Fastest qualifier | +5 | DH, XC |
 | Stage win | +3 per stage | EWS only |
 | Podium finish in home country | +3 | All series |
-| Wildcard top 10 (sub-$200K rider finishes top 10) | +5 | All series |
+| Wildcard top 10 (rider picked at under $200K — `isWildcard = true` — finishes top 10) | +5 | All series |
 | Perfect round (all 6 riders finish top 20) | +10 to team total | All series |
 
 ### Series-Specific Notes
@@ -377,7 +383,7 @@ Consistent across all three series:
 **Enduro World Series (EWS)**
 - Overall finish position determines base points
 - Each individual stage win earns +3 (no cap on stage win bonuses)
-- No DNS penalty if rider completes at least one stage (partial completion = 0 base points, no penalty)
+- Three-state completion model (EWS only): **full finish** (`finishPosition` set, `dnsDnf = false`, `partialCompletion = false`) = base points from table; **partial completion** (`finishPosition = null`, `partialCompletion = true`, `dnsDnf = false`) = 0 base points, no penalty; **full DNS/DNF** (`dnsDnf = true`, `partialCompletion = false`) = −2 points. The scraper sets `partialCompletion = true` when a rider appears in stage results but has no overall position.
 
 **UCI XC World Cup**
 - Circuit race finish position determines base points
@@ -388,7 +394,7 @@ Consistent across all three series:
 
 1. Admin confirms race results (or approves scraped results)
 2. `results.score` job enqueues
-3. Worker copies `finishPosition` and `dnsDnf` from each `RaceResult` into the corresponding `RiderEventEntry` — `RaceResult` is the source of truth for finish position; `RiderEventEntry` holds the denormalized copy used for scoring queries and display
+3. Worker copies `finishPosition`, `qualifyingPosition`, `dnsDnf`, and `partialCompletion` from each `RaceResult` into the corresponding `RiderEventEntry` — `RaceResult` is the source of truth; `RiderEventEntry` holds the denormalized copy used for scoring queries and display
 4. Worker calculates `fantasyPoints` + `bonusPoints` per `RiderEventEntry` — covers: base points (finish position table), fastest qualifier, stage wins, home-country podium. Note: the "Wildcard top 10" bonus is **not** computed here (it is team-scoped, not rider-scoped — see step 5).
 5. Worker calculates `totalPoints` per `FantasyTeam` for that event, including the team-scoped bonuses: (a) "Wildcard top 10" — for each `FantasyPick.isWildcard = true` pick whose rider finished top 10, add +5 to the team total; (b) "Perfect round" — if all 6 picked riders finished top 20, add +10. Checks `SUM(priceAtPick)` vs `salaryCap` — over-budget teams receive `totalPoints = 0` and `isOverBudget = true` on `FantasyEventScore`
 6. Writes `FantasyEventScore` records for all teams as **upserts** on `(teamId, eventId)` — idempotent, safe to re-run after result overrides
@@ -538,7 +544,7 @@ New pg-boss job types in the existing Fly.io worker. Each series has its own scr
 
 | Job | Trigger | Action |
 |-----|---------|--------|
-| `results.scrape` | Vercel cron 1hr after scheduled race end, then every 30min until confirmed | Fetch results page, parse finish order, store raw results + parsed data |
+| `results.scrape` | Initial: Vercel cron (`/api/cron/fantasy/scrape-results`, every 30min on Vercel Pro) fires 1hr after scheduled race end by enqueuing job for events where `status = results_pending` and no confirmed results. Retries: same cron re-enqueues every 30min for events that remain `results_pending` with `confirmedAt IS NULL` on all `RaceResult` rows. Termination: once all `RaceResult.confirmedAt` are set for an event (admin confirms results), no further jobs enqueued. | Fetch results page, parse finish order, store raw results + parsed data |
 | `results.confirm` | Admin clicks "Confirm Results" in admin panel | Lock results, enqueue `results.score` |
 | `results.score` | After `results.confirm` | Calculate fantasy points, update leaderboards, send emails, grant XP |
 | `results.override` | Admin edits a single result | Re-run `results.score` for that event |
@@ -567,16 +573,23 @@ Each scraper uploads the raw HTML response to object storage (Cloudflare R2 or e
 
 ### Result States
 
-These are internal `RaceResult` processing states — distinct from `FantasyEvent.status` (which tracks roster lifecycle). A `FantasyEvent` reaches `results_pending` status when `results.scrape` fires; it transitions to `scored` after `results.score` completes.
+`RaceResult.status` tracks the per-rider result processing state (stored in the `status` field — see schema). This is distinct from `FantasyEvent.status` (which tracks roster lifecycle). A `FantasyEvent` reaches `results_pending` status when `results.scrape` fires; it transitions to `scored` after `results.score` completes.
 
 ```
-RaceResult internal state:
+RaceResult.status lifecycle:
 pending → scraped → confirmed → scored
                               ↘ override_pending → scored
 
 FantasyEvent.status lifecycle:
 upcoming → roster_open → locked → results_pending → scored
 ```
+
+State transitions:
+- `pending` — initial state when `RaceResult` row is created during scrape job
+- `scraped` — parser successfully extracted a finish position (or dnsDnf flag)
+- `confirmed` — admin clicked "Confirm Results"; locks the result, enqueues `results.score`
+- `scored` — `results.score` completed; `RiderEventEntry` denormalized values updated, `FantasyEventScore` written
+- `override_pending` — admin submitted an override; triggers re-score without going back through scraper
 
 ### Admin Results Panel — `/admin/fantasy/results`
 
@@ -659,18 +672,20 @@ model Rider {
 }
 
 model RiderEventEntry {
-  id               String   @id @default(cuid())
-  riderId          String
-  eventId          String
-  basePriceCents   Int
-  marketPriceCents Int
-  ownershipPct     Float?   // null until post-lock reveal
-  finishPosition   Int?
-  fantasyPoints    Int?
-  bonusPoints      Int?
-  dnsDnf           Boolean  @default(false)
-  rider            Rider    @relation(...)
-  event            FantasyEvent @relation(...)
+  id                 String   @id @default(cuid())
+  riderId            String
+  eventId            String
+  basePriceCents     Int
+  marketPriceCents   Int
+  ownershipPct       Float?   // null until post-lock reveal
+  finishPosition     Int?
+  qualifyingPosition Int?     // DH/XC only; used for fastest qualifier bonus
+  fantasyPoints      Int?
+  bonusPoints        Int?
+  dnsDnf             Boolean  @default(false)
+  partialCompletion  Boolean  @default(false) // EWS only: copied from RaceResult.partialCompletion
+  rider              Rider    @relation(...)
+  event              FantasyEvent @relation(...)
 
   @@unique([riderId, eventId])
   @@index([eventId])
@@ -741,7 +756,7 @@ model FantasySeasonScore {
   teamId          String    @unique
   seriesId        String    // denormalized from FantasyTeam for query convenience
   season          Int       // denormalized from FantasyTeam for query convenience
-  totalPoints     Int       @default(0)
+  totalPoints     Int       @default(0) // drop-adjusted total: SUM(FantasyEventScore.totalPoints WHERE isDropRound = false) for season pass holders; raw SUM for free users. Recomputed after every event scoring run.
   eventsPlayed    Int       @default(0) // incremented whenever a FantasyEventScore exists for this team (regardless of totalPoints — even 0-point and over-budget events count as played)
   bestEventScore  Int?
   worstEventScore Int?
@@ -760,9 +775,10 @@ model FantasySeasonScore {
 model FantasyLeague {
   id              String   @id @default(cuid())
   name            String
+  avatarUrl       String?  // optional league avatar image
   seriesId        String
   season          Int
-  createdByUserId String
+  createdByUserId String   // the commissioner; can rename the league, cannot remove members
   inviteCode      String   @unique // 6-char nanoid generated in application layer before insert (Prisma has no native nanoid default)
   isPublic        Boolean  @default(true)
   isSurvivor      Boolean  @default(false)
@@ -776,6 +792,13 @@ model FantasyLeague {
   @@map("fantasy_leagues")
 }
 
+// Championship League uniqueness: enforced via a raw SQL partial unique index in the migration:
+//   CREATE UNIQUE INDEX fantasy_leagues_championship_unique
+//   ON fantasy_leagues (series_id, season)
+//   WHERE is_championship = true;
+// Prisma does not support partial unique indexes natively; this must be added as a raw migration step.
+// The admin tool at `/admin/fantasy/series` also guards against duplicates at the application layer.
+//
 // Championship League creation: one record seeded per FantasySeries per season (isChampionship = true).
 // Created via admin tool at `/admin/fantasy/series` when a series is activated.
 // The checkout.session.completed webhook looks up the Championship League by (seriesId, season, isChampionship = true)
@@ -833,6 +856,7 @@ model MulliganUse {
   team     FantasyTeam  @relation(...)
   event    FantasyEvent @relation(...)
 
+  @@unique([teamId, eventId]) // prevents double-consumption on cron retry; idempotency guard
   @@map("mulligan_uses")
 }
 
@@ -856,19 +880,22 @@ model ExpertPick {
 
 ```prisma
 model RaceResult {
-  id               String   @id @default(cuid())
-  eventId          String
-  riderId          String
-  finishPosition   Int?     // null for DNS/DNF riders
-  dnsDnf           Boolean  @default(false)
-  stageResults     Json?    // EWS stage breakdown
-  rawHtmlUrl       String?  // R2 URL to raw HTML; HTML body not stored in Postgres
-  scrapedAt        DateTime?
-  confirmedAt      DateTime?
+  id                String       @id @default(cuid())
+  eventId           String
+  riderId           String
+  status            ResultStatus @default(pending) // pending | scraped | confirmed | scored | override_pending
+  finishPosition    Int?         // null for DNS/DNF or EWS partial completion
+  qualifyingPosition Int?        // DH/XC only; used for fastest qualifier bonus; null for EWS
+  dnsDnf            Boolean      @default(false)
+  partialCompletion Boolean      @default(false) // EWS only: rider completed ≥1 stage but has no overall position; scores 0, no penalty
+  stageResults      Json?        // EWS stage breakdown
+  rawHtmlUrl        String?      // R2 URL to raw HTML; HTML body not stored in Postgres
+  scrapedAt         DateTime?
+  confirmedAt       DateTime?
   confirmedByUserId String?
-  overrides        ResultOverride[]
-  event            FantasyEvent @relation(...)
-  rider            Rider        @relation(...)
+  overrides         ResultOverride[]
+  event             FantasyEvent @relation(...)
+  rider             Rider        @relation(...)
 
   @@unique([eventId, riderId])
   @@map("race_results")
@@ -921,6 +948,14 @@ enum PassStatus {
 enum Gender {
   male
   female
+}
+
+enum ResultStatus {
+  pending          // row created, not yet parsed
+  scraped          // parser extracted position/dnsDnf
+  confirmed        // admin confirmed; results.score enqueued
+  scored           // results.score completed; RiderEventEntry updated
+  override_pending // admin submitted override; re-score in progress
 }
 ```
 
