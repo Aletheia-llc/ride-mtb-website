@@ -1,181 +1,253 @@
 // src/modules/fantasy/worker/mulliganAutoPick.ts
+// Called by pg-boss worker as 'fantasy.mulligan.auto-pick'
+// Input: { teamId: string; eventId: string; userId: string }
+//
+// Auto-picks the previous event's team for a user who missed the roster deadline
+// but has an unspent mulligan. The entire operation is transactional with
+// SELECT FOR UPDATE to prevent double-use of a single mulligan charge.
+
 import { pool } from '@/lib/db/client'
 import { getBoss } from '@/lib/pgboss'
+import { WILDCARD_PRICE_THRESHOLD } from '../constants/scoring'
 
-export async function handleMulliganAutoPick(payload: {
+export interface MulliganAutoPickPayload {
+  teamId: string
   eventId: string
   userId: string
-  teamId: string
-}) {
-  const { eventId, userId, teamId } = payload
+}
+
+export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
+  const { teamId, eventId, userId } = payload
   const client = await pool.connect()
+
   try {
-    // 1. Load event + series metadata
-    const eventRes = await client.query(
-      `SELECT e."seriesId", s.season, s."salaryCap"
-       FROM fantasy_events e
-       JOIN fantasy_series s ON s.id = e."seriesId"
-       WHERE e.id = $1`,
-      [eventId]
+    await client.query('BEGIN')
+
+    // 1. Lock the team row to prevent concurrent mulligan jobs
+    const teamRes = await client.query(
+      `SELECT ft.id, ft."seriesId", ft.season
+       FROM fantasy_teams ft
+       WHERE ft.id = $1
+       FOR UPDATE`,
+      [teamId]
     )
-    if (eventRes.rows.length === 0) {
-      console.error(`[mulligan.auto-pick] Event ${eventId} not found`)
+    if (teamRes.rows.length === 0) {
+      await client.query('ROLLBACK')
+      console.warn(`[fantasy.mulligan.auto-pick] Team ${teamId} not found`)
       return
     }
-    const { seriesId, season, salaryCap } = eventRes.rows[0]
+    const { seriesId, season } = teamRes.rows[0] as {
+      seriesId: string
+      season: number
+    }
 
-    // 2. Check mulligan balance (pre-check before transaction)
+    // 2. Verify this event still has zero picks (idempotent — job may fire late/duplicate)
+    const existingPicksRes = await client.query(
+      `SELECT id FROM fantasy_picks WHERE "teamId" = $1 AND "eventId" = $2 LIMIT 1`,
+      [teamId, eventId]
+    )
+    if (existingPicksRes.rows.length > 0) {
+      await client.query('ROLLBACK')
+      console.log(
+        `[fantasy.mulligan.auto-pick] Team ${teamId} already has picks for event ${eventId} — skipping`
+      )
+      return
+    }
+
+    // 3. Lock mulligan balance row + check available balance
     const balanceRes = await client.query(
-      `SELECT "totalPurchased", "totalUsed" FROM mulligan_balances WHERE "userId" = $1`,
+      `SELECT id, "totalPurchased", "totalUsed"
+       FROM mulligan_balances
+       WHERE "userId" = $1
+       FOR UPDATE`,
       [userId]
     )
-    if (
-      balanceRes.rows.length === 0 ||
-      balanceRes.rows[0].totalPurchased - balanceRes.rows[0].totalUsed <= 0
-    ) {
-      console.log(`[mulligan.auto-pick] User ${userId} has no mulligan balance — skipping`)
+    if (balanceRes.rows.length === 0) {
+      await client.query('ROLLBACK')
+      console.warn(`[fantasy.mulligan.auto-pick] No mulligan balance for user ${userId}`)
+      return
+    }
+    const balance = balanceRes.rows[0] as {
+      id: string
+      totalPurchased: number
+      totalUsed: number
+    }
+    const available = balance.totalPurchased - balance.totalUsed
+    if (available <= 0) {
+      await client.query('ROLLBACK')
+      console.warn(
+        `[fantasy.mulligan.auto-pick] User ${userId} has no mulligan balance (purchased=${balance.totalPurchased} used=${balance.totalUsed})`
+      )
       return
     }
 
-    // 3. Find most recent scored event in same series
+    // 4. Check no MulliganUse record already exists for this team+event (idempotent)
+    const mulliganUseRes = await client.query(
+      `SELECT id FROM mulligan_uses WHERE "teamId" = $1 AND "eventId" = $2 LIMIT 1`,
+      [teamId, eventId]
+    )
+    if (mulliganUseRes.rows.length > 0) {
+      await client.query('ROLLBACK')
+      console.log(
+        `[fantasy.mulligan.auto-pick] MulliganUse already exists for team ${teamId} event ${eventId} — skipping`
+      )
+      return
+    }
+
+    // 5. Find the previous scored event for this series
+    //    "Previous" = most recent FantasyEvent with status = 'scored' and raceDate before
+    //    this event's rosterDeadline. The spec requires status = 'scored' only.
     const prevEventRes = await client.query(
-      `SELECT id FROM fantasy_events
-       WHERE "seriesId" = $1 AND status = 'scored'
-       ORDER BY "raceDate" DESC
+      `SELECT fe.id
+       FROM fantasy_events fe
+       WHERE fe."seriesId" = $1
+         AND fe."raceDate" < (
+           SELECT "rosterDeadline" FROM fantasy_events WHERE id = $2
+         )
+         AND fe.status = 'scored'
+       ORDER BY fe."raceDate" DESC
        LIMIT 1`,
-      [seriesId]
+      [seriesId, eventId]
     )
     if (prevEventRes.rows.length === 0) {
-      console.log(`[mulligan.auto-pick] No prior scored event for series ${seriesId} — mulligan not consumed`)
+      await client.query('ROLLBACK')
+      console.warn(
+        `[fantasy.mulligan.auto-pick] No previous scored event found for series ${seriesId} before event ${eventId}`
+      )
       return
     }
     const prevEventId: string = prevEventRes.rows[0].id
 
-    // 4. Load previous event's picks for this team (use their priceAtPick values)
+    // 6. Load previous event's locked picks for this team, including priceAtPick.
+    //    Only picks with lockedAt IS NOT NULL (unlocked draft picks excluded).
     const prevPicksRes = await client.query(
-      `SELECT "riderId", "isWildcard", "priceAtPick"
-       FROM fantasy_picks
-       WHERE "teamId" = $1 AND "eventId" = $2`,
+      `SELECT fp."riderId", fp."isWildcard", fp."priceAtPick"
+       FROM fantasy_picks fp
+       WHERE fp."teamId" = $1
+         AND fp."eventId" = $2
+         AND fp."lockedAt" IS NOT NULL`,
       [teamId, prevEventId]
     )
     if (prevPicksRes.rows.length === 0) {
-      console.log(`[mulligan.auto-pick] Team ${teamId} has no picks from prev event — skipping`)
+      await client.query('ROLLBACK')
+      console.warn(
+        `[fantasy.mulligan.auto-pick] No locked picks found in previous event ${prevEventId} for team ${teamId}`
+      )
       return
     }
+    const prevPicks = prevPicksRes.rows as Array<{
+      riderId: string
+      isWildcard: boolean
+      priceAtPick: number
+    }>
 
-    // 5. Get all rider entries for the new event (for substitution pool)
-    const entriesRes = await client.query(
-      `SELECT "riderId", "marketPriceCents",
-              ("basePriceCents" < 20000000) AS "isWildcardEligible"
+    // 7. Check which previous riders are still entered in the current event.
+    const riderIds = prevPicks.map(p => p.riderId)
+    const currentEntriesRes = await client.query(
+      `SELECT "riderId"
        FROM rider_event_entries
-       WHERE "eventId" = $1
-       ORDER BY "marketPriceCents" ASC`,
-      [eventId]
+       WHERE "eventId" = $1 AND "riderId" = ANY($2::text[])`,
+      [eventId, riderIds]
     )
-    const enteredRiderIds = new Set(entriesRes.rows.map((r: { riderId: string }) => r.riderId))
-    const entriesByRider = Object.fromEntries(
-      entriesRes.rows.map((r: { riderId: string; marketPriceCents: number; isWildcardEligible: boolean }) => [r.riderId, r])
-    )
+    const enteredRiderIds = new Set<string>(currentEntriesRes.rows.map((r: { riderId: string }) => r.riderId))
 
-    // 6. Build final pick list
-    // - Use previous priceAtPick for riders still in the event
-    // - Substitute with cheapest eligible rider if not entered
-    const finalPicks: Array<{ riderId: string; isWildcard: boolean; priceAtPick: number }> = []
-    const usedRiderIds = new Set<string>()
+    // 8. Load salary cap for this series
+    const seriesRes = await client.query(
+      `SELECT "salaryCap" FROM fantasy_series WHERE id = $1`,
+      [seriesId]
+    )
+    const salaryCap: number = seriesRes.rows[0]?.salaryCap ?? 150_000_000
+
+    // 9. Build picks using PREVIOUS priceAtPick values (not current market prices).
+    //    isWildcard is re-derived from the previous priceAtPick using WILDCARD_PRICE_THRESHOLD.
+    //    Enforce: max 6 picks, max 2 wildcards, salary cap.
+    //    Skip ineligible riders — no substitution (deferred to a future phase).
+    const picksToInsert: Array<{
+      riderId: string
+      isWildcard: boolean
+      priceAtPick: number
+    }> = []
+    let totalCost = 0
     let wildcardCount = 0
 
-    for (const prev of prevPicksRes.rows as Array<{ riderId: string; isWildcard: boolean; priceAtPick: number }>) {
-      if (enteredRiderIds.has(prev.riderId) && !usedRiderIds.has(prev.riderId)) {
-        // Rider is in new event — keep them at their previous priceAtPick
-        const isWc = prev.isWildcard && wildcardCount < 2
-        if (prev.isWildcard) wildcardCount++
-        finalPicks.push({
-          riderId: prev.riderId,
-          isWildcard: isWc,
-          priceAtPick: prev.priceAtPick,
-        })
-        usedRiderIds.add(prev.riderId)
-      } else {
-        // Rider not entered — find cheapest substitute in same slot type
-        const needsWildcard = prev.isWildcard && wildcardCount < 2
-        const substitute = entriesRes.rows.find((entry: { riderId: string; isWildcardEligible: boolean }) =>
-          !usedRiderIds.has(entry.riderId) &&
-          (needsWildcard ? entry.isWildcardEligible : true)
+    for (const prev of prevPicks) {
+      if (!enteredRiderIds.has(prev.riderId)) {
+        console.log(
+          `[fantasy.mulligan.auto-pick] Rider ${prev.riderId} not entered in event ${eventId} — skipping`
         )
-        if (substitute) {
-          if (needsWildcard) wildcardCount++
-          finalPicks.push({
-            riderId: substitute.riderId,
-            isWildcard: needsWildcard,
-            priceAtPick: substitute.marketPriceCents,
-          })
-          usedRiderIds.add(substitute.riderId)
-        }
+        continue
       }
+      if (picksToInsert.length >= 6) break
+
+      // Re-derive isWildcard from the previous priceAtPick (not current market price)
+      const isWildcard = prev.priceAtPick < WILDCARD_PRICE_THRESHOLD
+      if (isWildcard && wildcardCount >= 2) {
+        console.log(
+          `[fantasy.mulligan.auto-pick] Wildcard slots full — skipping rider ${prev.riderId}`
+        )
+        continue
+      }
+
+      // Budget check using previous priceAtPick (spec requirement)
+      if (totalCost + prev.priceAtPick > salaryCap) {
+        console.log(
+          `[fantasy.mulligan.auto-pick] Budget exceeded at rider ${prev.riderId} (prev price ${prev.priceAtPick}) — skipping`
+        )
+        continue
+      }
+
+      picksToInsert.push({
+        riderId: prev.riderId,
+        isWildcard,
+        priceAtPick: prev.priceAtPick,
+      })
+      totalCost += prev.priceAtPick
+      if (isWildcard) wildcardCount++
     }
 
-    if (finalPicks.length === 0) {
-      console.log(`[mulligan.auto-pick] Could not build any picks for team ${teamId} — skipping`)
+    if (picksToInsert.length === 0) {
+      await client.query('ROLLBACK')
+      console.warn(
+        `[fantasy.mulligan.auto-pick] No valid picks to replicate for team ${teamId} event ${eventId}`
+      )
       return
     }
 
-    // 7. Atomic transaction: lock mulligan balance, insert picks, consume mulligan
-    await client.query('BEGIN')
-    try {
-      // Lock the mulligan balance row
-      const lockedBalanceRes = await client.query(
-        `SELECT "totalPurchased", "totalUsed"
-         FROM mulligan_balances
-         WHERE "userId" = $1
-         FOR UPDATE`,
-        [userId]
-      )
-      if (
-        lockedBalanceRes.rows.length === 0 ||
-        lockedBalanceRes.rows[0].totalPurchased - lockedBalanceRes.rows[0].totalUsed <= 0
-      ) {
-        await client.query('ROLLBACK')
-        console.log(`[mulligan.auto-pick] Balance gone by transaction time for user ${userId}`)
-        return
-      }
-
-      // Insert picks
-      for (const pick of finalPicks) {
-        await client.query(
-          `INSERT INTO fantasy_picks (id, "teamId", "eventId", "riderId", "isWildcard", "priceAtPick", "lockedAt")
-           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())
-           ON CONFLICT ("teamId", "eventId", "riderId") DO NOTHING`,
-          [teamId, eventId, pick.riderId, pick.isWildcard, pick.priceAtPick]
-        )
-      }
-
-      // Consume mulligan
+    // 10. Insert picks — locked immediately (mulligan picks lock at current time)
+    const lockedAt = new Date()
+    for (const pick of picksToInsert) {
       await client.query(
-        `UPDATE mulligan_balances SET "totalUsed" = "totalUsed" + 1 WHERE "userId" = $1`,
-        [userId]
+        `INSERT INTO fantasy_picks
+           (id, "teamId", "eventId", "riderId", "isWildcard", "priceAtPick", "lockedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
+         ON CONFLICT ("teamId", "eventId", "riderId") DO NOTHING`,
+        [teamId, eventId, pick.riderId, pick.isWildcard, pick.priceAtPick, lockedAt]
       )
-
-      // Record mulligan use
-      await client.query(
-        `INSERT INTO mulligan_uses (id, "userId", "teamId", "eventId", "usedAt")
-         VALUES (gen_random_uuid(), $1, $2, $3, NOW())
-         ON CONFLICT ("teamId", "eventId") DO NOTHING`,
-        [userId, teamId, eventId]
-      )
-
-      await client.query('COMMIT')
-    } catch (err) {
-      await client.query('ROLLBACK')
-      throw err
     }
 
-    // 8. Enqueue price recalculation (outside transaction)
-    const boss = await getBoss()
-    await boss.send('fantasy.prices.recalculate', { eventId })
+    // 11. Increment MulliganBalance.totalUsed
+    await client.query(
+      `UPDATE mulligan_balances SET "totalUsed" = "totalUsed" + 1 WHERE "userId" = $1`,
+      [userId]
+    )
+
+    // 12. Record MulliganUse
+    await client.query(
+      `INSERT INTO mulligan_uses (id, "userId", "teamId", "eventId", "usedAt")
+       VALUES (gen_random_uuid(), $1, $2, $3, NOW())
+       ON CONFLICT ("teamId", "eventId") DO NOTHING`,
+      [userId, teamId, eventId]
+    )
+
+    await client.query('COMMIT')
 
     console.log(
-      `[mulligan.auto-pick] Auto-picked ${finalPicks.length} riders for team ${teamId}, event ${eventId}`
+      `[fantasy.mulligan.auto-pick] Auto-picked ${picksToInsert.length} riders for team ${teamId} event ${eventId} (mulligan used)`
     )
+  } catch (err) {
+    await client.query('ROLLBACK')
+    console.error('[fantasy.mulligan.auto-pick] Error:', err)
+    throw err // Re-throw so pg-boss retries
   } finally {
     client.release()
   }
