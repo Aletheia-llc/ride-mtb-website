@@ -1,9 +1,11 @@
+// src/app/fantasy/[series]/team/TeamSelectionClient.tsx
 'use client'
 
 import { useState } from 'react'
 import { TeamPanel } from '@/ui/components/fantasy/TeamPanel'
 import { RiderList } from '@/ui/components/fantasy/RiderList'
 import { RiderDetail } from '@/ui/components/fantasy/RiderDetail'
+import { useLivePrices } from '@/modules/fantasy/hooks/useLivePrices'
 
 interface Rider {
   riderId: string; name: string; nationality: string; gender: 'male' | 'female';
@@ -30,9 +32,14 @@ export function TeamSelectionClient({
   const [picks, setPicks] = useState(initialPicks)
   const [selected, setSelected] = useState<string | null>(null)
 
+  const isLocked = new Date() >= deadline
+  const { prices: livePrices, loading: pricesLoading } = useLivePrices(eventId, isLocked)
+
   const selectedRider = riders.find(r => r.riderId === selected)
   const totalCost = picks.reduce((s, p) => s + p.priceAtPick, 0)
   const teamRiderIds = new Set(picks.map(p => p.riderId))
+
+  const showLiveBadge = !isLocked && !pricesLoading
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-6">
@@ -43,13 +50,22 @@ export function TeamSelectionClient({
         teamId={teamId}
         eventId={eventId}
         deadline={deadline}
-        isLocked={false}
+        isLocked={isLocked}
         onDropped={riderId => setPicks(prev => prev.filter(p => p.riderId !== riderId))}
       />
-      <RiderList
-        riders={riders.map(r => ({ ...r, isOnTeam: teamRiderIds.has(r.riderId) }))}
-        onSelect={setSelected}
-      />
+      <div className="flex flex-col gap-2">
+        {showLiveBadge && (
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium w-fit">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live pricing
+          </div>
+        )}
+        <RiderList
+          riders={riders.map(r => ({ ...r, isOnTeam: teamRiderIds.has(r.riderId) }))}
+          onSelect={setSelected}
+          livePrices={Object.keys(livePrices).length > 0 ? livePrices : undefined}
+        />
+      </div>
       {selectedRider ? (
         <RiderDetail
           {...selectedRider}
@@ -58,11 +74,13 @@ export function TeamSelectionClient({
           eventId={eventId}
           isOnTeam={teamRiderIds.has(selectedRider.riderId)}
           onPicked={() => {
+            const live = livePrices[selectedRider.riderId]
+            const priceAtPick = live?.cents ?? selectedRider.marketPriceCents
             setPicks(prev => [...prev, {
               riderId: selectedRider.riderId,
               name: selectedRider.name,
               isWildcard: selectedRider.isWildcardEligible,
-              priceAtPick: selectedRider.marketPriceCents,
+              priceAtPick,
             }])
             setSelected(null)
           }}
