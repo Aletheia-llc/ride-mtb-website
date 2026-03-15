@@ -48,5 +48,6 @@ export async function saveArticleAction(
     const article = await createArticle({ authorId: user.id, title, excerpt, body, coverImageUrl, category, tags })
     revalidatePath('/admin/news')
     redirect(`/admin/news/${article.id}/edit`)
+    return { errors: null, articleId: article.id }
   }
 }
