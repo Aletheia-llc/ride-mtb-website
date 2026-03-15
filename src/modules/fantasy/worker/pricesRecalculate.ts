@@ -56,17 +56,8 @@ export async function handlePricesRecalculate(payload: { eventId: string }) {
 
     // 5. Read existing Redis snapshot to preserve prev prices
     const redisKey = `fantasy:prices:${eventId}`
-    const existingRaw = await redis.get<string>(redisKey)
-    let existing: PriceSnapshot = {}
-    if (existingRaw) {
-      try {
-        existing = typeof existingRaw === 'string'
-          ? JSON.parse(existingRaw)
-          : existingRaw as PriceSnapshot
-      } catch {
-        existing = {}
-      }
-    }
+    const existingRaw = await redis.get<PriceSnapshot>(redisKey)
+    const existing: PriceSnapshot = existingRaw ?? {}
 
     // 6. Compute new prices
     const newSnapshot: PriceSnapshot = {}
@@ -85,10 +76,7 @@ export async function handlePricesRecalculate(payload: { eventId: string }) {
       updates.push({ riderId: entry.riderId, cents })
     }
 
-    // 7. Write to Redis (no TTL — persists until next recalculate)
-    await redis.set(redisKey, JSON.stringify(newSnapshot))
-
-    // 8. Bulk update Postgres marketPriceCents
+    // 7. Bulk update Postgres marketPriceCents
     for (const update of updates) {
       await client.query(
         `UPDATE rider_event_entries
@@ -97,6 +85,10 @@ export async function handlePricesRecalculate(payload: { eventId: string }) {
         [update.cents, eventId, update.riderId]
       )
     }
+
+    // 8. Write to Redis (no TTL — persists until next recalculate)
+    // Done after Postgres so Redis is only updated if all DB writes succeed
+    await redis.set(redisKey, JSON.stringify(newSnapshot))
 
     console.log(
       `[fantasy.prices.recalculate] Event ${eventId}: updated ${updates.length} rider prices`
