@@ -9,7 +9,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const session = await auth()
   if (session?.user) redirect('/dashboard')
 
-  const { callbackUrl } = await searchParams
+  const rawCallback = (await searchParams).callbackUrl
+  const callbackUrl = rawCallback?.startsWith('/') ? rawCallback : '/dashboard'
 
   return (
     <div style={{
@@ -37,7 +38,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
         <form action={async () => {
           'use server'
-          await signIn('google', { redirectTo: callbackUrl ?? '/dashboard' })
+          await signIn('google', { redirectTo: callbackUrl })
         }}>
           <button
             type="submit"
