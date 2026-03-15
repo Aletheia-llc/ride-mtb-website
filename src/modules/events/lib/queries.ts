@@ -165,6 +165,30 @@ export async function rsvpToEvent(
   userId: string,
   status: RsvpStatus,
 ) {
+  if (status === 'going') {
+    // Check capacity before creating/updating RSVP
+    const event = await db.event.findUnique({
+      where: { id: eventId },
+      select: { maxAttendees: true },
+    })
+
+    if (event?.maxAttendees) {
+      const goingCount = await db.eventRsvp.count({
+        where: { eventId, status: 'going' },
+      })
+      // Allow if user is already going (they're just re-confirming)
+      const existing = await db.eventRsvp.findUnique({
+        where: { eventId_userId: { eventId, userId } },
+        select: { status: true },
+      })
+      const isAlreadyGoing = existing?.status === 'going'
+
+      if (!isAlreadyGoing && goingCount >= event.maxAttendees) {
+        throw new Error('This event is at capacity')
+      }
+    }
+  }
+
   return db.eventRsvp.upsert({
     where: { eventId_userId: { eventId, userId } },
     update: { status },
