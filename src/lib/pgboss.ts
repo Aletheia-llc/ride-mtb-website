@@ -30,6 +30,7 @@ export type JobName =
   | 'fantasy.prices.reveal'
   | 'fantasy.results.scrape'
   | 'fantasy.results.score'
+  | 'fantasy.mulligan.auto-pick'
 
 export interface VideoIngestPayload {
   youtubeVideoId: string

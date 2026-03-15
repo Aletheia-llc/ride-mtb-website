@@ -2490,15 +2490,16 @@ model FantasyLeagueMember {
 }
 
 model SeasonPassPurchase {
-  id              String        @id @default(cuid())
-  userId          String
-  seriesId        String
-  season          Int
-  stripeSessionId String        @unique
-  status          PassStatus    @default(active)
-  createdAt       DateTime      @default(now())
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  series          FantasySeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  id                    String        @id @default(cuid())
+  userId                String
+  seriesId              String
+  season                Int
+  stripeSessionId       String        @unique
+  stripePaymentIntentId String?
+  status                PassStatus    @default(active)
+  createdAt             DateTime      @default(now())
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  series                FantasySeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
 
   @@unique([userId, seriesId, season])
   @@map("season_pass_purchases")
