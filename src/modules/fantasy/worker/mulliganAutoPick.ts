@@ -7,7 +7,6 @@
 // SELECT FOR UPDATE to prevent double-use of a single mulligan charge.
 
 import { pool } from '@/lib/db/client'
-import { getBoss } from '@/lib/pgboss'
 import { WILDCARD_PRICE_THRESHOLD } from '../constants/scoring'
 
 export interface MulliganAutoPickPayload {
@@ -25,7 +24,7 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
 
     // 1. Lock the team row to prevent concurrent mulligan jobs
     const teamRes = await client.query(
-      `SELECT ft.id, ft."seriesId", ft.season
+      `SELECT ft.id, ft."seriesId"
        FROM fantasy_teams ft
        WHERE ft.id = $1
        FOR UPDATE`,
@@ -36,10 +35,7 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
       console.warn(`[fantasy.mulligan.auto-pick] Team ${teamId} not found`)
       return
     }
-    const { seriesId, season } = teamRes.rows[0] as {
-      seriesId: string
-      season: number
-    }
+    const { seriesId } = teamRes.rows[0] as { seriesId: string }
 
     // 2. Verify this event still has zero picks (idempotent — job may fire late/duplicate)
     const existingPicksRes = await client.query(
@@ -97,6 +93,18 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
     // 5. Find the previous scored event for this series
     //    "Previous" = most recent FantasyEvent with status = 'scored' and raceDate before
     //    this event's rosterDeadline. The spec requires status = 'scored' only.
+
+    // Guard against NULL rosterDeadline
+    const deadlineCheckRes = await client.query(
+      `SELECT "rosterDeadline" FROM fantasy_events WHERE id = $1`,
+      [eventId]
+    )
+    if (!deadlineCheckRes.rows[0]?.rosterDeadline) {
+      await client.query('ROLLBACK')
+      console.warn(`[fantasy.mulligan.auto-pick] Event ${eventId} has no rosterDeadline — cannot find prev event`)
+      return
+    }
+
     const prevEventRes = await client.query(
       `SELECT fe.id
        FROM fantasy_events fe
@@ -225,10 +233,26 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
       )
     }
 
+    // 10b. Verify at least one pick was actually inserted
+    const actualPicksRes = await client.query(
+      `SELECT COUNT(*)::int AS count
+       FROM fantasy_picks
+       WHERE "teamId" = $1 AND "eventId" = $2`,
+      [teamId, eventId]
+    )
+    const actualCount: number = actualPicksRes.rows[0].count
+    if (actualCount === 0) {
+      await client.query('ROLLBACK')
+      console.warn(
+        `[fantasy.mulligan.auto-pick] All picks were conflicts — no picks inserted for team ${teamId} event ${eventId}`
+      )
+      return
+    }
+
     // 11. Increment MulliganBalance.totalUsed
     await client.query(
-      `UPDATE mulligan_balances SET "totalUsed" = "totalUsed" + 1 WHERE "userId" = $1`,
-      [userId]
+      `UPDATE mulligan_balances SET "totalUsed" = "totalUsed" + 1 WHERE id = $1`,
+      [balance.id]
     )
 
     // 12. Record MulliganUse
