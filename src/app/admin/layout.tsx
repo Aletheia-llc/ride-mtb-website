@@ -48,6 +48,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           News
         </a>
+        <a
+          href="/admin/coaching"
+          className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
+        >
+          Coaching
+        </a>
       </nav>
       {children}
     </div>

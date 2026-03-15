@@ -134,3 +134,25 @@ export async function getCoachByUserId(
   if (!profile) return null
   return toCoachDetail(profile)
 }
+
+// ── 4. getCoachApplications ───────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCoachApplications(status?: 'pending' | 'approved' | 'rejected'): Promise<any[]> {
+  // @ts-expect-error — model added to schema, not yet pushed
+  return db.coachApplication.findMany({
+    where: status ? { status } : undefined,
+    orderBy: { createdAt: 'desc' },
+    include: { user: { select: { name: true, email: true, image: true } } },
+  })
+}
+
+// ── 5. getMyCoachApplication ──────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getMyCoachApplication(userId: string): Promise<any | null> {
+  // @ts-expect-error — model added to schema, not yet pushed
+  return db.coachApplication.findUnique({
+    where: { userId },
+  })
+}

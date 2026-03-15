@@ -87,6 +87,7 @@ model User {
   sellerTransactions   Transaction[]       @relation("TxSeller")
   listingSaves     ListingSave[]
   listingReports   ListingReport[]
+  listingPayments  ListingPayment[]        @relation("ListingPayments")
   shops           Shop[]
   shopReviews     ShopReview[]
   reviewHelpfulVotes ReviewHelpful[]
@@ -99,6 +100,9 @@ model User {
   wishlistItems         WishlistItem[]
   dropSubscription      DropSubscriber?
   articles   Article[]  @relation("ArticleAuthor")
+  coachApplications    CoachApplication[] @relation("CoachApplications")
+  reviewedApplications CoachApplication[] @relation("CoachApplicationReviewer")
+  affiliateClicks  AffiliateClick[] @relation("AffiliateClicks")
 
   @@map("users")
 }
@@ -972,6 +976,7 @@ model Listing {
   saves       ListingSave[]
   reports     ListingReport[]
   conversations ListingConversation[] @relation("ConvListing")
+  payment     ListingPayment?
 
   @@index([category, status])
   @@index([sellerId])
@@ -1346,6 +1351,7 @@ model Shop {
   owner       User?       @relation(fields: [ownerId], references: [id])
   photos      ShopPhoto[]
   reviews     ShopReview[]
+  affiliateLinks   AffiliateLink[] @relation("ShopAffiliateLinks")
 
   @@index([city, state])
   @@index([latitude, longitude])
@@ -1442,9 +1448,40 @@ model CoachProfile {
   @@map("coach_profiles")
 }
 
+model CoachApplication {
+  id           String            @id @default(cuid())
+  userId       String            @unique
+  title        String
+  bio          String            @db.Text
+  specialties  Json              @default("[]")
+  certifications Json            @default("[]")
+  hourlyRate   Float?
+  location     String?
+  calcomLink   String?
+  status       ApplicationStatus @default(pending)
+  reviewNote   String?
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  user       User  @relation("CoachApplications", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer   User? @relation("CoachApplicationReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@map("coach_applications")
+}
+
 // ============================================================
 // ENUMS
 // ============================================================
+
+enum ApplicationStatus {
+  pending
+  approved
+  rejected
+
+  @@map("application_status")
+}
 
 enum UserRole {
   user
@@ -1692,6 +1729,7 @@ enum ItemCondition {
 }
 
 enum ListingStatus {
+  draft
   active
   sold
   reserved
@@ -2179,4 +2217,76 @@ model Article {
   @@index([status, publishedAt])
   @@index([slug])
   @@map("articles")
+}
+
+enum ListingPaymentStatus {
+  pending
+  paid
+  failed
+
+  @@map("listing_payment_status")
+}
+
+model ListingPayment {
+  id                    String               @id @default(cuid())
+  listingId             String               @unique
+  userId                String
+  stripeSessionId       String               @unique
+  stripePaymentIntentId String?
+  amount                Int                  @default(299)
+  currency              String               @default("usd")
+  status                ListingPaymentStatus @default(pending)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user    User    @relation("ListingPayments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("listing_payments")
+}
+
+// ============================================================
+// AFFILIATE
+// ============================================================
+
+enum AffiliateLinkType {
+  shop_directory
+  bike_selector
+  external
+
+  @@map("affiliate_link_type")
+}
+
+model AffiliateLink {
+  id          String            @id @default(cuid())
+  name        String
+  url         String
+  linkType    AffiliateLinkType @default(external)
+  shopId      String?
+  slug        String            @unique
+  commission  Float             @default(0)
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  shop        Shop?             @relation("ShopAffiliateLinks", fields: [shopId], references: [id], onDelete: SetNull)
+  clicks      AffiliateClick[]
+
+  @@map("affiliate_links")
+}
+
+model AffiliateClick {
+  id              String        @id @default(cuid())
+  linkId          String
+  userId          String?
+  ip              String?
+  userAgent       String?
+  referrer        String?
+  createdAt       DateTime      @default(now())
+
+  link  AffiliateLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  user  User?         @relation("AffiliateClicks", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([linkId, createdAt])
+  @@map("affiliate_clicks")
 }
