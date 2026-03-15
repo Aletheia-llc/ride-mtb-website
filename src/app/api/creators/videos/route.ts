@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
-import { requireAuth } from '@/lib/auth/guards'
+import { auth } from '@/lib/auth/config'
 import { getBoss } from '@/lib/pgboss'
 import { extractYouTubeVideoId } from '@/modules/creators/lib/youtube'
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const user = await requireAuth()
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const userId = session.user.id
 
   const body = await req.json() as { youtubeUrl?: unknown }
   if (typeof body.youtubeUrl !== 'string') {
@@ -19,7 +23,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const creator = await db.creatorProfile.findUnique({
-    where: { userId: user.id },
+    where: { userId },
     select: { id: true, status: true },
   })
   if (!creator || creator.status !== 'active') {
