@@ -2336,6 +2336,7 @@ model FantasyEvent {
   status           EventStatus       @default(upcoming)
   scraperUrl       String
   scraperUrlStages String?
+  forumThreadId    String?
   series           FantasySeries     @relation(fields: [seriesId], references: [id], onDelete: Cascade)
   riderEntries     RiderEventEntry[]
   picks            FantasyPick[]

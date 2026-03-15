@@ -32,6 +32,7 @@ const envSchema = z.object({
   YOUTUBE_API_KEY: z.string().optional(),
   NEXT_PUBLIC_BUNNY_CDN_HOSTNAME: z.string().optional(),
   SENDGRID_API_KEY: z.string().optional(),
+  FANTASY_BOT_USER_ID: z.string().optional(),
 
   // Feature flags
   FEATURE_COACHING: z.enum(['true', 'false']).default('false'),
