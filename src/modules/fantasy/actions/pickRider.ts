@@ -75,6 +75,16 @@ export async function pickRider(input: PickRiderInput): Promise<PickRiderResult>
     }
     const { marketPriceCents } = entryRes.rows[0]
 
+    // Verify event belongs to this series
+    const eventCheckRes = await client.query(
+      `SELECT "seriesId" FROM fantasy_events WHERE id = $1`,
+      [input.eventId]
+    )
+    if (eventCheckRes.rows.length === 0 || eventCheckRes.rows[0].seriesId !== input.seriesId) {
+      await client.query('ROLLBACK')
+      return { success: false, error: 'Event not in this series' }
+    }
+
     // Derive isWildcard server-side (never trust client)
     const isWildcard = marketPriceCents < WILDCARD_PRICE_THRESHOLD
 
@@ -92,7 +102,11 @@ export async function pickRider(input: PickRiderInput): Promise<PickRiderResult>
       `SELECT "salaryCap" FROM fantasy_series WHERE id = $1`,
       [input.seriesId]
     )
-    const salaryCap: number = seriesRes.rows[0]?.salaryCap ?? 150_000_000
+    if (seriesRes.rows.length === 0) {
+      await client.query('ROLLBACK')
+      return { success: false, error: 'Series not found' }
+    }
+    const salaryCap: number = seriesRes.rows[0].salaryCap
 
     // Budget check
     const currentCost = currentPicks.reduce(
