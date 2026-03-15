@@ -10,20 +10,27 @@ export async function GET(request: Request) {
 
   const now = new Date()
 
-  const eventsToLock = await pool.query(
-    `SELECT id, "seriesId", (
-       SELECT season FROM fantasy_series WHERE id = fe."seriesId"
-     ) AS season
-     FROM fantasy_events fe
-     WHERE status = 'roster_open' AND "rosterDeadline" <= $1`,
-    [now]
-  )
+  let eventsToLock
+  try {
+    eventsToLock = await pool.query(
+      `SELECT fe.id, fe."seriesId", fs.season
+       FROM fantasy_events fe
+       JOIN fantasy_series fs ON fs.id = fe."seriesId"
+       WHERE fe.status = 'roster_open' AND fe."rosterDeadline" <= $1`,
+      [now]
+    )
+  } catch (err) {
+    console.error('lock-rosters: failed to query events', err)
+    return NextResponse.json({ error: 'DB error' }, { status: 500 })
+  }
 
   let locked = 0
   let mulliganJobsEnqueued = 0
 
   for (const event of eventsToLock.rows) {
+    // --- Transaction: lock picks + event ---
     const client = await pool.connect()
+    let lockSucceeded = false
     try {
       await client.query('BEGIN')
 
@@ -39,7 +46,19 @@ export async function GET(request: Request) {
       )
 
       await client.query('COMMIT')
+      lockSucceeded = true
+      locked++
+    } catch (err) {
+      await client.query('ROLLBACK')
+      console.error(`Failed to lock event ${event.id}:`, err)
+    } finally {
+      client.release()
+    }
 
+    if (!lockSucceeded) continue
+
+    // --- Boss work (outside transaction) ---
+    try {
       const boss = await getBoss()
 
       // Send prices reveal job (Phase 3 — existing)
@@ -47,7 +66,7 @@ export async function GET(request: Request) {
 
       // Find teams with zero picks for this event whose user has a positive mulligan balance
       // A "zero picks" team may have been registered for the series but never built a team for this event.
-      const mulliganTeamsRes = await client.query(
+      const mulliganTeamsRes = await pool.query(
         `SELECT ft.id AS "teamId", ft."userId"
          FROM fantasy_teams ft
          JOIN mulligan_balances mb ON mb."userId" = ft."userId"
@@ -76,13 +95,8 @@ export async function GET(request: Request) {
         )
         mulliganJobsEnqueued++
       }
-
-      locked++
     } catch (err) {
-      await client.query('ROLLBACK')
-      console.error(`Failed to lock event ${event.id}:`, err)
-    } finally {
-      client.release()
+      console.error(`Boss enqueue failed for event ${event.id}:`, err)
     }
   }
 
