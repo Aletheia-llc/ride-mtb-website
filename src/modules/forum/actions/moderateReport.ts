@@ -7,10 +7,10 @@ import { db } from '@/lib/db/client'
 export async function resolveForumReport(reportId: string, modNote?: string) {
   const mod = await requireAdmin()
 
-  await db.forumReport.update({
+  await db.report.update({
     where: { id: reportId },
     data: {
-      status: 'RESOLVED',
+      status: 'resolved',
       moderatorId: mod.id,
       modNote: modNote || null,
       resolvedAt: new Date(),
@@ -24,10 +24,10 @@ export async function resolveForumReport(reportId: string, modNote?: string) {
 export async function dismissForumReport(reportId: string) {
   const mod = await requireAdmin()
 
-  await db.forumReport.update({
+  await db.report.update({
     where: { id: reportId },
     data: {
-      status: 'DISMISSED',
+      status: 'dismissed',
       moderatorId: mod.id,
       resolvedAt: new Date(),
     },
@@ -41,11 +41,12 @@ export async function deleteReportedPost(reportId: string, postId: string) {
   const mod = await requireAdmin()
 
   await db.$transaction([
-    db.forumPost.delete({ where: { id: postId } }),
-    db.forumReport.update({
+    db.comment.deleteMany({ where: { postId } }),
+    db.post.delete({ where: { id: postId } }),
+    db.report.update({
       where: { id: reportId },
       data: {
-        status: 'RESOLVED',
+        status: 'resolved',
         moderatorId: mod.id,
         modNote: 'Post deleted by moderator',
         resolvedAt: new Date(),
@@ -61,11 +62,12 @@ export async function deleteReportedThread(reportId: string, threadId: string) {
   const mod = await requireAdmin()
 
   await db.$transaction([
-    db.forumThread.delete({ where: { id: threadId } }),
-    db.forumReport.update({
+    db.comment.deleteMany({ where: { postId: threadId } }),
+    db.post.delete({ where: { id: threadId } }),
+    db.report.update({
       where: { id: reportId },
       data: {
-        status: 'RESOLVED',
+        status: 'resolved',
         moderatorId: mod.id,
         modNote: 'Thread deleted by moderator',
         resolvedAt: new Date(),
@@ -85,10 +87,10 @@ export async function banReportedUser(reportId: string, targetUserId: string) {
       where: { id: targetUserId },
       data: { bannedAt: new Date() },
     }),
-    db.forumReport.update({
+    db.report.update({
       where: { id: reportId },
       data: {
-        status: 'RESOLVED',
+        status: 'resolved',
         moderatorId: mod.id,
         modNote: 'User banned by moderator',
         resolvedAt: new Date(),
