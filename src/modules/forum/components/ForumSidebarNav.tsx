@@ -66,9 +66,9 @@ export async function ForumSidebarNav({ activeSlug }: Props) {
           Forum Stats
         </p>
         <div className="space-y-1 px-2 text-sm text-[var(--color-text-muted)]">
-          <div>{stats.postCount.toLocaleString()} posts</div>
-          <div>{stats.commentCount.toLocaleString()} comments</div>
-          <div>{stats.memberCount.toLocaleString()} members</div>
+          <div>{stats.threadCount.toLocaleString()} posts</div>
+          <div>{stats.postCount.toLocaleString()} comments</div>
+          <div>{stats.userCount.toLocaleString()} members</div>
         </div>
       </div>
 

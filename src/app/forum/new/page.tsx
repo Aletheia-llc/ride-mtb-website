@@ -12,7 +12,7 @@ export default async function NewForumThreadPage() {
   const session = await auth()
   if (!session?.user) redirect('/signin?callbackUrl=/forum/new')
 
-  const categories = await db.forumCategory.findMany({
+  const categories = await db.category.findMany({
     orderBy: { sortOrder: 'asc' },
     select: { id: true, name: true, slug: true },
   })
