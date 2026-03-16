@@ -17,6 +17,7 @@ export default async function QuizzesPage() {
       questions: { select: { id: true } },
       module: {
         select: {
+          youtubeVideoId: true,
           course: {
             select: { title: true, slug: true },
           },
@@ -92,6 +93,14 @@ export default async function QuizzesPage() {
                 {courseQuizzes.map((quiz) => (
                   <Link key={quiz.id} href={`/learn/quizzes/${quiz.slug}`} className="block">
                     <Card className="h-full transition-shadow hover:shadow-md">
+                      {quiz.module?.youtubeVideoId && (
+                        <img
+                          src={`https://img.youtube.com/vi/${quiz.module.youtubeVideoId}/mqdefault.jpg`}
+                          alt=""
+                          className="mb-3 w-full rounded-lg object-cover"
+                          style={{ aspectRatio: '16/9' }}
+                        />
+                      )}
                       <div className="mb-3 flex items-center gap-2">
                         <BookOpen className="h-5 w-5 text-[var(--color-primary)]" />
                         <h3 className="font-semibold text-[var(--color-text)]">{quiz.title}</h3>

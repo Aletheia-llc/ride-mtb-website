@@ -3,7 +3,7 @@ import { fetchMTBNews } from '@/lib/rss/client'
 import { MTBNewsFeedClient } from './MTBNewsFeedClient'
 
 export async function MTBNewsFeed() {
-  const articles = await fetchMTBNews(12)
+  const articles = await fetchMTBNews(18)
   if (articles.length === 0) return null
 
   return (

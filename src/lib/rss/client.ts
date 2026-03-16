@@ -8,14 +8,20 @@ export interface RssItem {
   imageUrl: string | null
   sourceName: string
   sourceUrl: string
+  /** Full article HTML from content:encoded, sanitized */
+  content?: string
 }
 
 const MTB_FEEDS = [
-  { name: 'Bikerumor', url: 'https://bikerumor.com/feed/', siteUrl: 'https://bikerumor.com' },
-  { name: 'Enduro MTB', url: 'https://enduro-mtb.com/en/feed/', siteUrl: 'https://enduro-mtb.com' },
-  { name: 'MBR', url: 'https://www.mbr.co.uk/feed', siteUrl: 'https://www.mbr.co.uk' },
-  { name: 'Dirt', url: 'https://www.dirtmountainbike.com/feed/', siteUrl: 'https://www.dirtmountainbike.com' },
-  { name: 'Bikepacking', url: 'https://bikepacking.com/feed/', siteUrl: 'https://bikepacking.com' },
+  { name: 'Bikerumor',   url: 'https://bikerumor.com/feed/',                  siteUrl: 'https://bikerumor.com' },
+  { name: 'Enduro MTB',  url: 'https://enduro-mtb.com/en/feed/',              siteUrl: 'https://enduro-mtb.com' },
+  { name: 'MBR',         url: 'https://www.mbr.co.uk/feed',                   siteUrl: 'https://www.mbr.co.uk' },
+  { name: 'Dirt',        url: 'https://www.dirtmountainbike.com/feed/',       siteUrl: 'https://www.dirtmountainbike.com' },
+  { name: 'Bikepacking', url: 'https://bikepacking.com/feed/',                siteUrl: 'https://bikepacking.com' },
+  { name: 'Singletracks',url: 'https://www.singletracks.com/feed/',           siteUrl: 'https://www.singletracks.com' },
+  { name: 'NSMB',        url: 'https://nsmb.com/feed/',                       siteUrl: 'https://nsmb.com' },
+  { name: 'Vital MTB',   url: 'https://www.vitalmtb.com/rss/news.rss',        siteUrl: 'https://www.vitalmtb.com' },
+  { name: 'Bike Mag',    url: 'https://www.bikemag.com/feed/',                siteUrl: 'https://www.bikemag.com' },
 ]
 
 function extractTag(xml: string, tag: string): string {
@@ -46,6 +52,31 @@ function extractImage(itemXml: string): string | null {
   return null
 }
 
+function extractFullContent(itemXml: string): string | undefined {
+  const patterns = [
+    /<content:encoded><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/i,
+    /<content:encoded>([\s\S]*?)<\/content:encoded>/i,
+  ]
+  for (const p of patterns) {
+    const m = itemXml.match(p)
+    if (m?.[1]?.trim().length > 200) {
+      return m[1]
+        // Strip dangerous/useless elements
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+        // Strip ad containers (common patterns)
+        .replace(/<div[^>]+class="[^"]*\bad\b[^"]*"[\s\S]*?<\/div>/gi, '')
+        .replace(/<ins[^>]*adsbygoogle[\s\S]*?<\/ins>/gi, '')
+        // Strip event handlers
+        .replace(/\s+on\w+="[^"]*"/gi, '')
+        .replace(/\s+on\w+='[^']*'/gi, '')
+        .trim()
+    }
+  }
+  return undefined
+}
+
 function parseItems(xml: string, sourceName: string, sourceUrl: string): RssItem[] {
   const itemMatches = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) ?? []
   return itemMatches.slice(0, 5).map((item) => ({
@@ -62,6 +93,7 @@ function parseItems(xml: string, sourceName: string, sourceUrl: string): RssItem
     imageUrl: extractImage(item),
     sourceName,
     sourceUrl,
+    content: extractFullContent(item),
   }))
 }
 

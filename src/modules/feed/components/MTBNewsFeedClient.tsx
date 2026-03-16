@@ -3,8 +3,12 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import DOMPurify from 'isomorphic-dompurify'
 import { X, ExternalLink, Newspaper } from 'lucide-react'
 import type { RssItem } from '@/lib/rss/client'
+
+const READER_TAGS = ['p','h1','h2','h3','h4','ul','ol','li','blockquote','strong','em','b','i','a','img','figure','figcaption','br','hr','span','div','table','thead','tbody','tr','th','td']
+const READER_ATTRS = ['href','src','alt','title','target','rel','width','height']
 
 function timeAgo(dateStr: string): string {
   if (!dateStr) return ''
@@ -19,6 +23,11 @@ function timeAgo(dateStr: string): string {
 }
 
 function ArticleModal({ article, onClose }: { article: RssItem; onClose: () => void }) {
+  const hasFullContent = Boolean(article.content)
+  const safeContent = hasFullContent
+    ? DOMPurify.sanitize(article.content!, { ALLOWED_TAGS: READER_TAGS, ALLOWED_ATTR: READER_ATTRS })
+    : ''
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -27,71 +36,82 @@ function ArticleModal({ article, onClose }: { article: RssItem; onClose: () => v
       aria-label={article.title}
     >
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] shadow-2xl">
-        {/* Image */}
+      <div
+        className={`relative z-10 flex w-full flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] shadow-2xl ${hasFullContent ? 'max-w-2xl' : 'max-w-lg'}`}
+        style={{ maxHeight: '90vh' }}
+      >
+        {/* Hero image */}
         {article.imageUrl && (
-          <div className="relative h-52 w-full bg-[var(--color-border)]">
-            <Image
-              src={article.imageUrl}
-              alt={article.title}
-              fill
-              className="object-cover"
-              unoptimized
-            />
+          <div className={`relative w-full shrink-0 bg-[var(--color-border)] ${hasFullContent ? 'h-36' : 'h-52'}`}>
+            <Image src={article.imageUrl} alt={article.title} fill className="object-cover" unoptimized />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-5">
-          {/* Source + time */}
-          <div className="mb-3 flex items-center gap-2">
+        {/* Header */}
+        <div className="shrink-0 border-b border-[var(--color-border)] px-5 py-4">
+          <div className="mb-2 flex items-center gap-2">
             <span className="rounded-full bg-[var(--color-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]">
               {article.sourceName}
             </span>
             {article.pubDate && (
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {timeAgo(article.pubDate)}
-              </span>
+              <span className="text-xs text-[var(--color-text-muted)]">{timeAgo(article.pubDate)}</span>
             )}
           </div>
+          <h2 className="text-base font-bold leading-snug text-[var(--color-text)]">{article.title}</h2>
+        </div>
 
-          {/* Title */}
-          <h2 className="mb-3 text-base font-bold leading-snug text-[var(--color-text)]">
-            {article.title}
-          </h2>
-
-          {/* Description */}
-          {article.description && (
-            <p className="mb-5 text-sm leading-relaxed text-[var(--color-text-muted)]">
-              {article.description}
-            </p>
+        {/* Scrollable body */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {hasFullContent ? (
+            // Full article reader — HTML sanitized via DOMPurify
+            <div
+              className="px-5 py-4 text-sm leading-relaxed text-[var(--color-text)]
+                [&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-bold
+                [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-bold
+                [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-semibold
+                [&_p]:mb-3
+                [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5
+                [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5
+                [&_li]:mb-1
+                [&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--color-primary)] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-[var(--color-text-muted)]
+                [&_img]:my-4 [&_img]:w-full [&_img]:rounded-lg [&_img]:object-cover
+                [&_a]:text-[var(--color-primary)] [&_a]:underline [&_a]:underline-offset-2
+                [&_figure]:my-4
+                [&_figcaption]:mt-1 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:text-[var(--color-text-muted)]
+                [&_hr]:my-4 [&_hr]:border-[var(--color-border)]"
+              // Content is sanitized by DOMPurify — scripts, events, iframes stripped
+              dangerouslySetInnerHTML={{ __html: safeContent }}
+            />
+          ) : (
+            <div className="px-5 py-4">
+              {article.description && (
+                <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{article.description}</p>
+              )}
+            </div>
           )}
+        </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <Link
-              href={article.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-dark)]"
-            >
-              Read on {article.sourceName}
-              <ExternalLink className="h-3.5 w-3.5" />
-            </Link>
-            <button
-              onClick={onClose}
-              className="rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]"
-            >
-              Close
-            </button>
-          </div>
+        {/* Footer actions */}
+        <div className="shrink-0 flex items-center gap-3 border-t border-[var(--color-border)] px-5 py-4">
+          <Link
+            href={article.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-dark)]"
+          >
+            {hasFullContent ? 'View on' : 'Read on'} {article.sourceName}
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]"
+          >
+            Close
+          </button>
         </div>
 
         {/* Close icon */}
@@ -142,13 +162,11 @@ export function MTBNewsFeedClient({ articles }: { articles: RssItem[] }) {
 
             {/* Text */}
             <div className="flex flex-1 flex-col gap-1 p-2">
-              <p className="line-clamp-3 text-xs font-medium leading-snug text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">
+              <p className="line-clamp-3 text-xs font-medium leading-snug text-[var(--color-text)] transition-colors group-hover:text-[var(--color-primary)]">
                 {article.title}
               </p>
               {article.pubDate && (
-                <p className="mt-auto text-[10px] text-[var(--color-text-muted)]">
-                  {timeAgo(article.pubDate)}
-                </p>
+                <p className="mt-auto text-[10px] text-[var(--color-text-muted)]">{timeAgo(article.pubDate)}</p>
               )}
             </div>
           </button>
@@ -156,9 +174,7 @@ export function MTBNewsFeedClient({ articles }: { articles: RssItem[] }) {
       </div>
 
       {/* Modal */}
-      {selected && (
-        <ArticleModal article={selected} onClose={() => setSelected(null)} />
-      )}
+      {selected && <ArticleModal article={selected} onClose={() => setSelected(null)} />}
     </>
   )
 }

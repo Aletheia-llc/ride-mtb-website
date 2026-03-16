@@ -120,13 +120,28 @@ export default async function CourseOverviewPage({ params }: PageProps) {
               className="block"
             >
               <Card className="flex items-center gap-4 transition-shadow hover:shadow-md">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg-secondary)]">
-                  {isCompleted ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-[var(--color-text-muted)]" />
-                  )}
-                </div>
+                {mod.youtubeVideoId ? (
+                  <div className="relative shrink-0">
+                    <img
+                      src={`https://img.youtube.com/vi/${mod.youtubeVideoId}/mqdefault.jpg`}
+                      alt=""
+                      className="h-10 w-[72px] rounded object-cover"
+                    />
+                    {isCompleted && (
+                      <div className="absolute -right-1 -top-1 rounded-full bg-[var(--color-bg)]">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg-secondary)]">
+                    {isCompleted ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-[var(--color-text-muted)]" />
+                    )}
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-[var(--color-text-muted)]">
