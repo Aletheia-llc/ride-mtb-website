@@ -49,6 +49,8 @@ export async function getCategories() {
 export async function getThreadsByCategory(
   categorySlug: string,
   page: number = 1,
+  sort: 'hot' | 'new' | 'top' = 'hot',
+  timePeriod: 'day' | 'week' | 'month' | 'all' = 'week',
 ) {
   const category = await db.forumCategory.findUnique({
     where: { slug: categorySlug },
@@ -56,14 +58,26 @@ export async function getThreadsByCategory(
 
   if (!category) return null
 
+  const topCutoff: Date | null =
+    sort === 'top' && timePeriod !== 'all'
+      ? new Date(Date.now() - { day: 1, week: 7, month: 30 }[timePeriod] * 86_400_000)
+      : null
+
+  const baseWhere = { categoryId: category.id, deletedAt: null }
+  const whereWithTime = topCutoff
+    ? { ...baseWhere, createdAt: { gte: topCutoff } }
+    : baseWhere
+
+  const orderBy =
+    sort === 'hot' ? [{ isPinned: 'desc' as const }, { hotScore: 'desc' as const }]
+    : sort === 'new' ? [{ isPinned: 'desc' as const }, { createdAt: 'desc' as const }]
+    : [{ isPinned: 'desc' as const }, { voteScore: 'desc' as const }]
+
   const [threads, totalCount] = await Promise.all([
     db.forumThread.findMany({
-      where: { categoryId: category.id, deletedAt: null },
+      where: whereWithTime,
       ...paginate(page),
-      orderBy: [
-        { isPinned: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy,
       include: {
         posts: {
           where: { isFirst: true },
@@ -83,7 +97,7 @@ export async function getThreadsByCategory(
       },
     }),
     db.forumThread.count({
-      where: { categoryId: category.id, deletedAt: null },
+      where: whereWithTime,
     }),
   ])
 
@@ -376,19 +390,30 @@ export async function getAllThreads(
   sort: 'hot' | 'new' | 'top' = 'hot',
   page: number = 1,
   categorySlug?: string,
+  timePeriod: 'day' | 'week' | 'month' | 'all' = 'week',
 ) {
   const where = categorySlug
     ? { category: { slug: categorySlug }, deletedAt: null as null }
     : { deletedAt: null as null }
 
+  // Time filter only applies to `top` sort
+  const topCutoff: Date | null =
+    sort === 'top' && timePeriod !== 'all'
+      ? new Date(Date.now() - { day: 1, week: 7, month: 30 }[timePeriod] * 86_400_000)
+      : null
+
+  const whereWithTime = topCutoff
+    ? { ...where, createdAt: { gte: topCutoff } }
+    : where
+
   const orderBy =
     sort === 'hot' ? [{ isPinned: 'desc' as const }, { hotScore: 'desc' as const }]
     : sort === 'new' ? [{ isPinned: 'desc' as const }, { createdAt: 'desc' as const }]
-    : [{ isPinned: 'desc' as const }, { hotScore: 'desc' as const }]
+    : [{ isPinned: 'desc' as const }, { voteScore: 'desc' as const }]
 
   const [threads, totalCount] = await Promise.all([
     db.forumThread.findMany({
-      where,
+      where: whereWithTime,
       ...paginate(page, 25),
       orderBy,
       include: {
@@ -406,7 +431,7 @@ export async function getAllThreads(
         _count: { select: { posts: true, bookmarks: true } },
       },
     }),
-    db.forumThread.count({ where }),
+    db.forumThread.count({ where: whereWithTime }),
   ])
 
   // compute voteScores efficiently
