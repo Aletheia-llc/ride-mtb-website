@@ -2,10 +2,11 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { SLUG_TO_CATEGORY, CATEGORY_SLUGS, BIKE_LISTINGS } from '@/modules/bikes/lib/bike-listings'
+import { SLUG_TO_CATEGORY, CATEGORY_SLUGS } from '@/modules/bikes/lib/bike-listings'
 import { CATEGORY_META } from '@/modules/bikes/lib/constants'
 import { BikeBrowser } from '@/modules/bikes/components/BikeBrowser'
 import { CATEGORY_COLORS } from '@/modules/bikes/lib/category-colors'
+import { getBikeListings } from '@/modules/bikes/lib/queries'
 
 const CATEGORY_IMAGES: Record<number, string> = {
   1: '/images/categories/photos/category-1.jpg',
@@ -17,10 +18,6 @@ const CATEGORY_IMAGES: Record<number, string> = {
 
 interface PageProps {
   params: Promise<{ category: string }>
-}
-
-export async function generateStaticParams() {
-  return Object.keys(SLUG_TO_CATEGORY).map((category) => ({ category }))
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -40,7 +37,7 @@ export default async function BrowsePage({ params }: PageProps) {
   if (!categoryNum) notFound()
 
   const meta = CATEGORY_META[categoryNum]
-  const bikes = BIKE_LISTINGS.filter((b) => b.category === categoryNum)
+  const bikes = await getBikeListings(categoryNum)
   const heroImage = CATEGORY_IMAGES[categoryNum]
 
   return (

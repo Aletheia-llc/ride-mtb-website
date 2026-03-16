@@ -1972,6 +1972,26 @@ model BikeConsultationRequest {
   @@map("bike_consultation_requests")
 }
 
+model BikeListing {
+  id           String   @id // e.g. 'trek-fuel-ex-9.8'
+  brand        String
+  model        String
+  category     Int
+  price        Int
+  travel       Int?     // rear travel mm, null for hardtail/rigid
+  wheelSize    String   // '29' | '27.5' | '29/27.5'
+  frame        String   // 'Alloy' | 'Carbon'
+  description  String
+  affiliateUrl String
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category])
+  @@index([active])
+  @@map("bike_listings")
+}
+
 // ============================================================
 // CREATORS
 // ============================================================

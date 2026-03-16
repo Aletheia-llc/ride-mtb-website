@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { BIKE_LISTINGS, CATEGORY_SLUGS } from '@/modules/bikes/lib/bike-listings'
+import { CATEGORY_SLUGS } from '@/modules/bikes/lib/bike-listings'
 import { BikeBrowser } from '@/modules/bikes/components/BikeBrowser'
 import { CATEGORY_COLORS } from '@/modules/bikes/lib/category-colors'
+import { getBikeListings } from '@/modules/bikes/lib/queries'
 
 export const metadata: Metadata = {
   title: 'Browse All Bikes | Ride MTB',
@@ -11,7 +12,9 @@ export const metadata: Metadata = {
 
 const TAB_NAMES: Record<number, string> = { 1: 'Gravel', 3: 'XC', 5: 'Trail', 7: 'Enduro', 9: 'Downhill' }
 
-export default function BrowseAllPage() {
+export default async function BrowseAllPage() {
+  const bikes = await getBikeListings()
+
   return (
     <div>
       {/* Hero */}
@@ -19,7 +22,7 @@ export default function BrowseAllPage() {
         <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">Browse</p>
         <h1 className="text-3xl font-bold text-[var(--color-text)] sm:text-4xl">All Mountain Bikes</h1>
         <p className="mx-auto mt-2 max-w-xl text-sm text-[var(--color-text-muted)]">
-          {BIKE_LISTINGS.length} bikes across 5 categories — filter by brand, budget, and frame material.
+          {bikes.length} bikes across 5 categories — filter by brand, budget, and frame material.
         </p>
       </div>
 
@@ -49,7 +52,7 @@ export default function BrowseAllPage() {
 
       {/* Browser — all bikes, no category filter */}
       <div className="mx-auto max-w-5xl px-4 py-10">
-        <BikeBrowser bikes={BIKE_LISTINGS} />
+        <BikeBrowser bikes={bikes} />
       </div>
     </div>
   )
