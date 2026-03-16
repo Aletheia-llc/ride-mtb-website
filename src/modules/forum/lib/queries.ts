@@ -336,7 +336,7 @@ export async function voteOnPost({ postId, userId, value }: VoteOnPostInput) {
         const newHotScore = calculateThreadHotScore(newVoteScore, replyCount, thread.createdAt)
         await db.forumThread.update({
           where: { id: thread.id },
-          data: { hotScore: newHotScore },
+          data: { hotScore: newHotScore, voteScore: newVoteScore },
         })
       }
     } catch {}
