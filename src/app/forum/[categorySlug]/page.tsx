@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
-import { ForumFeed } from '@/modules/forum'
+import { ForumFeed, ForumSortTabs } from '@/modules/forum'
 import { Button } from '@/ui/components'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
@@ -12,7 +12,7 @@ const PAGE_SIZE = 25
 
 interface CategoryPageProps {
   params: Promise<{ categorySlug: string }>
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ sort?: string; t?: string; page?: string }>
 }
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
@@ -28,11 +28,13 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
   const { categorySlug } = await params
-  const { page: pageParam } = await searchParams
-  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+  const sp = await searchParams
+  const sort = (['hot', 'new', 'top'].includes(sp.sort ?? '') ? sp.sort : 'hot') as 'hot' | 'new' | 'top'
+  const timePeriod = (['day', 'week', 'month', 'all'].includes(sp.t ?? '') ? sp.t : 'week') as 'day' | 'week' | 'month' | 'all'
+  const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1)
 
   const [result, session] = await Promise.all([
-    getThreadsByCategory(categorySlug, page),
+    getThreadsByCategory(categorySlug, page, sort, timePeriod),
     auth(),
   ])
 
@@ -40,6 +42,16 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   const { category, threads, totalCount } = result
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+
+  // Build a helper to construct pagination URLs that preserve sort + time params
+  function pageUrl(p: number) {
+    const params = new URLSearchParams()
+    if (sort !== 'hot') params.set('sort', sort)
+    if (sort === 'top' && timePeriod !== 'week') params.set('t', timePeriod)
+    if (p > 1) params.set('page', String(p))
+    const qs = params.toString()
+    return `/forum/${categorySlug}${qs ? `?${qs}` : ''}`
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -75,6 +87,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
       {/* Thread feed */}
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]">
+        <ForumSortTabs />
         <ForumFeed threads={threads} categorySlug={categorySlug} />
       </div>
 
@@ -83,7 +96,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         <nav className="mt-6 flex items-center justify-between" aria-label="Pagination">
           {page > 1 ? (
             <Link
-              href={`/forum/${categorySlug}?page=${page - 1}`}
+              href={pageUrl(page - 1)}
               className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-border)]"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -99,7 +112,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
           {page < totalPages ? (
             <Link
-              href={`/forum/${categorySlug}?page=${page + 1}`}
+              href={pageUrl(page + 1)}
               className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-2 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-border)]"
             >
               Next
