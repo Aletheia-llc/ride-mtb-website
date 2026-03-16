@@ -19,6 +19,7 @@ const createPostSchema = z.object({
     .string()
     .min(1, 'Content is required')
     .max(10000, 'Content must be at most 10,000 characters'),
+  parentId: z.string().optional(),
 })
 
 export type CreatePostState = {
@@ -36,6 +37,7 @@ export async function createPost(
     const raw = {
       threadId: formData.get('threadId'),
       content: formData.get('content'),
+      parentId: formData.get('parentId') ?? undefined,
     }
 
     const parsed = createPostSchema.safeParse(raw)
@@ -50,7 +52,7 @@ export async function createPost(
       return { errors: fieldErrors }
     }
 
-    const { threadId, content } = parsed.data
+    const { threadId, content, parentId } = parsed.data
 
     await rateLimit({ userId: user.id, action: 'forum-create-post', maxPerMinute: 5 })
 
@@ -58,6 +60,7 @@ export async function createPost(
       threadId,
       authorId: user.id,
       content,
+      parentId,
     })
 
     await grantXP({
@@ -139,6 +142,9 @@ export async function createPost(
     }
     if (error instanceof Error && error.message.includes('Thread not found')) {
       return { errors: { general: 'Thread not found.' } }
+    }
+    if (error instanceof Error && error.message.includes('Maximum reply depth')) {
+      return { errors: { general: 'You cannot reply this deep in a thread.' } }
     }
     return { errors: { general: 'Something went wrong. Please try again.' } }
   }

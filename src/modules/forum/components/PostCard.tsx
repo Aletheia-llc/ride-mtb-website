@@ -9,6 +9,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { Avatar, Badge } from '@/ui/components'
 import { EditPostForm } from './EditPostForm'
+import { ReplyForm } from './ReplyForm'
 import type { ForumPost } from '@/modules/forum/types'
 import { formatRelativeTime } from '@/modules/forum/types'
 
@@ -28,17 +29,22 @@ interface PostCardProps {
   currentUserId: string | null
   currentUserRole?: string | null
   onVote: (postId: string, value: 1 | -1) => Promise<void>
+  showReplyButton?: boolean
+  replyParentId?: string
+  threadId?: string
+  isLocked?: boolean
 }
 
 const EDIT_WINDOW_MS = 15 * 60 * 1000
 
-export function PostCard({ post, currentUserId, currentUserRole, onVote }: PostCardProps) {
+export function PostCard({ post, currentUserId, currentUserRole, onVote, showReplyButton, replyParentId, threadId, isLocked }: PostCardProps) {
   const [optimisticScore, setOptimisticScore] = useOptimistic(
     post.voteScore,
     (_current: number, delta: number) => _current + delta,
   )
   const [isPending, startTransition] = useTransition()
   const [isEditing, setIsEditing] = useState(false)
+  const [showInlineReply, setShowInlineReply] = useState(false)
   const [localContent, setLocalContent] = useState(post.content)
   const [localEditedAt, setLocalEditedAt] = useState<Date | null>(post.editedAt)
   const [deleted, setDeleted] = useState(!!post.deletedAt)
@@ -190,6 +196,27 @@ export function PostCard({ post, currentUserId, currentUserRole, onVote }: PostC
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             )}
+            {showReplyButton && !isEditing && (
+              <button
+                type="button"
+                onClick={() => setShowInlineReply((prev) => !prev)}
+                className="ml-2 inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]"
+              >
+                <MessageSquare className="h-3 w-3" />
+                Reply
+              </button>
+            )}
+          </div>
+        )}
+
+        {showInlineReply && threadId && (
+          <div className="mt-3">
+            <ReplyForm
+              threadId={threadId}
+              isLocked={isLocked ?? false}
+              parentId={replyParentId}
+              onSuccess={() => setShowInlineReply(false)}
+            />
           </div>
         )}
 

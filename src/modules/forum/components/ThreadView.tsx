@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { Eye, MessageSquare, Lock } from 'lucide-react'
 import { PostCard } from './PostCard'
+import { NestedReplies } from './NestedReplies'
+import type { NestedPost } from './NestedReplies'
 import type { ForumThread } from '@/modules/forum/types'
 import { formatRelativeTime } from '@/modules/forum/types'
 
@@ -60,18 +62,26 @@ export function ThreadView({ thread, currentUserId, currentUserRole, onVote, ren
         </div>
       )}
 
-      {/* Posts */}
-      <div className="divide-y-0">
-        {thread.posts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-            onVote={onVote}
-          />
-        ))}
-      </div>
+      {/* OP post */}
+      {thread.posts.filter(p => p.isFirst).map(post => (
+        <PostCard
+          key={post.id}
+          post={post}
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          onVote={onVote}
+        />
+      ))}
+
+      {/* Reply posts — nested tree */}
+      <NestedReplies
+        posts={thread.posts.filter(p => !p.isFirst) as NestedPost[]}
+        threadId={thread.id}
+        isLocked={thread.isLocked}
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole ?? null}
+        onVote={onVote}
+      />
     </div>
   )
 }

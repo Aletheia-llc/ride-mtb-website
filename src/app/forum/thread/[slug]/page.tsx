@@ -5,6 +5,7 @@ import { db } from '@/lib/db/client'
 // eslint-disable-next-line no-restricted-imports
 import { getThreadBySlug } from '@/modules/forum/lib/queries'
 import { ThreadPageClient } from './ThreadPageClient'
+import type { ForumThread } from '@/modules/forum/types'
 
 interface ThreadPageProps {
   params: Promise<{ slug: string }>
@@ -42,7 +43,7 @@ export default async function ThreadPage({ params }: ThreadPageProps) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <ThreadPageClient
-        thread={thread}
+        thread={thread as unknown as ForumThread}
         currentUserId={currentUserId}
         currentUserRole={session?.user?.role ?? null}
       />

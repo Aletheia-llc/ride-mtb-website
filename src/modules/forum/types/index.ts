@@ -54,12 +54,15 @@ export interface ForumPost {
   authorId: string
   content: string
   isFirst: boolean
+  depth: number
+  parentId: string | null
   createdAt: Date
   updatedAt: Date
   editedAt: Date | null
   deletedAt: Date | null
   author: ForumAuthor
   voteScore: number
+  replies?: ForumPost[]
 }
 
 export interface ForumThread {

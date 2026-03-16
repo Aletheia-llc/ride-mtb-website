@@ -16,6 +16,7 @@ interface CreatePostInput {
   threadId: string
   authorId: string
   content: string
+  parentId?: string
 }
 
 interface VoteOnPostInput {
@@ -152,7 +153,7 @@ export async function getThreadBySlug(slug: string) {
         select: { name: true, slug: true },
       },
       posts: {
-        where: { deletedAt: null },
+        where: { isFirst: false, parentId: null, deletedAt: null },
         orderBy: { createdAt: 'asc' },
         include: {
           author: {
@@ -180,6 +181,27 @@ export async function getThreadBySlug(slug: string) {
               },
             },
           },
+          replies: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: 'asc' },
+            include: {
+              author: { select: { id: true, name: true, username: true, image: true, avatarUrl: true } },
+              replies: {
+                where: { deletedAt: null },
+                orderBy: { createdAt: 'asc' },
+                include: {
+                  author: { select: { id: true, name: true, username: true, image: true, avatarUrl: true } },
+                  replies: {
+                    where: { deletedAt: null },
+                    orderBy: { createdAt: 'asc' },
+                    include: {
+                      author: { select: { id: true, name: true, username: true, image: true, avatarUrl: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -193,26 +215,82 @@ export async function getThreadBySlug(slug: string) {
     data: { viewCount: { increment: 1 } },
   }).catch(() => {})
 
+  // Collect ALL post IDs recursively
+  function collectPostIds(posts: { id: string; replies?: { id: string; replies?: unknown[] }[] }[]): string[] {
+    return posts.flatMap(p => [p.id, ...collectPostIds((p.replies ?? []) as typeof posts)])
+  }
+
+  const allPostIds = [
+    ...(thread.posts as { id: string; replies?: { id: string; replies?: unknown[] }[] }[]).flatMap(p =>
+      collectPostIds([p as { id: string; replies?: { id: string; replies?: unknown[] }[] }])
+    ),
+  ]
+
+  // Fetch the isFirst post separately
+  const firstPostRaw = await db.forumPost.findFirst({
+    where: { threadId: thread.id, isFirst: true },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          image: true,
+          avatarUrl: true,
+          forumBadges: {
+            select: {
+              badgeSlug: true,
+              awardedAt: true,
+              badge: {
+                select: {
+                  name: true,
+                  description: true,
+                  icon: true,
+                  color: true,
+                },
+              },
+            },
+            orderBy: { awardedAt: 'asc' },
+            take: 3,
+          },
+        },
+      },
+    },
+  })
+
+  if (firstPostRaw) allPostIds.push(firstPostRaw.id)
+
   // Batch-compute vote scores for all posts (avoids loading all vote rows)
-  const postIds = thread.posts.map((p) => p.id)
-  const voteScores = postIds.length > 0
+  const voteScores = allPostIds.length > 0
     ? await db.forumVote.groupBy({
         by: ['postId'],
-        where: { postId: { in: postIds } },
+        where: { postId: { in: allPostIds } },
         _sum: { value: true },
       })
     : []
 
   const scoreMap = new Map(voteScores.map((v) => [v.postId, v._sum.value ?? 0]))
 
-  const postsWithScores = thread.posts.map((post) => ({
-    ...post,
-    voteScore: scoreMap.get(post.id) ?? 0,
-  }))
+  function attachScores<T extends { id: string; replies?: T[] }>(posts: T[]): (T & { voteScore: number })[] {
+    return posts.map(p => ({
+      ...p,
+      voteScore: scoreMap.get(p.id) ?? 0,
+      replies: p.replies ? attachScores(p.replies) : undefined,
+    }))
+  }
+
+  const postsWithScores = attachScores(thread.posts as Parameters<typeof attachScores>[0])
+
+  const firstPost = firstPostRaw
+    ? { ...firstPostRaw, voteScore: scoreMap.get(firstPostRaw.id) ?? 0, replies: [] }
+    : null
 
   return {
     ...thread,
-    posts: postsWithScores,
+    posts: [
+      ...(firstPost ? [firstPost] : []),
+      ...postsWithScores,
+    ],
   }
 }
 
@@ -262,11 +340,12 @@ export async function createPost({
   threadId,
   authorId,
   content,
+  parentId,
 }: CreatePostInput) {
   return db.$transaction(async (tx) => {
     const thread = await tx.forumThread.findUnique({
       where: { id: threadId },
-      select: { isLocked: true },
+      select: { id: true, isLocked: true },
     })
 
     if (!thread) {
@@ -277,23 +356,31 @@ export async function createPost({
       throw new Error('Thread is locked')
     }
 
-    return tx.forumPost.create({
-      data: {
-        threadId,
-        authorId,
-        content,
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            image: true,
-          },
-        },
-      },
+    let depth = 0
+    let resolvedParentId: string | null = null
+
+    if (parentId) {
+      const parent = await tx.forumPost.findUnique({
+        where: { id: parentId },
+        select: { id: true, depth: true, threadId: true },
+      })
+      if (!parent) throw new Error('Parent post not found')
+      if (parent.threadId !== threadId) throw new Error('Parent post is not in this thread')
+      if (parent.depth >= 3) throw new Error('Maximum reply depth reached')
+      depth = parent.depth + 1
+      resolvedParentId = parent.id
+    }
+
+    const post = await tx.forumPost.create({
+      data: { threadId, authorId, content, isFirst: false, depth, parentId: resolvedParentId },
     })
+
+    await tx.forumThread.update({
+      where: { id: threadId },
+      data: { lastReplyAt: new Date() },
+    })
+
+    return post
   })
 }
 

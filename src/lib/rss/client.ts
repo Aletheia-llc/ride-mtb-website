@@ -59,7 +59,7 @@ function extractFullContent(itemXml: string): string | undefined {
   ]
   for (const p of patterns) {
     const m = itemXml.match(p)
-    if (m?.[1]?.trim().length > 200) {
+    if (m != null && m[1] != null && m[1].trim().length > 200) {
       return m[1]
         // Strip dangerous/useless elements
         .replace(/<script[\s\S]*?<\/script>/gi, '')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useRef } from 'react'
+import { useActionState, useEffect, useRef } from 'react'
 import { Lock } from 'lucide-react'
 import { Button } from '@/ui/components'
 import { createPost } from '../actions/createPost'
@@ -8,9 +8,11 @@ import { createPost } from '../actions/createPost'
 interface ReplyFormProps {
   threadId: string
   isLocked: boolean
+  parentId?: string
+  onSuccess?: () => void
 }
 
-export function ReplyForm({ threadId, isLocked }: ReplyFormProps) {
+export function ReplyForm({ threadId, isLocked, parentId, onSuccess }: ReplyFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
 
   const [state, formAction, isPending] = useActionState(
@@ -24,6 +26,12 @@ export function ReplyForm({ threadId, isLocked }: ReplyFormProps) {
     { errors: {} as Record<string, string> },
   )
 
+  useEffect(() => {
+    if (state?.success) {
+      onSuccess?.()
+    }
+  }, [state?.success, onSuccess])
+
   if (isLocked) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
@@ -36,6 +44,7 @@ export function ReplyForm({ threadId, isLocked }: ReplyFormProps) {
   return (
     <form ref={formRef} action={formAction} className="space-y-3">
       <input type="hidden" name="threadId" value={threadId} />
+      {parentId && <input type="hidden" name="parentId" value={parentId} />}
 
       <div className="flex flex-col gap-1.5">
         <label
