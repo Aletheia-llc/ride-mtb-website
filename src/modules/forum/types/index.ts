@@ -48,6 +48,14 @@ export interface ForumBadgeDisplay {
   }
 }
 
+export interface LinkPreviewData {
+  url: string
+  title: string | null
+  description: string | null
+  imageUrl: string | null
+  fetchedAt: Date
+}
+
 export interface ForumPost {
   id: string
   threadId: string
@@ -56,6 +64,8 @@ export interface ForumPost {
   isFirst: boolean
   depth: number
   parentId: string | null
+  linkPreviewUrl: string | null
+  linkPreviewData: LinkPreviewData | null
   createdAt: Date
   updatedAt: Date
   editedAt: Date | null

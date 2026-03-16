@@ -285,11 +285,41 @@ export async function getThreadBySlug(slug: string) {
     ? { ...firstPostRaw, voteScore: scoreMap.get(firstPostRaw.id) ?? 0, replies: [] }
     : null
 
+  // Batch-fetch link previews for all posts that have a linkPreviewUrl
+  function collectPreviewUrls<T extends { linkPreviewUrl?: string | null; replies?: T[] }>(posts: T[]): string[] {
+    return posts.flatMap(p => [
+      ...(p.linkPreviewUrl ? [p.linkPreviewUrl] : []),
+      ...collectPreviewUrls(p.replies ?? []),
+    ])
+  }
+  const allPreviewUrls = [
+    ...(firstPost?.linkPreviewUrl ? [firstPost.linkPreviewUrl] : []),
+    ...collectPreviewUrls(postsWithScores as { linkPreviewUrl?: string | null; replies?: typeof postsWithScores }[]),
+  ]
+
+  const previews = allPreviewUrls.length > 0
+    ? await db.forumLinkPreview.findMany({ where: { url: { in: allPreviewUrls } } })
+    : []
+  const previewMap = new Map(previews.map(p => [p.url, p]))
+
+  function attachPreviews<T extends { linkPreviewUrl?: string | null; replies?: T[] }>(posts: T[]): (T & { linkPreviewData: (typeof previews)[0] | null })[] {
+    return posts.map(p => ({
+      ...p,
+      linkPreviewData: p.linkPreviewUrl ? (previewMap.get(p.linkPreviewUrl) ?? null) : null,
+      replies: p.replies ? attachPreviews(p.replies as T[]) : undefined,
+    }))
+  }
+
+  const postsWithPreviews = attachPreviews(postsWithScores as Parameters<typeof attachPreviews>[0])
+  const firstPostWithPreview = firstPost
+    ? { ...firstPost, linkPreviewData: firstPost.linkPreviewUrl ? (previewMap.get(firstPost.linkPreviewUrl) ?? null) : null }
+    : null
+
   return {
     ...thread,
     posts: [
-      ...(firstPost ? [firstPost] : []),
-      ...postsWithScores,
+      ...(firstPostWithPreview ? [firstPostWithPreview] : []),
+      ...postsWithPreviews,
     ],
   }
 }

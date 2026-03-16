@@ -14,6 +14,8 @@ import { sendReplyNotification, sendMentionNotification } from '../lib/email'
 import { checkAndGrantBadges } from '../lib/badges'
 // eslint-disable-next-line no-restricted-imports
 import { createForumNotification, extractMentions } from '../lib/notifications'
+// eslint-disable-next-line no-restricted-imports
+import { resolveContentLinkPreview } from '../lib/link-preview'
 
 const createPostSchema = z.object({
   threadId: z.string().min(1, 'Thread ID is required'),
@@ -64,6 +66,16 @@ export async function createPost(
       content,
       parentId,
     })
+
+    // Link preview (fire-and-forget)
+    void resolveContentLinkPreview(content).then(async (result) => {
+      if (result) {
+        await db.forumPost.update({
+          where: { id: post.id },
+          data: { linkPreviewUrl: result.url },
+        }).catch(() => {})
+      }
+    }).catch(() => {})
 
     await grantXP({
       userId: user.id,

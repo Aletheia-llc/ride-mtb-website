@@ -10,6 +10,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Avatar, Badge } from '@/ui/components'
 import { EditPostForm } from './EditPostForm'
 import { ReplyForm } from './ReplyForm'
+import { LinkPreviewCard } from './LinkPreviewCard'
 import type { ForumPost } from '@/modules/forum/types'
 import { formatRelativeTime } from '@/modules/forum/types'
 
@@ -146,6 +147,15 @@ export function PostCard({ post, currentUserId, currentUserRole, onVote, showRep
           <div className="mt-2 whitespace-pre-wrap text-sm text-[var(--color-text)] leading-relaxed">
             {localContent}
           </div>
+        )}
+
+        {post.linkPreviewData && post.linkPreviewUrl && !isEditing && (
+          <LinkPreviewCard
+            url={post.linkPreviewUrl}
+            title={post.linkPreviewData.title}
+            description={post.linkPreviewData.description}
+            imageUrl={post.linkPreviewData.imageUrl}
+          />
         )}
 
         {/* Action bar */}
