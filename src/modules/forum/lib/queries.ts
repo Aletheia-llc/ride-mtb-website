@@ -203,6 +203,31 @@ export async function getBookmarkedPosts(userId: string) {
 
 // ── Read: User profile ─────────────────────────────────────────────────────
 
+export async function getForumUserProfile(username: string) {
+  return db.user.findUnique({
+    where: { username },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      image: true,
+      avatarUrl: true,
+      role: true,
+      karma: true,
+      bio: true,
+      createdAt: true,
+      isPremium: true,
+      isVerifiedCreator: true,
+      _count: { select: { posts: { where: { deletedAt: null } } } },
+      userBadges: {
+        include: {
+          badge: { select: { name: true, description: true, icon: true, color: true } },
+        },
+      },
+    },
+  })
+}
+
 export async function getUserPosts(username: string, page = 1) {
   const skip = (page - 1) * PAGE_SIZE
   const where: Prisma.PostWhereInput = { deletedAt: null, author: { username } }
@@ -216,6 +241,7 @@ export async function getUserPosts(username: string, page = 1) {
       include: {
         author: { select: authorSelect },
         category: { select: categorySelect },
+        tags: { include: tagInclude },
         _count: { select: { comments: { where: { deletedAt: null } } } },
       },
     }),

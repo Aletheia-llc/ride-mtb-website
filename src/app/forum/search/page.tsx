@@ -3,11 +3,10 @@ import { Suspense } from 'react'
 import { Search } from 'lucide-react'
 // eslint-disable-next-line no-restricted-imports
 import {
-  searchForumThreads,
-  searchForumReplies,
-  searchForumUsers,
+  searchPosts,
+  searchComments,
+  searchUsers,
   getForumSearchCounts,
-  getCategories,
 } from '@/modules/forum/lib/queries'
 // eslint-disable-next-line no-restricted-imports
 import { ForumSearchResults } from '@/modules/forum/components/ForumSearchResults'
@@ -20,11 +19,6 @@ interface SearchPageProps {
   searchParams: Promise<{
     q?: string
     type?: string
-    category?: string
-    author?: string
-    dateFrom?: string
-    dateTo?: string
-    sort?: string
     page?: string
   }>
 }
@@ -33,11 +27,6 @@ export default async function ForumSearchPage({ searchParams }: SearchPageProps)
   const params = await searchParams
   const query = params.q?.trim() ?? ''
   const type = ['threads', 'replies', 'users'].includes(params.type ?? '') ? (params.type ?? 'threads') : 'threads'
-  const category = params.category ?? ''
-  const author = params.author ?? ''
-  const dateFrom = params.dateFrom ?? ''
-  const dateTo = params.dateTo ?? ''
-  const sort = (params.sort === 'votes' ? 'votes' : 'date') as 'date' | 'votes'
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
 
   if (!query) {
@@ -58,46 +47,23 @@ export default async function ForumSearchPage({ searchParams }: SearchPageProps)
     )
   }
 
-  const [categories, tabCounts] = await Promise.all([
-    getCategories(),
-    getForumSearchCounts(query, {
-      categorySlug: category || undefined,
-      authorUsername: author || undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-    }),
-  ])
+  const tabCounts = await getForumSearchCounts(query)
 
   // Fetch results for the active tab
-  let threadResults: Awaited<ReturnType<typeof searchForumThreads>>['threads'] = []
-  let replyResults: Awaited<ReturnType<typeof searchForumReplies>>['posts'] = []
-  let userResults: Awaited<ReturnType<typeof searchForumUsers>>['users'] = []
+  let threadResults: Awaited<ReturnType<typeof searchPosts>> = []
+  let replyResults: Awaited<ReturnType<typeof searchComments>> = []
+  let userResults: Awaited<ReturnType<typeof searchUsers>> = []
   let total = 0
 
   if (type === 'threads') {
-    const data = await searchForumThreads(query, {
-      categorySlug: category || undefined,
-      authorUsername: author || undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-      sort,
-      page,
-    })
-    threadResults = data.threads
-    total = data.totalCount
+    threadResults = await searchPosts(query)
+    total = tabCounts.posts
   } else if (type === 'replies') {
-    const data = await searchForumReplies(query, {
-      authorUsername: author || undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-      page,
-    })
-    replyResults = data.posts
-    total = data.totalCount
+    replyResults = await searchComments(query)
+    total = tabCounts.comments
   } else {
-    const data = await searchForumUsers(query, { page })
-    userResults = data.users
-    total = data.totalCount
+    userResults = await searchUsers(query)
+    total = tabCounts.users
   }
 
   return (
@@ -117,16 +83,10 @@ export default async function ForumSearchPage({ searchParams }: SearchPageProps)
           total={total}
           page={page}
           tabCounts={{
-            threads: tabCounts.threadCount,
-            replies: tabCounts.replyCount,
-            users: tabCounts.userCount,
+            threads: tabCounts.posts,
+            replies: tabCounts.comments,
+            users: tabCounts.users,
           }}
-          categories={categories.map((c) => ({
-            name: c.name,
-            slug: c.slug,
-            color: (c as { color?: string | null }).color ?? null,
-          }))}
-          filters={{ category, author, dateFrom, dateTo, sort }}
         />
       </Suspense>
     </div>
