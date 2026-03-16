@@ -67,7 +67,7 @@ export async function resolveContentLinkPreview(content: string): Promise<{ url:
   if (!url) return null
 
   // Check cache
-  const cached = await db.forumLinkPreview.findUnique({ where: { url } })
+  const cached = await db.linkPreview.findUnique({ where: { url } })
   if (cached && Date.now() - cached.fetchedAt.getTime() < PREVIEW_TTL_MS) {
     return { url, preview: { url, title: cached.title, description: cached.description, imageUrl: cached.imageUrl } }
   }
@@ -77,7 +77,7 @@ export async function resolveContentLinkPreview(content: string): Promise<{ url:
     const data = await fetchOgData(url)
     if (!data.title && !data.description && !data.imageUrl) return null
 
-    await db.forumLinkPreview.upsert({
+    await db.linkPreview.upsert({
       where: { url },
       update: { ...data, fetchedAt: new Date() },
       create: { url, ...data, fetchedAt: new Date() },
