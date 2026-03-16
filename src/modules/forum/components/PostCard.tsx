@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useOptimistic, useTransition } from 'react'
+import { useState, useOptimistic, useTransition, useCallback } from 'react'
 import { ThumbsUp, ThumbsDown, Pencil, Trash2 } from 'lucide-react'
 import {
   MessageSquare, MessageCircle, MessagesSquare, Award,
@@ -45,6 +45,7 @@ export function PostCard({ post, currentUserId, currentUserRole, onVote, showRep
   const [isPending, startTransition] = useTransition()
   const [isEditing, setIsEditing] = useState(false)
   const [showInlineReply, setShowInlineReply] = useState(false)
+  const hideInlineReply = useCallback(() => setShowInlineReply(false), [])
   const [localContent, setLocalContent] = useState(post.content)
   const [localEditedAt, setLocalEditedAt] = useState<Date | null>(post.editedAt)
   const [deleted, setDeleted] = useState(!!post.deletedAt)
@@ -215,7 +216,7 @@ export function PostCard({ post, currentUserId, currentUserRole, onVote, showRep
               threadId={threadId}
               isLocked={isLocked ?? false}
               parentId={replyParentId}
-              onSuccess={() => setShowInlineReply(false)}
+              onSuccess={hideInlineReply}
             />
           </div>
         )}
