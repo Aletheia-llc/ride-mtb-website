@@ -48,6 +48,8 @@ model User {
   forumPosts              ForumPost[]
   forumVotes              ForumVote[]
   forumBookmarks          ForumBookmark[]
+  forumNotificationsReceived ForumNotification[] @relation("ForumNotificationRecipient")
+  forumNotificationsGiven    ForumNotification[] @relation("ForumNotificationActor")
   ownedForumCommunities   ForumCategory[]              @relation("ownedForumCommunities")
   forumMemberships        ForumCommunityMembership[]
   forumReports            ForumReport[]                @relation("forumReporter")
@@ -112,8 +114,6 @@ model User {
   mulliganUses             MulliganUse[]
   manufacturerPicks  ManufacturerPick[]
   manufacturerScores ManufacturerEventScore[]
-  forumNotificationsReceived ForumNotification[] @relation("ForumNotificationRecipient")
-  forumNotificationsGiven    ForumNotification[] @relation("ForumNotificationActor")
 
   @@map("users")
 }
@@ -267,6 +267,7 @@ model ForumThread {
 
   @@index([categoryId, createdAt])
   @@index([hotScore])
+  @@index([voteScore])
   @@index([deletedAt])
   @@map("forum_threads")
 }
@@ -383,7 +384,7 @@ model ForumNotification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
-  @@index([actorId, type, postId])
+  @@index([actorId, type, postId]) // lookup index (dedup enforced in app code)
   @@map("forum_notifications")
 }
 
