@@ -6,7 +6,7 @@ import { formatRelativeTime } from '@/modules/forum/types'
 
 interface ForumFeedProps {
   posts: PostSummary[]
-  categorySlug: string
+  categorySlug?: string
 }
 
 export function ForumFeed({ posts, categorySlug }: ForumFeedProps) {
