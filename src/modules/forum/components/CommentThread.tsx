@@ -72,14 +72,17 @@ export function CommentThread({
       </div>
 
       {/* Reply form or locked notice */}
-      {currentUserId && (
-        <div className="mb-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <ReplyForm threadId={postId} isLocked={!!isLocked} />
-        </div>
-      )}
-      {!currentUserId && isLocked && (
+      {isLocked ? (
         <p className="mb-6 rounded-lg border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
           This thread is locked.
+        </p>
+      ) : currentUserId ? (
+        <div className="mb-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <ReplyForm threadId={postId} isLocked={false} />
+        </div>
+      ) : (
+        <p className="mb-6 rounded-lg border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
+          <a href="/signin" className="font-medium text-[var(--color-primary)] hover:underline">Sign in</a> to leave a reply.
         </p>
       )}
 

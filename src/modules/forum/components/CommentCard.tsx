@@ -61,24 +61,28 @@ export function CommentCard({ comment, currentUserId }: CommentCardProps) {
 
       <div className="min-w-0 flex-1">
         {/* Author meta */}
-        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-muted)]">
-          <Link
-            href={`/forum/user/${author.username}`}
-            className="font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)]"
-          >
-            {author.name ?? author.username}
-          </Link>
-          {author.role && author.role !== 'user' && (
-            <span className="rounded bg-[var(--color-primary)]/10 px-1.5 py-0.5 font-medium text-[var(--color-primary)] capitalize">
-              {author.role}
-            </span>
-          )}
-          {joinedYear && <span>Joined {joinedYear}</span>}
-          <span>{postCount} posts</span>
-          {author.karma !== null && author.karma !== undefined && (
-            <span>{author.karma} karma</span>
-          )}
-          <span className="ml-auto">{formatRelativeTime(comment.createdAt)}</span>
+        <div className="mb-2 text-xs">
+          <div className="flex items-center gap-1.5">
+            <Link
+              href={`/forum/user/${author.username}`}
+              className="font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)]"
+            >
+              {author.name ?? author.username}
+            </Link>
+            {author.role && author.role !== 'user' && (
+              <span className="rounded bg-[var(--color-primary)]/10 px-1.5 py-0.5 font-medium text-[var(--color-primary)] capitalize">
+                {author.role}
+              </span>
+            )}
+            <span className="ml-auto text-[var(--color-text-muted)]">{formatRelativeTime(comment.createdAt)}</span>
+          </div>
+          <div className="mt-0.5 flex items-center gap-2 text-[var(--color-text-muted)]">
+            {joinedYear && <span>Joined {joinedYear}</span>}
+            <span>{postCount} {postCount === 1 ? 'post' : 'posts'}</span>
+            {author.karma !== null && author.karma !== undefined && (
+              <span>{author.karma} karma</span>
+            )}
+          </div>
         </div>
 
         {/* Body */}
