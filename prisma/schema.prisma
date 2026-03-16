@@ -112,6 +112,8 @@ model User {
   mulliganUses             MulliganUse[]
   manufacturerPicks  ManufacturerPick[]
   manufacturerScores ManufacturerEventScore[]
+  forumNotificationsReceived ForumNotification[] @relation("ForumNotificationRecipient")
+  forumNotificationsGiven    ForumNotification[] @relation("ForumNotificationActor")
 
   @@map("users")
 }
@@ -249,7 +251,9 @@ model ForumThread {
   isPinned    Boolean       @default(false)
   isLocked    Boolean       @default(false)
   viewCount   Int           @default(0)
-  hotScore    Float         @default(0)
+  hotScore       Float         @default(0)
+  voteScore      Int           @default(0)
+  linkPreviewUrl String?
   lastReplyAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -259,6 +263,7 @@ model ForumThread {
   tags        ForumThreadTag[]
   bookmarks   ForumBookmark[]
   reports     ForumReport[]
+  notifications  ForumNotification[]
 
   @@index([categoryId, createdAt])
   @@index([hotScore])
@@ -275,14 +280,21 @@ model ForumPost {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   editedAt  DateTime?
-  deletedAt DateTime?
+  deletedAt      DateTime?
+  parentId       String?
+  depth          Int           @default(0)
+  linkPreviewUrl String?
   thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
   votes     ForumVote[]
   reports   ForumReport[]
+  parent         ForumPost?    @relation("PostReplies", fields: [parentId], references: [id])
+  replies        ForumPost[]   @relation("PostReplies")
+  notifications  ForumNotification[]
 
   @@index([threadId, createdAt])
   @@index([authorId])
+  @@index([parentId])
   @@map("forum_posts")
 }
 
@@ -351,6 +363,38 @@ model ForumReport {
 
   @@index([status])
   @@map("forum_reports")
+}
+
+model ForumNotification {
+  id        String                @id @default(cuid())
+  userId    String
+  actorId   String?
+  type      ForumNotificationType
+  threadId  String?
+  postId    String?
+  meta      Json?
+  read      Boolean               @default(false)
+  createdAt DateTime              @default(now())
+
+  user      User          @relation("ForumNotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor     User?         @relation("ForumNotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  thread    ForumThread?  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  post      ForumPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@index([actorId, type, postId])
+  @@map("forum_notifications")
+}
+
+model ForumLinkPreview {
+  url         String   @id
+  title       String?
+  description String?
+  imageUrl    String?
+  fetchedAt   DateTime @default(now())
+
+  @@map("forum_link_previews")
 }
 
 model ForumBadge {
@@ -1771,6 +1815,13 @@ enum ForumReportTarget {
   POST
   THREAD
   USER
+}
+
+enum ForumNotificationType {
+  REPLY_TO_THREAD
+  REPLY_TO_POST
+  MENTION
+  VOTE_MILESTONE
 }
 
 // ============================================================
