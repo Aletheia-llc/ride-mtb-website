@@ -1,8 +1,17 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Bike, ChevronRight, Mountain, Zap, Target } from 'lucide-react'
 // eslint-disable-next-line no-restricted-imports
 import { CATEGORY_META } from '@/modules/bikes/lib/constants'
+
+const CATEGORY_IMAGES: Record<number, string> = {
+  1: '/images/categories/gravel.svg',
+  3: '/images/categories/xc.svg',
+  5: '/images/categories/trail.svg',
+  7: '/images/categories/enduro.svg',
+  9: '/images/categories/downhill.svg',
+}
 
 export const metadata: Metadata = {
   title: 'Bikes | Ride MTB',
@@ -77,26 +86,45 @@ export default function BikesPage() {
         <h2 className="mb-2 text-center text-2xl font-bold text-[var(--color-text)]">The Spectrum</h2>
         <p className="mb-8 text-center text-sm text-[var(--color-text-muted)]">From smooth gravel to full-send downhill — every rider fits somewhere on the 1–9 scale.</p>
         <div className="grid gap-4 sm:grid-cols-5">
-          {categories.map(({ number, name, description, travelRange }) => (
-            <div
-              key={number}
-              className="flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4"
-            >
+          {categories.map(({ number, name, description, travelRange }) => {
+            const img = CATEGORY_IMAGES[number]
+            return (
               <div
-                className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg text-lg font-bold text-white"
-                style={{ background: `hsl(${140 - number * 12}, 70%, 40%)` }}
+                key={number}
+                className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]"
               >
-                {number}
+                {/* Mini hero image */}
+                <div className="relative flex min-h-[90px] items-end overflow-hidden p-3">
+                  {img && (
+                    <Image
+                      src={img}
+                      alt={name}
+                      fill
+                      sizes="(min-width: 640px) 200px, 50vw"
+                      className="object-cover object-[center_30%]"
+                    />
+                  )}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 70%, rgba(0,0,0,0.05) 100%)',
+                    }}
+                  />
+                  <h3 className="relative z-10 text-sm font-bold leading-tight text-white">{name}</h3>
+                </div>
+                {/* Content */}
+                <div className="flex flex-col gap-1 p-3">
+                  <p className="text-xs leading-relaxed text-[var(--color-text-muted)]">{description}</p>
+                  {travelRange && (
+                    <p className="text-xs font-medium text-[var(--color-primary)]">
+                      {travelRange.min}–{travelRange.max}mm travel
+                    </p>
+                  )}
+                </div>
               </div>
-              <h3 className="mb-1 text-sm font-semibold text-[var(--color-text)]">{name}</h3>
-              <p className="mb-2 text-xs leading-relaxed text-[var(--color-text-muted)]">{description}</p>
-              {travelRange && (
-                <p className="mt-auto text-xs font-medium text-[var(--color-primary)]">
-                  {travelRange.min}–{travelRange.max}mm travel
-                </p>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
