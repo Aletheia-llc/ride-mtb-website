@@ -81,7 +81,7 @@ export async function getAllPosts(
 
   const orderBy: Prisma.PostOrderByWithRelationInput =
     sort === 'new' ? { createdAt: 'desc' }
-    : sort === 'top' ? { voteScore: 'desc' }
+    : sort === 'top' ? { viewCount: 'desc' }
     : { hotScore: 'desc' }
 
   const [posts, total] = await Promise.all([
