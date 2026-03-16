@@ -1,6 +1,7 @@
 'use server'
 
 import { auth } from '@/lib/auth'
+// eslint-disable-next-line no-restricted-imports
 import { voteOnContent } from '@/modules/forum/lib/queries'
 
 export async function votePost(

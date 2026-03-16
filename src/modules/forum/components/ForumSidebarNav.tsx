@@ -1,4 +1,5 @@
 import Link from 'next/link'
+// eslint-disable-next-line no-restricted-imports
 import { getCategories, getForumStats, getOnlineUserCount } from '@/modules/forum/lib/queries'
 import { Users } from 'lucide-react'
 

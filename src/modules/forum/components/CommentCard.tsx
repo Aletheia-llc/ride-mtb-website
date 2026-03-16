@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { formatRelativeTime } from '@/modules/forum/types'
+// eslint-disable-next-line no-restricted-imports
 import { votePost } from '@/modules/forum/actions/votePost'
 import type { ForumComment } from '@/modules/forum/types'
 

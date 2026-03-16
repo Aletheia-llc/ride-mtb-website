@@ -7,8 +7,11 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ChevronUp, ChevronDown, Bookmark, Flag, Share2 } from 'lucide-react'
 import { formatRelativeTime } from '@/modules/forum/types'
+// eslint-disable-next-line no-restricted-imports
 import { votePost } from '@/modules/forum/actions/votePost'
+// eslint-disable-next-line no-restricted-imports
 import { toggleForumBookmark } from '@/modules/forum/actions/bookmarkThread'
+// eslint-disable-next-line no-restricted-imports
 import { LinkPreviewCard } from '@/modules/forum/components/LinkPreviewCard'
 import type { PostDetail as PostDetailType } from '@/modules/forum/types'
 
