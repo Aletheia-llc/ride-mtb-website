@@ -94,7 +94,7 @@ export default function BikesPage() {
                 className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]"
               >
                 {/* Mini hero image */}
-                <div className="relative flex min-h-[90px] items-end overflow-hidden p-3">
+                <div className="relative aspect-square overflow-hidden">
                   {img && (
                     <Image
                       src={img}
@@ -111,7 +111,7 @@ export default function BikesPage() {
                         'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 70%, rgba(0,0,0,0.05) 100%)',
                     }}
                   />
-                  <h3 className="relative z-10 text-sm font-bold leading-tight text-white">{name}</h3>
+                  <h3 className="absolute inset-x-0 bottom-0 z-10 p-2 text-sm font-bold leading-tight text-white">{name}</h3>
                 </div>
                 {/* Content */}
                 <div className="flex flex-col gap-1 p-3">

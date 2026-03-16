@@ -77,7 +77,7 @@ function OptionCard({
       {option.image ? (
         <>
           {/* Image + overlay */}
-          <div className="relative min-h-[120px] overflow-hidden">
+          <div className="relative aspect-square overflow-hidden">
             <Image
               src={option.image}
               alt={option.label}

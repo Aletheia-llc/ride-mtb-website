@@ -162,7 +162,7 @@ export function ResultsView({ result, onRetake }: ResultsViewProps) {
                   key={alt.categoryNumber}
                   className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]"
                 >
-                  <div className="relative flex min-h-[90px] items-end overflow-hidden p-4">
+                  <div className="relative aspect-square overflow-hidden">
                     {altImage && (
                       <Image
                         src={altImage}
@@ -179,7 +179,7 @@ export function ResultsView({ result, onRetake }: ResultsViewProps) {
                           'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.05) 100%)',
                       }}
                     />
-                    <h3 className="relative z-10 text-base font-bold text-white">{alt.categoryName}</h3>
+                    <h3 className="absolute inset-x-0 bottom-0 z-10 p-3 text-base font-bold text-white">{alt.categoryName}</h3>
                   </div>
                   <p className="px-4 py-3 text-sm italic text-[var(--color-text-muted)]">{alt.reason}</p>
                 </div>
