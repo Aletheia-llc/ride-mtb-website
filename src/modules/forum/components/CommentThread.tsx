@@ -1,21 +1,22 @@
 'use client'
 
 import { useTransition } from 'react'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { CommentCard } from './CommentCard'
-import { ReplyForm } from './ReplyForm'
 import { ForumPagination } from './ForumPagination'
+// eslint-disable-next-line no-restricted-imports
+import { ReplyForm } from '@/modules/forum/components/ReplyForm'
 import type { ForumComment } from '@/modules/forum/types'
 
 interface CommentThreadProps {
-  postId: string
   comments: ForumComment[]
   total: number
   pageCount: number
   currentPage: number
   activeSort: 'oldest' | 'newest' | 'best'
   currentUserId?: string
-  isLocked?: boolean
+  isLocked: boolean
+  threadId: string
 }
 
 const SORT_OPTIONS = [
@@ -25,7 +26,6 @@ const SORT_OPTIONS = [
 ]
 
 export function CommentThread({
-  postId,
   comments,
   total,
   pageCount,
@@ -33,17 +33,14 @@ export function CommentThread({
   activeSort,
   currentUserId,
   isLocked,
+  threadId,
 }: CommentThreadProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
   const setSort = (sort: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('sort', sort)
-    params.delete('page')
-    startTransition(() => router.push(`${pathname}?${params.toString()}`))
+    startTransition(() => router.push(`${pathname}?sort=${sort}`))
   }
 
   return (
@@ -78,7 +75,7 @@ export function CommentThread({
         </p>
       ) : currentUserId ? (
         <div className="mb-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <ReplyForm threadId={postId} isLocked={false} />
+          <ReplyForm threadId={threadId} isLocked={false} />
         </div>
       ) : (
         <p className="mb-6 rounded-lg border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">

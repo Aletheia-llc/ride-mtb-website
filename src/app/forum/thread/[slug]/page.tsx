@@ -60,7 +60,6 @@ export default async function ThreadPage({ params, searchParams }: Props) {
         isBookmarked={isBookmarked}
       />
       <CommentThread
-        postId={post.id}
         comments={comments}
         total={total}
         pageCount={pageCount}
@@ -68,6 +67,7 @@ export default async function ThreadPage({ params, searchParams }: Props) {
         activeSort={sortValue}
         currentUserId={session?.user?.id}
         isLocked={post.isLocked}
+        threadId={post.id}
       />
     </div>
   )
