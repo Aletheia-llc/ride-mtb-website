@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   BookOpen, Map, MessageSquare,
   ShoppingBag, User, LogIn, Mail, Wallet, Bike, LayoutDashboard,
-  ChevronDown, Search, Heart,
+  ChevronDown, Search, Heart, Trophy,
 } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationBell } from './NotificationBell'
@@ -19,6 +19,7 @@ const NAV_LINKS: { label: string; href: string; Icon: React.ComponentType<{ size
   { label: 'Trails', href: '/trails', Icon: Map, megaKey: 'trails' },
   { label: 'Forum', href: '/forum', Icon: MessageSquare, megaKey: 'forum' },
   { label: 'Bikes', href: '/bikes', Icon: Bike, megaKey: 'bikes' },
+  { label: 'Fantasy', href: '/fantasy', Icon: Trophy, megaKey: null },
   { label: 'Marketplace', href: '/marketplace', Icon: ShoppingBag, megaKey: 'marketplace' },
 ]
 
@@ -69,12 +70,12 @@ export function TopNavClient({ session, features }: TopNavClientProps) {
   return (
     <>
       <header className="relative sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]/90 backdrop-blur-md">
-        <div className="mx-auto flex h-14 items-center gap-4 px-4" style={{ maxWidth: 'var(--max-content-width)' }}>
-          <Link href="/" className="mr-2 shrink-0 text-lg font-extrabold text-[var(--color-text)]">
+        <div className="mx-auto grid h-14 grid-cols-[auto_1fr_auto] items-center gap-4 px-4" style={{ maxWidth: 'var(--max-content-width)' }}>
+          <Link href="/" className="shrink-0 text-lg font-extrabold text-[var(--color-text)]">
             Ride <span className="text-[var(--color-primary)]">MTB</span>
           </Link>
 
-          <nav className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-0.5">
+          <nav className="hidden md:flex items-center justify-center gap-0.5">
             {NAV_LINKS
               .filter(({ href }) => href !== '/marketplace' || features.marketplace)
               .map(({ label, href, Icon, megaKey }) => {
@@ -113,7 +114,7 @@ export function TopNavClient({ session, features }: TopNavClientProps) {
             })}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-end">
             <button
               onClick={() => setSearchOpen(true)}
               aria-label="Search"

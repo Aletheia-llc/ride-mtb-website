@@ -343,6 +343,232 @@ A mulligan is a safety net for missed roster deadlines.
 
 ---
 
+## Manufacturer Cup
+
+### Overview
+
+The Manufacturer Cup is a season-long meta-game layered on top of the core Fantasy MTB experience. Before Round 1, each user picks one bike manufacturer per series. That brand's top-finishing rider each round contributes points to the user's regular weekly fantasy score (a meaningful bonus) and to a separate Manufacturer Cup standings table where all users are ranked by their chosen brand's cumulative season performance.
+
+The manufacturer pick is free — it lives outside the $1M rider budget system and does not consume a roster slot. Every user who registers for a series automatically engages with the Manufacturer Cup.
+
+The pick is brand-level, not rider-level. Rider transfers between teams during the season are part of the game: the rider wearing the brand's kit on race day counts. If a sponsored rider switches brands mid-season, the new brand they are riding for at race day is what matters.
+
+If a user plays multiple series (e.g. UCI DH World Cup and EWS), they make a separate manufacturer pick for each series independently.
+
+---
+
+### Pick Flow
+
+- **Pre-season only.** The manufacturer pick window opens when the series is created in the admin panel (i.e. when `FantasySeries.status = upcoming` or `active` before Round 1 is locked).
+- **Locked after Round 1 deadline.** The pick locks at the `rosterDeadline` of the first `FantasyEvent` in the series. Once locked, the pick cannot be changed for the remainder of the season. If a user has not made a pick by that deadline, they have no manufacturer pick for the season and score 0 from this mechanic.
+- **One pick per series per season.** Enforced via `@@unique([userId, seriesId, season])` on `ManufacturerPick`.
+- **Displayed prominently** on the series hub, team selection page, and leaderboard.
+
+Pick UI location: `/fantasy/[series]/` (series hub page) — a dedicated "Your Manufacturer Pick" card shown above the event list, with a select dropdown while the pick window is open, and a locked display badge once locked.
+
+---
+
+### Points Scoring
+
+#### Half-Table
+
+The manufacturer uses a 50% scaling of the standard rider points table, rounded to the nearest integer:
+
+| Finish | Full Points | Manufacturer Points (×0.5, rounded) |
+|--------|-------------|---------------------------------------|
+| 1st    | 30          | 15                                    |
+| 2nd    | 28          | 14                                    |
+| 3rd    | 26          | 13                                    |
+| 4th    | 24          | 12                                    |
+| 5th    | 22          | 11                                    |
+| 6th    | 20          | 10                                    |
+| 7th    | 18          | 9                                     |
+| 8th    | 16          | 8                                     |
+| 9th    | 14          | 7                                     |
+| 10th   | 12          | 6                                     |
+| 11th   | 10          | 5                                     |
+| 12th   | 9           | 5 (4.5 → 5)                           |
+| 13th   | 8           | 4                                     |
+| 14th   | 7           | 4 (3.5 → 4)                           |
+| 15th   | 6           | 3                                     |
+| 16th   | 5           | 3 (2.5 → 3)                           |
+| 17th   | 4           | 2                                     |
+| 18th   | 3           | 2 (1.5 → 2)                           |
+| 19th   | 2           | 1                                     |
+| 20th   | 1           | 1 (0.5 → 1)                           |
+| 21st+  | 0           | 0                                     |
+| DNS/DNF | −2         | 0 (no negative for manufacturer)      |
+
+DNS/DNF does not incur a penalty on the manufacturer side — the user simply scores 0 for the manufacturer contribution that round.
+
+This constant lives in `src/modules/fantasy/constants/scoring.ts` as `MANUFACTURER_POSITION_POINTS`.
+
+#### Which Rider Counts
+
+Each round, only **one rider per manufacturer** contributes points — the top-finishing rider for that brand in that event. Specifically:
+
+1. After results are confirmed, find all `RiderEventEntry` rows for the event where `rider.manufacturerId = [the user's chosen manufacturerId]` AND `dnsDnf = false` AND `partialCompletion = false` (for EWS).
+2. Sort by `finishPosition ASC`. The rider with the lowest (best) `finishPosition` is the contributing rider.
+3. Apply `MANUFACTURER_POSITION_POINTS[finishPosition]` to get the round manufacturer points.
+4. If no rider for that brand is entered or no rider finishes (all DNS/DNF), the user scores 0 for the manufacturer contribution that round — no penalty.
+
+The contributing rider and their finish position are stored on `ManufacturerEventScore` for transparency (shown in UI as "Loic Bruni — 2nd → +14 pts").
+
+---
+
+### Manufacturer Cup Standings
+
+A dedicated leaderboard tab, separate from the global fantasy standings.
+
+- **Ranking criterion:** sum of all `ManufacturerEventScore.points` for the user in a given series and season.
+- **All users ranked**, regardless of tier (free and paid users compete equally in this table).
+- **Tiebreaker:** users with equal total are ranked by the number of events where their manufacturer scored > 0, then by `userId` lexicographically.
+- **Displayed on** `/fantasy/[series]/leaderboard` as a "Manufacturer Cup" tab alongside the Global and Championship tabs.
+
+The leaderboard query aggregates `ManufacturerEventScore` grouped by `userId`, ordered by `SUM(points) DESC`.
+
+---
+
+### Round Score Contribution
+
+Each round, the manufacturer points are **added to the user's regular fantasy score** for that event:
+
+- `FantasyEventScore.manufacturerPoints Int @default(0)` — new column, stores the manufacturer bonus for the round.
+- `FantasyEventScore.totalPoints` — continues to represent the full score including manufacturer bonus. The scoring worker adds manufacturer points to `totalPoints` when writing the upsert.
+- `FantasySeasonScore.totalPoints` — already computed as `SUM(FantasyEventScore.totalPoints WHERE NOT isDropRound)`, so manufacturer points flow through automatically with no extra aggregation logic.
+
+This means manufacturer points appear in the global leaderboard standings (they lift a user's regular rank) AND are separately tracked in the Manufacturer Cup standings via `ManufacturerEventScore`.
+
+---
+
+### Admin Requirements
+
+#### `BikeManufacturer` Model
+
+Admins create and manage manufacturers via `/admin/fantasy/manufacturers`. Fields:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | String (cuid) | PK |
+| `name` | String | e.g. "Trek", "Santa Cruz", "Specialized" |
+| `slug` | String | URL-safe identifier, unique |
+| `logoUrl` | String? | Optional CDN-hosted logo image |
+
+#### Assigning Manufacturers to Riders
+
+The `Rider` model gains a nullable `manufacturerId` FK. Admin assigns a manufacturer to a rider on the rider edit page (`/admin/fantasy/riders/[id]`). The dropdown is populated from `BikeManufacturer` records.
+
+This is intentionally nullable — some riders may be unsponsored or their manufacturer not tracked. A rider with `manufacturerId = null` contributes 0 points to all manufacturer picks.
+
+Mid-season kit changes are handled by updating `Rider.manufacturerId` in the admin panel before race day. There is no history of manufacturer changes — only the current value at the time the `results.score` job runs matters.
+
+---
+
+### Schema Additions
+
+```prisma
+model BikeManufacturer {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  logoUrl  String?
+  riders   Rider[]
+  picks    ManufacturerPick[]
+  scores   ManufacturerEventScore[]
+
+  @@map("bike_manufacturers")
+}
+```
+
+Add to `Rider`:
+```prisma
+  manufacturerId String?
+  manufacturer   BikeManufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: SetNull)
+```
+
+```prisma
+model ManufacturerPick {
+  id             String           @id @default(cuid())
+  userId         String
+  seriesId       String
+  season         Int
+  manufacturerId String
+  lockedAt       DateTime?
+  createdAt      DateTime         @default(now())
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  series         FantasySeries    @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  manufacturer   BikeManufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  eventScores    ManufacturerEventScore[]
+
+  @@unique([userId, seriesId, season])
+  @@map("manufacturer_picks")
+}
+
+model ManufacturerEventScore {
+  id                  String           @id @default(cuid())
+  userId              String
+  seriesId            String
+  season              Int
+  eventId             String
+  manufacturerPickId  String
+  points              Int
+  riderId             String           // which rider scored for this manufacturer this event
+  riderFinishPosition Int              // that rider's finish position
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  series              FantasySeries    @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  event               FantasyEvent     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  manufacturerPick    ManufacturerPick @relation(fields: [manufacturerPickId], references: [id], onDelete: Cascade)
+  rider               Rider            @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seriesId, season, eventId])
+  @@index([seriesId, season, userId])
+  @@map("manufacturer_event_scores")
+}
+```
+
+Add to `FantasyEventScore`:
+```prisma
+  manufacturerPoints Int @default(0)
+```
+
+Add to `FantasySeries`:
+```prisma
+  manufacturerPicks  ManufacturerPick[]
+  manufacturerScores ManufacturerEventScore[]
+```
+
+Add to `FantasyEvent`:
+```prisma
+  manufacturerScores ManufacturerEventScore[]
+```
+
+---
+
+### Display
+
+| Location | What to Show |
+|----------|-------------|
+| `/fantasy/[series]/` (series hub) | "Your Manufacturer Pick" card: brand logo + name, locked/open status, season total manufacturer points earned so far |
+| `/fantasy/[series]/team` | Small badge at top of "Your Team" panel: brand logo + name + "Manufacturer: [X] pts this season" |
+| `/fantasy/[series]/leaderboard` | "Manufacturer Cup" tab: rank, username/avatar, chosen brand logo + name, season total manufacturer points |
+| Post-event score breakdown | Line item: "[Rider Name] — [Position] — [Brand] → +[N] manufacturer pts" |
+
+---
+
+### Edge Cases
+
+| Scenario | Handling |
+|----------|----------|
+| No riders entered for brand in an event | User scores 0 manufacturer points for that round; no penalty |
+| All riders for brand DNS/DNF | User scores 0 manufacturer points for that round; no penalty |
+| EWS partial completion by top brand rider | Partial completion does not count as a finish — next best brand rider with a full finish is used; if none, 0 pts |
+| User makes no pick before Round 1 lock | `ManufacturerPick` row never created; user scores 0 manufacturer points for entire season |
+| Mid-season brand transfer (rider changes manufacturer) | `Rider.manufacturerId` updated by admin; only matters at time `results.score` runs for each event — historical events are not retroactively re-scored |
+| Two brand riders tie for best finish (EWS parallel stages) | Tiebreaker: lower `riderId` lexicographically (deterministic, not material since points are equal) |
+| Result override after manufacturer scores written | `results.score` re-run upserts `ManufacturerEventScore` on `@@unique([userId, seriesId, season, eventId])` — safe, idempotent |
+
+---
+
 ## Scoring Engine
 
 ### Base Points Table
