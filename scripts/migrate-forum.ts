@@ -96,7 +96,7 @@ async function migrateUsers(): Promise<Map<string, string>> {
 
     if (!DRY_RUN) {
       await dest.query(
-        `INSERT INTO "users" (id, email, name, username, password, "emailVerified", "createdAt", "updatedAt")
+        `INSERT INTO "users" (id, email, name, username, "passwordHash", "emailVerified", "createdAt", "updatedAt")
          VALUES ($1, $2, $3, $4, $5, NULL, $6, NOW())
          ON CONFLICT (email) DO UPDATE SET "updatedAt" = NOW()
          RETURNING id`,
@@ -149,6 +149,24 @@ async function migrateTags(): Promise<Map<string, string>> {
 
   for (const row of rows) {
     const destId = `migrated-tag-${row.id}`
+
+    if (DRY_RUN) {
+      counter('forum_tags').ok++
+      idMap.set(row.id, destId)
+      continue
+    }
+
+    // Check if tag with this name already exists (different id)
+    const existing = await dest.query(
+      `SELECT id FROM forum_tags WHERE name = $1 LIMIT 1`,
+      [row.name],
+    )
+    if (existing.rows.length > 0) {
+      idMap.set(row.id, existing.rows[0].id)
+      counter('forum_tags').skip++
+      continue
+    }
+
     await upsert('forum_tags', {
       id: destId,
       name: row.name,
@@ -158,7 +176,7 @@ async function migrateTags(): Promise<Map<string, string>> {
     idMap.set(row.id, destId)
   }
 
-  console.log(`  ✓ tags: ${counter('forum_tags').ok} ok, ${counter('forum_tags').err} errors`)
+  console.log(`  ✓ tags: ${counter('forum_tags').ok} ok, ${counter('forum_tags').skip} matched, ${counter('forum_tags').err} errors`)
   return idMap
 }
 
@@ -170,7 +188,7 @@ async function migrateThreads(
   console.log('4/11 Migrating threads...')
   // Standalone "Post" is a top-level discussion = ForumThread
   const { rows } = await src.query(
-    `SELECT id, title, slug, "categoryId", "authorId", content, "isPinned",
+    `SELECT id, title, "categoryId", "authorId", body, "isPinned",
             "isLocked", "viewCount", "createdAt", "updatedAt"
      FROM "Post" ORDER BY "createdAt" ASC`,
   )
@@ -186,7 +204,7 @@ async function migrateThreads(
       id: threadId,
       categoryId,
       title: row.title ?? '(Untitled)',
-      slug: `migrated-${row.slug ?? row.id}`,
+      slug: `migrated-${row.id}`,
       isPinned: row.isPinned ?? false,
       isLocked: row.isLocked ?? false,
       viewCount: row.viewCount ?? 0,
@@ -202,7 +220,7 @@ async function migrateThreads(
       id: firstPostId,
       threadId,
       authorId,
-      content: row.content ?? '',
+      content: row.body ?? '',
       isFirst: true,
       depth: 0,
       createdAt: row.createdAt,
@@ -223,7 +241,7 @@ async function migratePostsFlat(
 ): Promise<Map<string, string>> {
   console.log('5a/11 Migrating posts (flat pass)...')
   const { rows } = await src.query(
-    `SELECT id, "postId" as "threadId", "authorId", content, "parentId",
+    `SELECT id, "postId" as "threadId", "authorId", body, "parentId",
             "createdAt", "updatedAt"
      FROM "Comment" ORDER BY "createdAt" ASC`,
   )
@@ -239,7 +257,7 @@ async function migratePostsFlat(
       id: postId,
       threadId,
       authorId,
-      content: row.content ?? '',
+      content: row.body ?? '',
       isFirst: false,
       depth: 0,          // backfilled in 5b
       parentId: null,    // backfilled in 5b
@@ -383,19 +401,20 @@ async function migrateBookmarks(
 // ── Step 9: ForumBadge ────────────────────────────────────────
 async function migrateBadges(): Promise<Map<string, string>> {
   console.log('9/11 Migrating badges...')
-  const { rows } = await src.query(`SELECT id, name, slug, description, icon, color FROM "Badge"`)
+  const { rows } = await src.query(`SELECT id, name, description, icon FROM "Badge"`)
   const idToSlug = new Map<string, string>()
 
   for (const row of rows) {
+    const slug = row.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
     await upsert('forum_badges', {
       id: `migrated-badge-${row.id}`,
-      slug: row.slug,
+      slug,
       name: row.name,
       description: row.description ?? '',
       icon: row.icon ?? 'award',
-      color: row.color ?? '#6b7280',
+      color: '#6b7280',
     })
-    idToSlug.set(row.id, row.slug)
+    idToSlug.set(row.id, slug)
   }
 
   console.log(`  ✓ badges: ${counter('forum_badges').ok} ok`)
@@ -408,7 +427,7 @@ async function migrateUserBadges(
   badgeIdToSlug: Map<string, string>,
 ): Promise<void> {
   console.log('10/11 Migrating user badges...')
-  const { rows } = await src.query(`SELECT id, "userId", "badgeId", "awardedAt" FROM "UserBadge"`)
+  const { rows } = await src.query(`SELECT "userId", "badgeId", "awardedAt" FROM "UserBadge"`)
 
   for (const row of rows) {
     const userId = userIdMap.get(row.userId)
@@ -416,7 +435,7 @@ async function migrateUserBadges(
     if (!userId || !badgeSlug) { counter('forum_user_badges').err++; continue }
 
     await upsert('forum_user_badges', {
-      id: `migrated-ub-${row.id}`,
+      id: `migrated-ub-${row.userId}-${row.badgeId}`,
       userId,
       badgeSlug,
       awardedAt: row.awardedAt,
