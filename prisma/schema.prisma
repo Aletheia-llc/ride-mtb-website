@@ -273,6 +273,7 @@ model Post {
   @@index([hotScore])
   @@index([voteScore])
   @@index([deletedAt])
+  @@index([lastReplyAt])
   @@map("posts")
 }
 
@@ -299,6 +300,7 @@ model Comment {
 
   @@index([postId])
   @@index([authorId])
+  @@index([parentId])
   @@map("comments")
 }
 
@@ -392,8 +394,8 @@ model Report {
   resolvedAt     DateTime?
   createdAt      DateTime  @default(now())
 
-  reporter  User     @relation("Reporter", fields: [reporterId], references: [id])
-  moderator User?    @relation("Moderator", fields: [moderatorId], references: [id])
+  reporter  User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  moderator User?    @relation("Moderator", fields: [moderatorId], references: [id], onDelete: SetNull)
   post      Post?    @relation(fields: [postId], references: [id])
   comment   Comment? @relation(fields: [commentId], references: [id])
 
