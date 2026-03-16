@@ -70,6 +70,14 @@ export function ForumFeed({ posts, categorySlug }: ForumFeedProps) {
                 </Link>
               </div>
               <div className="mt-0.5 flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+                <Link
+                  href={`/forum/${post.category.slug}`}
+                  className="rounded-full px-1.5 py-0.5 font-medium text-white transition-opacity hover:opacity-80"
+                  style={{ backgroundColor: post.category.color }}
+                >
+                  {post.category.name}
+                </Link>
+                <span>&middot;</span>
                 <span>{displayName}</span>
                 <span>&middot;</span>
                 <time dateTime={new Date(post.createdAt).toISOString()}>
