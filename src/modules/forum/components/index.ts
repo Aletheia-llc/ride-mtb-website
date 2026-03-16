@@ -1,3 +1,6 @@
+export { PostDetail } from './PostDetail'
+export { CommentCard } from './CommentCard'
+export { CommentThread } from './CommentThread'
 export { CategoryList } from './CategoryList'
 export { PostCard } from './PostCard'
 export { ThreadView } from './ThreadView'
