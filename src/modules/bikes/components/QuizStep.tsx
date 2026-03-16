@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Check } from 'lucide-react'
 import type { QuizStepConfig, QuizAnswers } from '../types'
 
@@ -51,6 +52,82 @@ export function QuizStep({ stepConfig, answers, onAnswer }: QuizStepProps) {
 /* Single select option grid                                                  */
 /* -------------------------------------------------------------------------- */
 
+function OptionCard({
+  option,
+  selected,
+  multi,
+  onClick,
+}: {
+  option: NonNullable<QuizStepConfig['options']>[number]
+  selected: boolean
+  multi: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`relative overflow-hidden rounded-xl border-2 text-left transition-all ${
+        selected
+          ? 'border-[var(--color-primary)] shadow-md'
+          : 'border-[var(--color-border)] hover:border-[var(--color-primary-light)]'
+      }`}
+    >
+      {option.image ? (
+        <>
+          {/* Image + overlay */}
+          <div className="relative min-h-[120px] overflow-hidden">
+            <Image
+              src={option.image}
+              alt={option.label}
+              fill
+              sizes="(max-width: 640px) 50vw, 33vw"
+              className="object-cover"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.0) 100%)',
+              }}
+            />
+            <div className="absolute inset-x-0 bottom-0 p-3">
+              <div className="flex items-end justify-between gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-semibold leading-tight text-white">{option.label}</span>
+                  {option.description && (
+                    <span className="text-xs leading-tight text-white/75">{option.description}</span>
+                  )}
+                </div>
+                {selected && (
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-white">
+                    {multi ? <Check className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className={`flex flex-col gap-1 p-4 ${selected ? 'bg-[var(--color-primary)]/5' : 'bg-[var(--color-bg)]'}`}>
+          <div className="flex w-full items-center justify-between">
+            <span className="font-medium text-[var(--color-text)]">{option.label}</span>
+            {selected && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-primary)] text-white">
+                <Check className="h-3 w-3" />
+              </span>
+            )}
+          </div>
+          {option.description && (
+            <span className="text-sm text-[var(--color-text-muted)]">{option.description}</span>
+          )}
+        </div>
+      )}
+    </button>
+  )
+}
+
 function SingleSelect({
   options,
   value,
@@ -60,35 +137,18 @@ function SingleSelect({
   value: string
   onChange: (value: string) => void
 }) {
+  const cols = options.length >= 5 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {options.map((option) => {
-        const selected = value === option.id
-        return (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => onChange(option.id)}
-            className={`flex flex-col items-start gap-1 rounded-xl border-2 p-4 text-left transition-all ${
-              selected
-                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-sm'
-                : 'border-[var(--color-border)] bg-[var(--color-bg)] hover:border-[var(--color-primary-light)] hover:bg-[var(--color-bg-secondary)]'
-            }`}
-          >
-            <div className="flex w-full items-center justify-between">
-              <span className="font-medium text-[var(--color-text)]">{option.label}</span>
-              {selected && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-primary)] text-white">
-                  <Check className="h-3 w-3" />
-                </span>
-              )}
-            </div>
-            {option.description && (
-              <span className="text-sm text-[var(--color-text-muted)]">{option.description}</span>
-            )}
-          </button>
-        )
-      })}
+    <div className={`grid gap-3 ${cols}`}>
+      {options.map((option) => (
+        <OptionCard
+          key={option.id}
+          option={option}
+          selected={value === option.id}
+          multi={false}
+          onClick={() => onChange(option.id)}
+        />
+      ))}
     </div>
   )
 }
@@ -121,39 +181,18 @@ function MultiSelect({
     }
   }
 
+  const cols = options.length >= 5 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {options.map((option) => {
-        const selected = value.includes(option.id)
-        return (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => toggle(option.id)}
-            className={`flex flex-col items-start gap-1 rounded-xl border-2 p-4 text-left transition-all ${
-              selected
-                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-sm'
-                : 'border-[var(--color-border)] bg-[var(--color-bg)] hover:border-[var(--color-primary-light)] hover:bg-[var(--color-bg-secondary)]'
-            }`}
-          >
-            <div className="flex w-full items-center justify-between">
-              <span className="font-medium text-[var(--color-text)]">{option.label}</span>
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
-                  selected
-                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
-                    : 'border-[var(--color-border)]'
-                }`}
-              >
-                {selected && <Check className="h-3 w-3" />}
-              </span>
-            </div>
-            {option.description && (
-              <span className="text-sm text-[var(--color-text-muted)]">{option.description}</span>
-            )}
-          </button>
-        )
-      })}
+    <div className={`grid gap-3 ${cols}`}>
+      {options.map((option) => (
+        <OptionCard
+          key={option.id}
+          option={option}
+          selected={value.includes(option.id)}
+          multi={true}
+          onClick={() => toggle(option.id)}
+        />
+      ))}
     </div>
   )
 }

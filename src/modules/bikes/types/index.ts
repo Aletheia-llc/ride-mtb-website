@@ -11,8 +11,8 @@ export type QuizStepType = 'multi_select' | 'single_select' | 'slider'
 export interface QuizOption {
   id: string
   label: string
-  image?: string
   description?: string
+  image?: string
 }
 
 export interface SliderField {
