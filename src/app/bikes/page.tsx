@@ -4,13 +4,14 @@ import Image from 'next/image'
 import { Bike, ChevronRight, Mountain, Zap, Target } from 'lucide-react'
 // eslint-disable-next-line no-restricted-imports
 import { CATEGORY_META } from '@/modules/bikes/lib/constants'
+import { CATEGORY_SLUGS } from '@/modules/bikes/lib/bike-listings'
 
 const CATEGORY_IMAGES: Record<number, string> = {
-  1: '/images/categories/gravel.svg',
-  3: '/images/categories/xc.svg',
-  5: '/images/categories/trail.svg',
-  7: '/images/categories/enduro.svg',
-  9: '/images/categories/downhill.svg',
+  1: '/images/categories/photos/category-1.jpg',
+  3: '/images/categories/photos/category-3.jpg',
+  5: '/images/categories/photos/category-5.jpg',
+  7: '/images/categories/photos/category-7.jpg',
+  9: '/images/categories/photos/category-9.jpg',
 }
 
 export const metadata: Metadata = {
@@ -88,10 +89,12 @@ export default function BikesPage() {
         <div className="grid gap-4 sm:grid-cols-5">
           {categories.map(({ number, name, description, travelRange }) => {
             const img = CATEGORY_IMAGES[number]
+            const slug = CATEGORY_SLUGS[number]
             return (
-              <div
+              <Link
                 key={number}
-                className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]"
+                href={`/bikes/browse/${slug}`}
+                className="group overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] transition-shadow hover:shadow-md"
               >
                 {/* Mini hero image */}
                 <div className="relative aspect-square overflow-hidden">
@@ -101,7 +104,7 @@ export default function BikesPage() {
                       alt={name}
                       fill
                       sizes="(min-width: 640px) 200px, 50vw"
-                      className="object-cover object-[center_30%]"
+                      className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
                     />
                   )}
                   <div
@@ -122,7 +125,7 @@ export default function BikesPage() {
                     </p>
                   )}
                 </div>
-              </div>
+              </Link>
             )
           })}
         </div>

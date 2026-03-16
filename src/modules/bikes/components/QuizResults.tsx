@@ -1,23 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { RotateCcw, Share2, Calendar, Check } from 'lucide-react'
 import Link from 'next/link'
 import { Card } from '@/ui/components'
 import type { SpectrumResult } from '../types'
 import { CATEGORY_META } from '../lib/constants'
+import { CATEGORY_SLUGS } from '../lib/bike-listings'
 import { SpectrumDisplay } from './SpectrumDisplay'
 import { ScoreBreakdown } from './ScoreBreakdown'
 import { BrandLinks } from './BrandLinks'
 import { ConsultationModal } from './ConsultationModal'
+import { bikeAnalytics } from '../lib/analytics'
 
 const CATEGORY_IMAGES: Record<number, string> = {
-  1: '/images/categories/gravel.svg',
-  3: '/images/categories/xc.svg',
-  5: '/images/categories/trail.svg',
-  7: '/images/categories/enduro.svg',
-  9: '/images/categories/downhill.svg',
+  1: '/images/categories/photos/category-1.jpg',
+  3: '/images/categories/photos/category-3.jpg',
+  5: '/images/categories/photos/category-5.jpg',
+  7: '/images/categories/photos/category-7.jpg',
+  9: '/images/categories/photos/category-9.jpg',
 }
 
 interface QuizResultsProps {
@@ -31,6 +33,10 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
   const [copied, setCopied] = useState(false)
   const heroImage = CATEGORY_IMAGES[result.primaryCategory]
 
+  useEffect(() => {
+    bikeAnalytics.resultsViewed(resultId ?? 'inline')
+  }, [resultId])
+
   const categoryLabels = Object.fromEntries(
     Object.entries(CATEGORY_META).map(([k, v]) => [Number(k), { name: v.name }]),
   )
@@ -40,9 +46,11 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
       ? `${window.location.origin}/bikes/selector/results/${resultId}`
       : window.location.href
     if (navigator.share) {
+      bikeAnalytics.resultsShared('native')
       navigator.share({ title: `My bike match: ${result.categoryName}`, url }).catch(() => {})
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
+        bikeAnalytics.resultsShared('clipboard')
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       }).catch(() => {})
@@ -53,14 +61,14 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       {/* Hero card */}
       <div className="overflow-hidden rounded-xl border border-[var(--color-border)] shadow-sm">
-        <div className="relative flex min-h-[220px] items-end overflow-hidden p-6">
+        <div className="relative aspect-square overflow-hidden">
           {heroImage && (
             <Image
               src={heroImage}
               alt={result.categoryName}
               fill
               sizes="(min-width: 640px) 672px, 100vw"
-              className="object-cover object-[center_30%]"
+              className="object-cover object-center"
             />
           )}
           <div
@@ -70,7 +78,7 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
                 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.05) 100%)',
             }}
           />
-          <div className="relative z-10 flex flex-col gap-1.5">
+          <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col gap-1.5 p-6">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Your match</p>
             <h1 className="text-2xl font-bold leading-tight text-white">{result.categoryName}</h1>
             <p className="text-sm leading-relaxed text-white/85">{result.categoryDescription}</p>
@@ -151,10 +159,12 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
           <div className="grid gap-3 sm:grid-cols-2">
             {result.alternatives.map((alt) => {
               const altImage = CATEGORY_IMAGES[alt.categoryNumber]
+              const slug = CATEGORY_SLUGS[alt.categoryNumber]
               return (
-                <div
+                <Link
                   key={alt.categoryNumber}
-                  className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+                  href={`/bikes/browse/${slug}`}
+                  className="group overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] transition-shadow hover:shadow-md"
                 >
                   <div className="relative aspect-square overflow-hidden">
                     {altImage && (
@@ -163,7 +173,7 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
                         alt={alt.categoryName}
                         fill
                         sizes="(min-width: 640px) 336px, 100vw"
-                        className="object-cover object-[center_30%]"
+                        className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
                       />
                     )}
                     <div
@@ -178,7 +188,7 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
                     </h3>
                   </div>
                   <p className="px-4 py-3 text-sm italic text-[var(--color-text-muted)]">{alt.reason}</p>
-                </div>
+                </Link>
               )
             })}
           </div>
@@ -207,7 +217,7 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
         </button>
         <button
           type="button"
-          onClick={() => setConsultationOpen(true)}
+          onClick={() => { bikeAnalytics.consultationStarted(); setConsultationOpen(true) }}
           className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
         >
           <Calendar className="h-4 w-4" />
@@ -220,6 +230,7 @@ export function QuizResults({ result, resultId, quizSessionId }: QuizResultsProp
         onClose={() => setConsultationOpen(false)}
         quizSessionId={quizSessionId}
         budget={result.budget}
+        onSubmitted={() => bikeAnalytics.consultationSubmitted()}
       />
     </div>
   )

@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Send } from 'lucide-react'
+import { X, Send, Calendar } from 'lucide-react'
 
 interface ConsultationModalProps {
   open: boolean
   onClose: () => void
   quizSessionId?: string
   budget?: number
+  onSubmitted?: () => void
 }
 
 interface FormState {
@@ -19,10 +20,11 @@ interface FormState {
   budgetRange: string
 }
 
-export function ConsultationModal({ open, onClose, quizSessionId, budget }: ConsultationModalProps) {
+export function ConsultationModal({ open, onClose, quizSessionId, budget, onSubmitted }: ConsultationModalProps) {
+  const calComLink = process.env.NEXT_PUBLIC_CALCOM_LINK
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [stage, setStage] = useState<'form' | 'schedule'>('form')
   const [error, setError] = useState<string | null>(null)
 
   const defaultBudgetRange = budget
@@ -45,6 +47,8 @@ export function ConsultationModal({ open, onClose, quizSessionId, budget }: Cons
       dialog.showModal()
     } else {
       if (dialog.open) dialog.close()
+      // Reset to form stage when closed
+      setStage('form')
     }
   }, [open])
 
@@ -66,7 +70,12 @@ export function ConsultationModal({ open, onClose, quizSessionId, budget }: Cons
         const data = await res.json() as { error?: string }
         throw new Error(data.error ?? 'Submission failed')
       }
-      setSubmitted(true)
+      onSubmitted?.()
+      setStage(calComLink ? 'schedule' : 'form')
+      if (!calComLink) {
+        // No Cal.com link — just close after a moment
+        setTimeout(onClose, 1500)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -80,12 +89,16 @@ export function ConsultationModal({ open, onClose, quizSessionId, budget }: Cons
   return (
     <dialog
       ref={dialogRef}
-      className="m-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-6 shadow-2xl backdrop:bg-black/60"
+      className={`m-auto max-h-[90vh] w-full overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-6 shadow-2xl backdrop:bg-black/60 ${stage === 'schedule' ? 'max-w-2xl' : 'max-w-lg'}`}
       onClose={onClose}
     >
       <div className="flex w-full flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[var(--color-text)]">Book a Consultation</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text)]">
+            {stage === 'schedule' ? (
+              <span className="flex items-center gap-2"><Calendar className="h-5 w-5 text-[var(--color-primary)]" />Pick a Time</span>
+            ) : 'Book a Consultation'}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -95,13 +108,20 @@ export function ConsultationModal({ open, onClose, quizSessionId, budget }: Cons
           </button>
         </div>
 
-        {submitted ? (
-          <div className="py-8 text-center">
-            <p className="text-lg font-semibold text-[var(--color-text)]">Request received!</p>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">We&apos;ll be in touch within 24 hours.</p>
+        {stage === 'schedule' && calComLink ? (
+          <div className="flex flex-col gap-4">
+            <div className="rounded-lg border border-[var(--color-border)] bg-[rgba(34,197,94,0.06)] p-3 text-center">
+              <p className="text-sm font-semibold text-[var(--color-success)]">Request received!</p>
+              <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">Now pick a time that works for you.</p>
+            </div>
+            <iframe
+              src={`${calComLink}?name=${encodeURIComponent(form.name)}&email=${encodeURIComponent(form.email)}`}
+              className="h-[480px] w-full rounded-lg border border-[var(--color-border)]"
+              title="Schedule a consultation"
+            />
             <button
               onClick={onClose}
-              className="mt-4 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white"
+              className="text-center text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             >
               Close
             </button>

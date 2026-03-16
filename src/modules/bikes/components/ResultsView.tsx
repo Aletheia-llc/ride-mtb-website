@@ -1,21 +1,23 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { RotateCcw, ExternalLink } from 'lucide-react'
 import { Button } from '@/ui/components'
 import { Card } from '@/ui/components'
 import { Badge } from '@/ui/components'
 import type { SpectrumResult } from '../types'
 import { CATEGORY_META } from '../lib/constants'
+import { CATEGORY_SLUGS } from '../lib/bike-listings'
 import { SpectrumDisplay } from './SpectrumDisplay'
 import { ScoreBreakdown } from './ScoreBreakdown'
 
 const CATEGORY_IMAGES: Record<number, string> = {
-  1: '/images/categories/gravel.svg',
-  3: '/images/categories/xc.svg',
-  5: '/images/categories/trail.svg',
-  7: '/images/categories/enduro.svg',
-  9: '/images/categories/downhill.svg',
+  1: '/images/categories/photos/category-1.jpg',
+  3: '/images/categories/photos/category-3.jpg',
+  5: '/images/categories/photos/category-5.jpg',
+  7: '/images/categories/photos/category-7.jpg',
+  9: '/images/categories/photos/category-9.jpg',
 }
 
 interface ResultsViewProps {
@@ -36,14 +38,14 @@ export function ResultsView({ result, onRetake }: ResultsViewProps) {
       {/* Hero card with category image */}
       <div className="overflow-hidden rounded-xl border border-[var(--color-border)] shadow-sm">
         {/* Hero image section */}
-        <div className="relative flex min-h-[220px] items-end overflow-hidden p-6">
+        <div className="relative aspect-square overflow-hidden">
           {heroImage && (
             <Image
               src={heroImage}
               alt={result.categoryName}
               fill
               sizes="(min-width: 640px) 672px, 100vw"
-              className="object-cover object-[center_30%]"
+              className="object-cover object-center"
             />
           )}
           <div
@@ -53,7 +55,7 @@ export function ResultsView({ result, onRetake }: ResultsViewProps) {
                 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.05) 100%)',
             }}
           />
-          <div className="relative z-10 flex flex-col gap-1.5">
+          <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col gap-1.5 p-6">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Your match</p>
             <h1 className="text-2xl font-bold leading-tight text-white">{result.categoryName}</h1>
             <p className="text-sm leading-relaxed text-white/85">{result.categoryDescription}</p>
@@ -157,10 +159,12 @@ export function ResultsView({ result, onRetake }: ResultsViewProps) {
           <div className="grid gap-3 sm:grid-cols-2">
             {result.alternatives.map((alt) => {
               const altImage = CATEGORY_IMAGES[alt.categoryNumber]
+              const slug = CATEGORY_SLUGS[alt.categoryNumber]
               return (
-                <div
+                <Link
                   key={alt.categoryNumber}
-                  className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+                  href={`/bikes/browse/${slug}`}
+                  className="group overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] transition-shadow hover:shadow-md"
                 >
                   <div className="relative aspect-square overflow-hidden">
                     {altImage && (
@@ -169,7 +173,7 @@ export function ResultsView({ result, onRetake }: ResultsViewProps) {
                         alt={alt.categoryName}
                         fill
                         sizes="(min-width: 640px) 336px, 100vw"
-                        className="object-cover object-[center_30%]"
+                        className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
                       />
                     )}
                     <div
@@ -182,7 +186,7 @@ export function ResultsView({ result, onRetake }: ResultsViewProps) {
                     <h3 className="absolute inset-x-0 bottom-0 z-10 p-3 text-base font-bold text-white">{alt.categoryName}</h3>
                   </div>
                   <p className="px-4 py-3 text-sm italic text-[var(--color-text-muted)]">{alt.reason}</p>
-                </div>
+                </Link>
               )
             })}
           </div>

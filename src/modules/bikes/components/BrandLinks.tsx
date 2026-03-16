@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 
@@ -29,14 +28,14 @@ const BRAND_DATA: Record<number, { name: string; url: string; priceRange: string
     { name: 'Santa Cruz', url: 'https://www.santacruzbicycles.com/en-US/hightower', priceRange: '$3,500–$10,000', models: 'Hightower, Tallboy' },
   ],
   5: [
-    { name: 'Trek', url: 'https://www.trekbikes.com/us/en_US/bikes/mountain-bikes/enduro-mountain-bikes/', priceRange: '$3,500–$12,000', models: 'Slash, Remedy' },
-    { name: 'Specialized', url: 'https://www.specialized.com/us/en/bikes/mountain/enduro', priceRange: '$3,000–$12,000', models: 'Enduro, Stumpjumper Evo' },
-    { name: 'Santa Cruz', url: 'https://www.santacruzbicycles.com/en-US/megatower', priceRange: '$4,500–$12,000', models: 'Megatower, Nomad' },
-    { name: 'Canyon', url: 'https://www.canyon.com/en-us/mountain-bikes/enduro/', priceRange: '$2,800–$9,000', models: 'Spectral, Strive' },
+    { name: 'Trek', url: 'https://www.trekbikes.com/us/en_US/bikes/mountain-bikes/trail-mountain-bikes/', priceRange: '$2,500–$11,000', models: 'Fuel EX, Remedy' },
+    { name: 'Specialized', url: 'https://www.specialized.com/us/en/bikes/mountain/trail', priceRange: '$2,000–$12,000', models: 'Stumpjumper, Stumpjumper Evo' },
+    { name: 'Santa Cruz', url: 'https://www.santacruzbicycles.com/en-US/hightower', priceRange: '$3,500–$10,000', models: 'Hightower, Tallboy' },
+    { name: 'Canyon', url: 'https://www.canyon.com/en-us/mountain-bikes/trail/', priceRange: '$2,500–$8,000', models: 'Spectral, Neuron' },
   ],
   7: [
-    { name: 'Specialized', url: 'https://www.specialized.com/us/en/bikes/mountain/enduro', priceRange: '$4,000–$13,000', models: 'Demo, Enduro' },
-    { name: 'Santa Cruz', url: 'https://www.santacruzbicycles.com/en-US/v10', priceRange: '$5,000–$12,000', models: 'V10, Megatower' },
+    { name: 'Specialized', url: 'https://www.specialized.com/us/en/bikes/mountain/enduro', priceRange: '$4,500–$13,000', models: 'Enduro, Stumpjumper Evo' },
+    { name: 'Santa Cruz', url: 'https://www.santacruzbicycles.com/en-US/megatower', priceRange: '$5,000–$12,000', models: 'Megatower, Nomad' },
     { name: 'YT Industries', url: 'https://www.yt-industries.com/en/bikes/mountain/', priceRange: '$3,500–$7,500', models: 'Capra, Tues' },
     { name: 'Canyon', url: 'https://www.canyon.com/en-us/mountain-bikes/enduro/', priceRange: '$3,000–$8,000', models: 'Torque, Strive' },
   ],
@@ -74,9 +73,8 @@ export function BrandLinks({ categoryNumber, budget: _budget, ebike }: BrandLink
             >
               <div className="flex items-center gap-2.5">
                 {logo && (
-                  <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded">
-                    <Image src={logo} alt={brand.name} fill sizes="24px" className="object-contain" />
-                  </div>
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logo} alt={brand.name} className="h-6 w-6 shrink-0 rounded object-contain" />
                 )}
                 <div>
                   <span className="font-medium text-[var(--color-text)]">{brand.name}</span>

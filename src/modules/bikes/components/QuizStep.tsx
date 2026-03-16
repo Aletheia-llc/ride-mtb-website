@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import { Check } from 'lucide-react'
 import type { QuizStepConfig, QuizAnswers } from '../types'
@@ -37,7 +38,11 @@ export function QuizStep({ stepConfig, answers, onAnswer }: QuizStepProps) {
         />
       )}
 
-      {stepConfig.type === 'slider' && (
+      {stepConfig.type === 'slider' && stepConfig.key === 'sizing' && (
+        <SizingStep answers={answers} onAnswer={onAnswer} />
+      )}
+
+      {stepConfig.type === 'slider' && stepConfig.key !== 'sizing' && (
         <SliderStep
           stepConfig={stepConfig}
           answers={answers}
@@ -292,6 +297,121 @@ function SliderStep({
           </label>
         )
       })}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sizing step — height/weight with metric/imperial toggle                    */
+/* -------------------------------------------------------------------------- */
+
+function SizingStep({
+  answers,
+  onAnswer,
+}: {
+  answers: QuizAnswers
+  onAnswer: <K extends keyof QuizAnswers>(key: K, value: QuizAnswers[K]) => void
+}) {
+  const [metric, setMetric] = useState(false)
+  const sizing = answers.sizing
+  const heightIn = sizing.height_inches || 68
+  const weightLbs = sizing.weight_lbs || 170
+
+  // Convert stored imperial values to display units
+  const heightDisplay = metric ? Math.round(heightIn * 2.54) : heightIn
+  const weightDisplay = metric ? Math.round(weightLbs / 2.20462) : weightLbs
+
+  function handleHeight(displayVal: number) {
+    const inches = metric ? Math.round(displayVal / 2.54) : displayVal
+    onAnswer('sizing', { ...sizing, height_inches: inches })
+  }
+
+  function handleWeight(displayVal: number) {
+    const lbs = metric ? Math.round(displayVal * 2.20462) : displayVal
+    onAnswer('sizing', { ...sizing, weight_lbs: lbs })
+  }
+
+  function formatHeight(inches: number): string {
+    const ft = Math.floor(inches / 12)
+    const inn = inches % 12
+    return `${ft}ft ${inn}in`
+  }
+
+  const sliderClass = 'h-2 w-full cursor-pointer appearance-none rounded-full bg-[var(--color-border)] accent-[var(--color-primary)]'
+
+  return (
+    <div className="flex flex-col gap-8">
+      {/* Unit toggle */}
+      <div className="flex items-center justify-end gap-1 rounded-lg border border-[var(--color-border)] p-1 self-end">
+        <button
+          type="button"
+          onClick={() => setMetric(false)}
+          className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+            !metric
+              ? 'bg-[var(--color-primary)] text-white'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+          }`}
+        >
+          Imperial
+        </button>
+        <button
+          type="button"
+          onClick={() => setMetric(true)}
+          className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+            metric
+              ? 'bg-[var(--color-primary)] text-white'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+          }`}
+        >
+          Metric
+        </button>
+      </div>
+
+      {/* Height */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <label className="font-medium text-[var(--color-text)]">Height</label>
+          <span className="text-lg font-semibold text-[var(--color-primary)]">
+            {metric ? `${heightDisplay} cm` : formatHeight(heightIn)}
+          </span>
+        </div>
+        <input
+          type="range"
+          min={metric ? 122 : 48}
+          max={metric ? 213 : 84}
+          step={1}
+          value={heightDisplay}
+          onChange={(e) => handleHeight(Number(e.target.value))}
+          className={sliderClass}
+        />
+        <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
+          <span>{metric ? '122 cm' : "4'0\""}</span>
+          <span>{metric ? '213 cm' : "7'0\""}</span>
+        </div>
+      </div>
+
+      {/* Weight */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <label className="font-medium text-[var(--color-text)]">Weight</label>
+          <span className="text-lg font-semibold text-[var(--color-primary)]">
+            {metric ? `${weightDisplay} kg` : `${weightLbs} lbs`}
+          </span>
+        </div>
+        <input
+          type="range"
+          min={metric ? 23 : 50}
+          max={metric ? 181 : 400}
+          step={metric ? 1 : 5}
+          value={weightDisplay}
+          onChange={(e) => handleWeight(Number(e.target.value))}
+          className={sliderClass}
+        />
+        <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
+          <span>{metric ? '23 kg' : '50 lbs'}</span>
+          <span>{metric ? '181 kg' : '400 lbs'}</span>
+        </div>
+      </div>
     </div>
   )
 }

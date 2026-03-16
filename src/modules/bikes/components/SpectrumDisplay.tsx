@@ -25,25 +25,20 @@ export function SpectrumDisplay({ value, categories, className = '' }: SpectrumD
       </div>
 
       {/* Category labels below */}
-      <div className="relative mt-1 h-10">
-        {positions.map((pos) => {
-          const left = ((pos - 1) / 8) * 100
+      <div className="mt-2 flex justify-between">
+        {positions.map((pos, idx) => {
           const cat = categories[pos]
           const isActive = Math.round(value) === pos || roundToNearestOddLocal(value) === pos
+          const align = idx === 0 ? 'text-left' : idx === positions.length - 1 ? 'text-right' : 'text-center'
           return (
-            <div
+            <span
               key={pos}
-              className="absolute -translate-x-1/2 text-center"
-              style={{ left: `${left}%` }}
+              className={`flex-1 text-xs ${align} ${
+                isActive ? 'font-bold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'
+              }`}
             >
-              <span
-                className={`block text-xs whitespace-nowrap ${
-                  isActive ? 'font-bold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'
-                }`}
-              >
-                {cat?.name ?? pos}
-              </span>
-            </div>
+              {cat?.name ?? pos}
+            </span>
           )
         })}
       </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Bike } from 'lucide-react'
 import { Button } from '@/ui/components'
@@ -11,6 +11,7 @@ import { computeSpectrumCategory } from '../lib/spectrum'
 import type { SpectrumResult } from '../types'
 import { QuizStep } from './QuizStep'
 import { ResultsView } from './ResultsView'
+import { bikeAnalytics } from '../lib/analytics'
 
 export function BikeQuizFlow() {
   const { currentStep, answers, isSubmitting, sessionToken, setAnswer, nextStep, prevStep, setSubmitting, reset } =
@@ -19,6 +20,11 @@ export function BikeQuizFlow() {
   const router = useRouter()
 
   const stepConfig = QUIZ_STEPS[currentStep - 1]
+
+  // Track quiz started once on mount
+  useEffect(() => {
+    bikeAnalytics.quizStarted()
+  }, [])
 
   const isStepValid = useCallback((): boolean => {
     switch (stepConfig?.key) {
@@ -44,6 +50,7 @@ export function BikeQuizFlow() {
     if (currentStep === TOTAL_STEPS) {
       handleSubmit()
     } else {
+      if (stepConfig) bikeAnalytics.quizStepCompleted(currentStep, stepConfig.key)
       nextStep()
     }
   }
@@ -62,6 +69,7 @@ export function BikeQuizFlow() {
         })
         if (response.ok) {
           const data = await response.json() as { resultId: string; sessionId: string }
+          bikeAnalytics.quizCompleted(data.resultId, computed.categoryName)
           router.push(`/bikes/selector/results/${data.resultId}`)
           return
         } else {
