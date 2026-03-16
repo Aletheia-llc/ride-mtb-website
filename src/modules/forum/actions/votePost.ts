@@ -8,6 +8,8 @@ import { voteOnPost } from '../lib/queries'
 import { db } from '../../../lib/db/client'
 // eslint-disable-next-line no-restricted-imports
 import { checkAndGrantBadges } from '../lib/badges'
+// eslint-disable-next-line no-restricted-imports
+import { createForumNotification } from '../lib/notifications'
 
 export type VotePostResult =
   | { success: true }
@@ -47,6 +49,25 @@ export async function votePost(
             refId: `${postId}-${user.id}`,
           })
           await checkAndGrantBadges(votedPost.authorId, 'vote')
+
+          // ── Vote milestone notifications ─────────────────────
+          const currentScore = await db.forumVote.aggregate({
+            where: { postId },
+            _sum: { value: true },
+          })
+          const score = currentScore._sum.value ?? 0
+          const MILESTONES = [10, 50, 100]
+          for (const threshold of MILESTONES) {
+            if (score >= threshold) {
+              await createForumNotification({
+                type: 'VOTE_MILESTONE',
+                userId: votedPost.authorId,
+                actorId: undefined,
+                postId,
+                meta: { threshold },
+              })
+            }
+          }
         }
       } catch {
         // best-effort

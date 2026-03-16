@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutList, Users, Bookmark } from 'lucide-react'
+import { NotificationBell } from '@/modules/forum/components/NotificationBell'
 
 const NAV_ITEMS = [
   { label: 'All Posts', href: '/forum', icon: LayoutList },
@@ -34,6 +35,9 @@ export function ForumSubNav() {
             </Link>
           )
         })}
+        <div className="ml-auto">
+          <NotificationBell />
+        </div>
       </div>
     </nav>
   )

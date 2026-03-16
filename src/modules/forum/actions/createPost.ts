@@ -12,6 +12,8 @@ import { db } from '../../../lib/db/client'
 import { sendReplyNotification, sendMentionNotification } from '../lib/email'
 // eslint-disable-next-line no-restricted-imports
 import { checkAndGrantBadges } from '../lib/badges'
+// eslint-disable-next-line no-restricted-imports
+import { createForumNotification, extractMentions } from '../lib/notifications'
 
 const createPostSchema = z.object({
   threadId: z.string().min(1, 'Thread ID is required'),
@@ -125,6 +127,53 @@ export async function createPost(
               threadSlug: thread.slug,
               emailNotifications: mentionedUser.emailNotifications,
             }).catch(console.error)
+          }
+        }
+
+        // ── In-app notifications ────────────────────────────
+        // REPLY_TO_THREAD: notify thread author
+        if (thread && threadAuthorId && threadAuthorId !== user.id) {
+          await createForumNotification({
+            type: 'REPLY_TO_THREAD',
+            userId: threadAuthorId,
+            actorId: user.id,
+            threadId,
+            postId: post.id,
+          })
+        }
+
+        // REPLY_TO_POST: notify parent post author (for nested replies)
+        if (parentId) {
+          const parentPost = await db.forumPost.findUnique({
+            where: { id: parentId },
+            select: { authorId: true },
+          })
+          if (parentPost && parentPost.authorId !== user.id) {
+            await createForumNotification({
+              type: 'REPLY_TO_POST',
+              userId: parentPost.authorId,
+              actorId: user.id,
+              threadId,
+              postId: post.id,
+            })
+          }
+        }
+
+        // MENTION: notify @mentioned users (in-app, using extractMentions)
+        const mentionedUsernamesForNotif = extractMentions(content)
+        if (mentionedUsernamesForNotif.length > 0 && thread) {
+          const mentionedUsersForNotif = await db.user.findMany({
+            where: { username: { in: mentionedUsernamesForNotif }, NOT: { id: user.id } },
+            select: { id: true },
+          })
+          for (const mentioned of mentionedUsersForNotif) {
+            await createForumNotification({
+              type: 'MENTION',
+              userId: mentioned.id,
+              actorId: user.id,
+              threadId,
+              postId: post.id,
+            })
           }
         }
       } catch {
