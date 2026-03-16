@@ -108,7 +108,7 @@ Order history is pulled from Shopify Admin API by email and displayed inside the
 - FBA/MCF order routing (Shopify → Amazon MCF API)
 - Shipping notifications + tracking emails
 - Tax calculation by region
-- Basic refund processing
+- Refund processing for orders ≤$50 (auto-approved, Shopify refund API triggered automatically; XP deducted via negative XpTransaction entry at same time)
 
 **Marketing:**
 - Welcome series for new email subscribers (Klaviyo)
@@ -125,7 +125,7 @@ Order history is pulled from Shopify Admin API by email and displayed inside the
 
 **Platform:**
 - XP awards on `order.paid` webhook
-- Inventory sync (Shopify ↔ Amazon via Sales Channel)
+- Inventory sync (Shopify ↔ Amazon via Sales Channel) — FBA accessory SKUs only; POD products have no real inventory and are excluded from sync
 - FBA restock alerts (agent, daily poll)
 
 ### Manual (or Agent-Drafted, Human-Approved)
@@ -223,10 +223,10 @@ Manual triggers        ──→                      ──→  Reports / summa
 | Task | Trigger | Agent does | Human does |
 |---|---|---|---|
 | Restock POs | Inventory below threshold | Draft PO: quantity, supplier, cost | Review → send |
-| Customer service replies | New support ticket | Draft with full order context | Edit if needed → send |
+| Customer service replies | New email to Shopify Inbox (polled via Shopify Inbox API) or support email alias (via Postmark inbound webhook) | Draft reply with full order context pulled from Admin API by customer email or order ID | Edit if needed → send via same channel |
 | Amazon listing updates | Sales + search trend data | Rewrite copy with keyword suggestions | Review → publish |
 | Price adjustments | Competitor pricing data | Recommend changes with reasoning | Approve → execute |
-| New product listings | Manual trigger | Draft Amazon copy, Shopify description, SEO metadata | Review → publish |
+| New product listings | Structured Slack command: `/new-product [name] [category] [key features] [price range]` posted to `#merch-ops` | Draft Amazon title/bullets/A+ outline, Shopify description, SEO metadata — returned as formatted Slack message | Review → trigger publish via Admin API + SP-API Listings API |
 | Refunds >$50 | Customer request | Draft response + recommend approve/deny | Decide → execute |
 
 ### Escalation Rules (agent pulls human in immediately)
@@ -236,23 +236,24 @@ Manual triggers        ──→                      ──→  Reports / summa
 - Unusual order spike (potential fraud pattern)
 - Supplier doesn't confirm PO within 48 hours
 - Customer escalates to chargeback
-- Any action that would spend >$500
+- Any action that would spend >$100
 
 ### Agent Tools / Integrations
 
-- Shopify Admin API — orders, customers, products, inventory
-- Shopify Storefront API — product sync (read-only)
-- Amazon SP-API — orders, inventory, listings, pricing
+- Shopify Admin API — orders, customers, products, inventory, discount code generation
+- Shopify Storefront API — product browse, cart creation, cart mutation, checkout URL generation (not read-only — cart operations are writes)
+- Amazon SP-API — orders, inventory, listings, pricing (Note: Amazon Merch on Demand operates entirely outside SP-API and the Shopify channel — Merch orders, fulfillment, and royalties are managed in the separate Merch portal and are not accessible to the agent)
 - Klaviyo API — trigger and manage email flows
 - Email — send drafted CS replies, POs
 - Ride MTB DB — read/write XP, user lookup by email
 - Slack — escalation channel
-- Printful/Printify API — POD order status monitoring
+- Printful/Printify API — POD order failure/delay monitoring only (Shopify handles normal order routing via native app integration; agent uses this API solely to detect stuck or errored POD orders and escalate)
 
 ### Guardrails
 
 - Never send customer-facing messages autonomously (except transactional: shipping, receipt)
 - Never spend >$100 autonomously (threshold raised over time as trust builds)
+- Any action that would spend >$100 requires human approval (this is the single threshold — escalation rules referencing "$500" refer to escalation urgency level, not a separate spend limit)
 - Log every action with reasoning, reviewable in a simple dashboard
 - Fail loudly — escalate rather than guess when uncertain
 
@@ -265,23 +266,32 @@ Manual triggers        ──→                      ──→  Reports / summa
 ```
 ride-mtb.com/shop              →  Product listing (Storefront API)
 ride-mtb.com/shop/[handle]     →  Product detail (Storefront API)
-ride-mtb.com/cart              →  Cart (Storefront API)
-ride-mtb.com/checkout          →  Checkout bridge (Storefront API)
+ride-mtb.com/cart              →  Cart (Storefront API — cart is a write operation)
+ride-mtb.com/checkout          →  Checkout bridge: generate Shopify checkout URL via
+                                   Storefront API, redirect to checkout.shopify.com
+                                   (custom domain configured in Shopify settings so
+                                   it reads as shop.ride-mtb.com — user sees branded
+                                   domain, not raw shopify.com URL)
 ride-mtb.com/account/orders    →  Order history (Admin API, by email)
 ```
+
+**Checkout architecture note:** Full custom checkout UI (where the user never leaves ride-mtb.com at any point) requires Shopify Plus ($2,300/month). At Basic/mid-tier, the cart is built in Next.js and the final checkout step redirects to Shopify's hosted checkout on a custom branded subdomain (`shop.ride-mtb.com`). This is the correct approach — do not attempt to rebuild the checkout UI from scratch at Basic tier. The user experience is seamless enough: branded domain, pre-filled data, and they return to the platform after purchase.
 
 ### Webhook Architecture
 
 ```
 Shopify webhooks → /api/webhooks/shopify (Next.js API route)
   ├── order.paid
-  │     ├── lookup Ride MTB user by email
-  │     ├── award XP
-  │     └── log order against user profile
+  │     ├── verify HMAC signature
+  │     ├── lookup Ride MTB user by customer email
+  │     ├── if user found: award XP + create XpTransaction record
+  │     ├── if user NOT found: log to xp_pending_awards table for
+  │     │   manual review (never silently drop — email may join later)
+  │     └── log ShopifyOrder record against user profile
   ├── order.fulfilled
-  │     └── confirm tracking synced
+  │     └── confirm tracking synced to order record
   └── customer.created
-        └── sync to Ride MTB DB
+        └── upsert ShopifyCustomer mapping in Ride MTB DB
 
 Amazon SP-API → agent cron jobs
   ├── inventory check (daily)
@@ -289,11 +299,13 @@ Amazon SP-API → agent cron jobs
   └── account health (daily)
 ```
 
+**Webhook reliability:** All webhook handlers must be idempotent (Shopify may deliver duplicates). Use the Shopify order ID as an idempotency key — check if `ShopifyOrder` record already exists before processing. Return 200 immediately even if processing fails; log failures to an error table for the agent to review rather than returning 5xx (which causes Shopify to retry aggressively).
+
 ### Key Packages
 
 ```
-@shopify/storefront-api-client     Storefront API (browse, cart, checkout)
-@shopify/admin-api-client          Admin API (orders, customers, inventory)
+@shopify/storefront-api-client     Storefront API (browse, cart, checkout URL generation)
+@shopify/admin-api-client          Admin API (orders, customers, inventory, discount codes)
 amazon-sp-api                      SP-API wrapper
 @anthropic-ai/sdk                  AI agent (Claude Sonnet 4.6)
 klaviyo-api                        Email automation
@@ -311,7 +323,87 @@ AMAZON_SP_CLIENT_SECRET
 AMAZON_SP_REFRESH_TOKEN
 AMAZON_SELLER_ID
 KLAVIYO_API_KEY
+ANTHROPIC_API_KEY
 ```
+
+### DB Schema Changes (Prisma)
+
+New fields and models required on the Ride MTB Supabase DB:
+
+```prisma
+// Add to User model
+model User {
+  // ... existing fields
+  shopifyCustomerId   String?           // Shopify customer GID
+  shopifyOrders       ShopifyOrder[]
+  xpTransactions      XpTransaction[]
+  xpPendingAwards     XpPendingAward[]
+}
+
+// New models
+model ShopifyOrder {
+  id              String   @id          // Shopify order GID (idempotency key)
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  email           String
+  totalPrice      Float
+  currency        String
+  xpAwarded       Int      @default(0)
+  createdAt       DateTime @default(now())
+  raw             Json                  // Full Shopify order payload
+}
+
+model XpTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Int
+  source    String                      // e.g. "merch_purchase", "course_complete"
+  refNote   String?                     // order ID or course ID
+  createdAt DateTime @default(now())
+}
+
+model XpPendingAward {
+  id        String   @id @default(cuid())
+  email     String
+  orderId   String   @unique
+  xpAmount  Int
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+```
+
+### XP → Discount Redemption Mechanism
+
+XP thresholds are enforced in the Ride MTB app, not in Shopify natively. Flow:
+
+```
+User on /shop or /cart → app checks their XP total from DB
+  → if threshold met, offer discount to apply
+  → user clicks "Apply XP Reward"
+  → server calls Shopify Admin API: create price rule + discount code
+      (scoped to one use, tied to their email)
+  → discount code injected into cart via Storefront API discountCodes field
+  → user proceeds to checkout with discount already applied
+  → on order.paid: XP deducted or marked as used (track in XpTransaction
+      with negative amount and source: "discount_redemption")
+```
+
+Discount types by threshold:
+- 10% off → percentage-based price rule, one-time use code
+- Free shipping → shipping discount price rule
+- Member-only products → enforced via Shopify product tags + metafields checked at route level (not a discount code)
+- Early access → time-gated product publish (product hidden until user's XP qualifies)
+
+### Agent Dashboard — Interim Plan
+
+Full dashboard UI is a future build. Until then, the draft+approve workflow is delivered via **Slack**:
+
+- Agent posts drafted actions to a private `#merch-ops` Slack channel
+- Each draft includes context, reasoning, and approve/reject buttons (Slack Block Kit interactive components)
+- Human clicks approve → agent executes; clicks reject → agent logs and stands down
+- All actions logged to a `AgentActionLog` table in DB regardless of delivery method
+- Dashboard UI replaces Slack interface once built, using the same log table as its data source
 
 ### Folder Structure
 
@@ -351,22 +443,32 @@ src/
 - [ ] Apply for trademark via Amazon IP Accelerator (~$1,000-1,500, faster approval)
 - [ ] Apply for Amazon Brand Registry (requires trademark — 6-12 months standard, weeks via IP Accelerator)
 - [ ] Apply for Amazon Merch on Demand (waitlist — apply early)
-- [ ] Purchase GS1 UPC barcodes ($250 for 10 + $50/year) — required for every listing
+- [ ] Purchase GS1 UPC barcodes ($250 for 10 + $50/year) — required for every listing; note: each size/color variant of a product needs its own UPC, so budget accordingly (e.g. a t-shirt in 4 sizes × 3 colors = 12 UPCs)
+- [ ] Register SP-API developer application in Seller Central (Developer Console → Create App → Self-Authorized)
+- [ ] Complete SP-API OAuth flow to obtain `AMAZON_SP_REFRESH_TOKEN` (LWA — Login with Amazon credentials)
+- [ ] Set up IAM role with SP-API permissions (AmazonSellingPartnerAPITest or prod equivalent)
 - [ ] Set up first FBA inbound shipment once supplier is locked
 
 ### Shopify
 - [ ] Create Shopify store (Basic plan, $39/month to start)
 - [ ] Enable Shopify Payments (eliminates transaction fees)
+- [ ] Configure custom checkout subdomain: `shop.ride-mtb.com` in Shopify settings
+- [ ] Create Shopify Custom App → generate Admin API access token (with required scopes: read/write orders, customers, products, inventory, discounts)
+- [ ] Generate Storefront API access token (public, for headless frontend)
+- [ ] Configure Shopify webhooks: `order.paid`, `order.fulfilled`, `customer.created` → point to `/api/webhooks/shopify` on Vercel; copy webhook HMAC secret
 - [ ] Install Printful or Printify app
 - [ ] Install Amazon Sales Channel app
 - [ ] Install Shopify MCF app
-- [ ] Configure Klaviyo integration
-- [ ] Set up webhook endpoints
+- [ ] Create Klaviyo account → get API key → install Klaviyo app in Shopify
+- [ ] Add all env vars to Vercel project settings
 
 ### Business
 - [ ] Form LLC (before taking payments)
 - [ ] Open business bank account
 - [ ] Set up accounting software (QuickBooks or Wave)
+- [ ] Get Anthropic API key (for agent) → add to Vercel env vars as `ANTHROPIC_API_KEY`
+- [ ] Create Slack workspace or channel `#merch-ops` for agent draft+approve workflow
+- [ ] Set up Postmark (or similar) for inbound email handling if not using Shopify Inbox for CS
 
 ### Estimated upfront investment
 | Scenario | Estimate |
