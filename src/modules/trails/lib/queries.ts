@@ -102,7 +102,20 @@ export async function getTrailSystemBySlug(slug: string) {
       trails: {
         where: { status: 'open' },
         orderBy: { name: 'asc' },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          trailType: true,
+          physicalDifficulty: true,
+          technicalDifficulty: true,
+          distance: true,
+          elevationGain: true,
+          status: true,
+          currentCondition: true,
+          hasGpsTrack: true,
+          features: true,
+          averageRating: true,
           gpsTrack: {
             select: {
               id: true,
@@ -142,10 +155,10 @@ export async function getTrailList(
     trailSystemId: system.id,
     ...(filters?.trailType && { trailType: filters.trailType }),
     ...(filters?.status && { status: filters.status }),
-    ...((filters?.minDifficulty || filters?.maxDifficulty) && {
+    ...((filters?.minDifficulty != null || filters?.maxDifficulty != null) && {
       physicalDifficulty: {
-        ...(filters?.minDifficulty && { gte: filters.minDifficulty }),
-        ...(filters?.maxDifficulty && { lte: filters.maxDifficulty }),
+        ...(filters?.minDifficulty != null && { gte: filters.minDifficulty }),
+        ...(filters?.maxDifficulty != null && { lte: filters.maxDifficulty }),
       },
     }),
   }
