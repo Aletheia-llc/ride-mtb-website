@@ -18,6 +18,8 @@ interface TrailMapProps {
   selectedTrailId?: string | null
   onTrailClick?: (slug: string) => void
   className?: string
+  trailheadLat?: number | null
+  trailheadLng?: number | null
 }
 
 const DEFAULT_CENTER: [number, number] = [-109.55, 38.58]
@@ -50,6 +52,8 @@ export function TrailMap({
   selectedTrailId = null,
   onTrailClick,
   className = '',
+  trailheadLat,
+  trailheadLng,
 }: TrailMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -165,6 +169,16 @@ export function TrailMap({
     map.on('load', () => {
       addTrailLayers(map)
     })
+
+    if (trailheadLat != null && trailheadLng != null) {
+      const el = document.createElement('div')
+      el.className = 'trailhead-marker'
+      el.style.cssText = 'width:16px;height:16px;background:#16a34a;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);cursor:pointer'
+      new mapboxgl.Marker({ element: el })
+        .setLngLat([trailheadLng, trailheadLat])
+        .setPopup(new mapboxgl.Popup({ offset: 15 }).setHTML('<div style="font-size:12px;font-weight:600;padding:2px 0;">Trailhead</div>'))
+        .addTo(map)
+    }
 
     mapRef.current = map
 

@@ -171,7 +171,7 @@ export default async function SystemDetailPage({ params }: Props) {
       </div>
 
       {/* Stats row */}
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Card className="p-4 text-center">
           <div className="flex items-center justify-center gap-1.5 text-[var(--color-text-muted)]">
             <Route className="h-4 w-4" />
@@ -225,6 +225,16 @@ export default async function SystemDetailPage({ params }: Props) {
             <p className="mt-1 text-2xl font-bold text-[var(--color-text)]">—</p>
           )}
         </Card>
+
+        <Card className="p-4 text-center">
+          <div className="flex items-center justify-center gap-1.5 text-[var(--color-text-muted)]">
+            <Users className="h-4 w-4" />
+            <span className="text-xs uppercase tracking-wide">Rides</span>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-[var(--color-text)]">
+            {system.rideCount != null ? system.rideCount.toLocaleString() : '—'}
+          </p>
+        </Card>
       </div>
 
       {/* Photo gallery */}
@@ -248,6 +258,8 @@ export default async function SystemDetailPage({ params }: Props) {
               trails={trailsWithGps}
               center={mapCenter}
               zoom={13}
+              trailheadLat={system.trailheadLat}
+              trailheadLng={system.trailheadLng}
               className="h-[400px] rounded-xl"
             />
           </Card>
