@@ -60,11 +60,17 @@ export function ExploreClient({ initialSystems }: Props) {
     trailsMapRef.current = trailsMap
   }, [trailsMap])
 
+  // Keep loadingIds in a ref so loadTrailsForSystem doesn't need it in deps
+  const loadingIdsRef = useRef(loadingIds)
+  useEffect(() => {
+    loadingIdsRef.current = loadingIds
+  }, [loadingIds])
+
   // Fix 3: Shared trail-fetching helper used by both handleMoveEnd and handleToggleExpand
   const loadTrailsForSystem = useCallback(
     async (systemId: string) => {
       // Guard: skip if already loaded or currently loading
-      if (trailsMapRef.current[systemId] || loadingIds.has(systemId)) return
+      if (trailsMapRef.current[systemId] || loadingIdsRef.current.has(systemId)) return
 
       setLoadingIds((prev) => new Set(prev).add(systemId))
 
@@ -89,7 +95,7 @@ export function ExploreClient({ initialSystems }: Props) {
         return next
       })
     },
-    [loadingIds],
+    [],
   )
 
   // Client-side filter by search + type
