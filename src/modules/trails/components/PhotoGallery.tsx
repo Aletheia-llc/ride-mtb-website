@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -16,6 +16,13 @@ interface PhotoGalleryProps {
 
 export function PhotoGallery({ photos }: PhotoGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (lightboxIndex !== null) {
+      overlayRef.current?.focus();
+    }
+  }, [lightboxIndex]);
 
   if (photos.length === 0) return null;
 
@@ -52,6 +59,7 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
 
       {lightboxIndex !== null && (
         <div
+          ref={overlayRef}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
           onClick={closeLightbox}
           onKeyDown={handleKeyDown}

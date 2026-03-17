@@ -8,21 +8,23 @@ export async function toggleReviewHelpful(reviewId: string) {
   if (!session?.user?.id) throw new Error('Not authenticated')
   const userId = session.user.id
 
-  const existing = await db.trailReviewHelpful.findUnique({
-    where: { reviewId_userId: { reviewId, userId } },
-  })
+  await db.$transaction(async (tx) => {
+    const existing = await tx.trailReviewHelpful.findUnique({
+      where: { reviewId_userId: { reviewId, userId } },
+    })
 
-  if (existing) {
-    await db.trailReviewHelpful.delete({ where: { id: existing.id } })
-    await db.trailReview.update({
-      where: { id: reviewId },
-      data: { helpfulCount: { decrement: 1 } },
-    })
-  } else {
-    await db.trailReviewHelpful.create({ data: { reviewId, userId } })
-    await db.trailReview.update({
-      where: { id: reviewId },
-      data: { helpfulCount: { increment: 1 } },
-    })
-  }
+    if (existing) {
+      await tx.trailReviewHelpful.delete({ where: { id: existing.id } })
+      await tx.trailReview.update({
+        where: { id: reviewId },
+        data: { helpfulCount: { decrement: 1 } },
+      })
+    } else {
+      await tx.trailReviewHelpful.create({ data: { reviewId, userId } })
+      await tx.trailReview.update({
+        where: { id: reviewId },
+        data: { helpfulCount: { increment: 1 } },
+      })
+    }
+  })
 }

@@ -7,11 +7,13 @@ import { toggleReviewHelpful } from '../actions/toggleReviewHelpful'
 interface HelpfulButtonProps {
   reviewId: string
   initialCount: number
+  initialHasMarked?: boolean
   isAuthenticated: boolean
 }
 
-export function HelpfulButton({ reviewId, initialCount, isAuthenticated }: HelpfulButtonProps) {
+export function HelpfulButton({ reviewId, initialCount, initialHasMarked = false, isAuthenticated }: HelpfulButtonProps) {
   const [count, setCount] = useState(initialCount)
+  const [marked, setMarked] = useState(initialHasMarked)
   const [loading, setLoading] = useState(false)
 
   async function handleClick() {
@@ -19,8 +21,8 @@ export function HelpfulButton({ reviewId, initialCount, isAuthenticated }: Helpf
     setLoading(true)
     try {
       await toggleReviewHelpful(reviewId)
-      // Optimistic: just show +1, real count updates on refresh
-      setCount((c) => c + 1)
+      setCount((c) => marked ? c - 1 : c + 1)
+      setMarked((m) => !m)
     } catch {
       // silent
     } finally {
@@ -32,7 +34,11 @@ export function HelpfulButton({ reviewId, initialCount, isAuthenticated }: Helpf
     <button
       onClick={handleClick}
       disabled={!isAuthenticated || loading}
-      className="flex items-center gap-1 text-xs text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)] disabled:opacity-50"
+      className={`flex items-center gap-1 text-xs transition-colors disabled:opacity-50 ${
+        marked
+          ? 'text-[var(--color-primary)]'
+          : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'
+      }`}
     >
       <ThumbsUp className="h-3.5 w-3.5" />
       {count > 0 && <span>{count}</span>}
