@@ -6,10 +6,11 @@ export async function getSystemsInBoundsAction(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _filters?: { type?: string },
 ) {
-  return getTrailSystemsInBounds(
-    bounds.ne[1], // neLat
-    bounds.ne[0], // neLng
-    bounds.sw[1], // swLat
-    bounds.sw[0], // swLng
-  )
+  // Basic validation — protect against NaN/Infinity from client
+  const [neLng, neLat] = bounds.ne
+  const [swLng, swLat] = bounds.sw
+  if (!isFinite(neLng) || !isFinite(neLat) || !isFinite(swLng) || !isFinite(swLat)) {
+    return []
+  }
+  return getTrailSystemsInBounds(neLat, neLng, swLat, swLng)
 }

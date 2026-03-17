@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useTransition } from 'react'
+import { useState, useCallback, useRef, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, ChevronDown, ChevronRight, MapPin, Star, Map, List } from 'lucide-react'
@@ -50,7 +50,47 @@ export function ExploreClient({ initialSystems }: Props) {
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
   const [mobileTab, setMobileTab] = useState<'list' | 'map'>('map')
   const [, startTransition] = useTransition()
-  const loadingTrailsRef = useRef<Set<string>>(new Set())
+
+  // Fix 1: useState instead of useRef so loading state triggers re-renders
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set())
+
+  // Fix 2: Keep trailsMap in a ref so handleMoveEnd doesn't need it in deps
+  const trailsMapRef = useRef(trailsMap)
+  useEffect(() => {
+    trailsMapRef.current = trailsMap
+  }, [trailsMap])
+
+  // Fix 3: Shared trail-fetching helper used by both handleMoveEnd and handleToggleExpand
+  const loadTrailsForSystem = useCallback(
+    async (systemId: string) => {
+      // Guard: skip if already loaded or currently loading
+      if (trailsMapRef.current[systemId] || loadingIds.has(systemId)) return
+
+      setLoadingIds((prev) => new Set(prev).add(systemId))
+
+      const rawTrails = await getSystemTrailsAction(systemId)
+      const mapped: TrailLineData[] = rawTrails
+        .filter(
+          (t): t is typeof t & { gpsTrack: { trackData: string } } =>
+            t.gpsTrack?.trackData != null,
+        )
+        .map((t) => ({
+          slug: t.slug,
+          name: t.name,
+          physicalDifficulty: t.physicalDifficulty,
+          technicalDifficulty: t.technicalDifficulty,
+          trackData: t.gpsTrack.trackData,
+        }))
+
+      setTrailsMap((prev) => ({ ...prev, [systemId]: mapped }))
+      setLoadingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(systemId)
+        return next
+      })
+    },
+    [loadingIds],
+  )
 
   // Client-side filter by search + type
   const filteredSystems = systems.filter((s) => {
@@ -69,6 +109,7 @@ export function ExploreClient({ initialSystems }: Props) {
       s.latitude != null && s.longitude != null,
   )
 
+  // Fix 2: trailsMap removed from deps; read via trailsMapRef.current inside
   const handleMoveEnd = useCallback(
     (bounds: { ne: [number, number]; sw: [number, number] }, _center: [number, number], zoom: number) => {
       startTransition(async () => {
@@ -95,27 +136,11 @@ export function ExploreClient({ initialSystems }: Props) {
         if (zoom >= 11 && pins.length === 1) {
           const single = pins[0]
           setExpandedSystemId(single.id)
-          if (!trailsMap[single.id] && !loadingTrailsRef.current.has(single.id)) {
-            loadingTrailsRef.current.add(single.id)
-            const rawTrails = await getSystemTrailsAction(single.id)
-            const mapped: TrailLineData[] = rawTrails
-              .filter((t): t is typeof t & { gpsTrack: { trackData: string } } =>
-                t.gpsTrack?.trackData != null,
-              )
-              .map((t) => ({
-                slug: t.slug,
-                name: t.name,
-                physicalDifficulty: t.physicalDifficulty,
-                technicalDifficulty: t.technicalDifficulty,
-                trackData: t.gpsTrack.trackData,
-              }))
-            setTrailsMap((prev) => ({ ...prev, [single.id]: mapped }))
-            loadingTrailsRef.current.delete(single.id)
-          }
+          await loadTrailsForSystem(single.id)
         }
       })
     },
-    [trailsMap],
+    [loadTrailsForSystem],
   )
 
   const handleSystemClick = useCallback(
@@ -136,25 +161,9 @@ export function ExploreClient({ initialSystems }: Props) {
         return
       }
       setExpandedSystemId(system.id)
-      if (!trailsMap[system.id] && !loadingTrailsRef.current.has(system.id)) {
-        loadingTrailsRef.current.add(system.id)
-        const rawTrails = await getSystemTrailsAction(system.id)
-        const mapped: TrailLineData[] = rawTrails
-          .filter((t): t is typeof t & { gpsTrack: { trackData: string } } =>
-            t.gpsTrack?.trackData != null,
-          )
-          .map((t) => ({
-            slug: t.slug,
-            name: t.name,
-            physicalDifficulty: t.physicalDifficulty,
-            technicalDifficulty: t.technicalDifficulty,
-            trackData: t.gpsTrack.trackData,
-          }))
-        setTrailsMap((prev) => ({ ...prev, [system.id]: mapped }))
-        loadingTrailsRef.current.delete(system.id)
-      }
+      await loadTrailsForSystem(system.id)
     },
-    [expandedSystemId, trailsMap],
+    [expandedSystemId, loadTrailsForSystem],
   )
 
   const expandedSystem = filteredSystems.find((s) => s.id === expandedSystemId) ?? null
@@ -266,7 +275,7 @@ export function ExploreClient({ initialSystems }: Props) {
                   {/* Expanded trail list */}
                   {isExpanded && (
                     <div className="bg-[var(--color-bg-secondary)] pl-10 pr-4 pb-2">
-                      {loadingTrailsRef.current.has(system.id) ? (
+                      {loadingIds.has(system.id) ? (
                         <p className="py-3 text-xs text-[var(--color-text-muted)]">Loading trails…</p>
                       ) : trails.length === 0 ? (
                         <p className="py-3 text-xs text-[var(--color-text-muted)]">No GPS trails available</p>
