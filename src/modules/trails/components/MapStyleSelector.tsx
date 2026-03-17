@@ -18,6 +18,10 @@ export const MAPBOX_STYLES: Record<MapStyle, string> = {
   '3d-satellite': 'mapbox://styles/mapbox/satellite-streets-v12',
 }
 
+export function getMapboxStyleUrl(style: MapStyle): string {
+  return MAPBOX_STYLES[style]
+}
+
 interface MapStyleSelectorProps {
   current: MapStyle
   onChange: (style: MapStyle) => void

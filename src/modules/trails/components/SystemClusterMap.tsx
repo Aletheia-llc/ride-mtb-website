@@ -27,6 +27,9 @@ interface SystemClusterMapProps {
   onMoveEnd?: (bounds: { ne: [number, number]; sw: [number, number] }, center: [number, number], zoom: number) => void
 }
 
+type MapMouseHandler = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => void
+type VoidHandler = () => void
+
 export function SystemClusterMap({
   systems, className = '', onSystemClick, onMapReady,
   center = [-98.5, 39.8], zoom = 4, onMoveEnd,
@@ -35,6 +38,21 @@ export function SystemClusterMap({
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const [mapStyle, setMapStyle] = useState<MapStyle>('standard')
   const [loaded, setLoaded] = useState(false)
+
+  // Callback refs — keeps closures fresh without re-registering map listeners
+  const onMoveEndRef = useRef(onMoveEnd)
+  useEffect(() => { onMoveEndRef.current = onMoveEnd }, [onMoveEnd])
+
+  const onMapReadyRef = useRef(onMapReady)
+  useEffect(() => { onMapReadyRef.current = onMapReady }, [onMapReady])
+
+  // Handler refs — stored so we can call map.off() before re-registering
+  const clusterClickHandlerRef = useRef<MapMouseHandler | null>(null)
+  const pinClickHandlerRef = useRef<MapMouseHandler | null>(null)
+  const clusterMouseEnterRef = useRef<VoidHandler | null>(null)
+  const clusterMouseLeaveRef = useRef<VoidHandler | null>(null)
+  const pinMouseEnterRef = useRef<VoidHandler | null>(null)
+  const pinMouseLeaveRef = useRef<VoidHandler | null>(null)
 
   const addData = useCallback((map: mapboxgl.Map) => {
     const geojson: GeoJSON.FeatureCollection = {
@@ -63,7 +81,15 @@ export function SystemClusterMap({
     map.addLayer({ id: 'system-pins', type: 'circle', source: 'systems', filter: ['!', ['has', 'point_count']],
       paint: { 'circle-color': '#16a34a', 'circle-radius': 8, 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } })
 
-    map.on('click', 'clusters', (e) => {
+    // Remove stale handlers before re-registering
+    if (clusterClickHandlerRef.current) map.off('click', 'clusters', clusterClickHandlerRef.current)
+    if (pinClickHandlerRef.current) map.off('click', 'system-pins', pinClickHandlerRef.current)
+    if (clusterMouseEnterRef.current) map.off('mouseenter', 'clusters', clusterMouseEnterRef.current)
+    if (clusterMouseLeaveRef.current) map.off('mouseleave', 'clusters', clusterMouseLeaveRef.current)
+    if (pinMouseEnterRef.current) map.off('mouseenter', 'system-pins', pinMouseEnterRef.current)
+    if (pinMouseLeaveRef.current) map.off('mouseleave', 'system-pins', pinMouseLeaveRef.current)
+
+    clusterClickHandlerRef.current = (e) => {
       const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] })
       const clusterId = features[0]?.properties?.cluster_id
       if (clusterId != null) {
@@ -72,9 +98,10 @@ export function SystemClusterMap({
           map.easeTo({ center: (features[0].geometry as GeoJSON.Point).coordinates as [number, number], zoom })
         })
       }
-    })
+    }
+    map.on('click', 'clusters', clusterClickHandlerRef.current)
 
-    map.on('click', 'system-pins', (e) => {
+    pinClickHandlerRef.current = (e) => {
       const feature = e.features?.[0]
       if (!feature?.properties) return
       const { slug, name, city, state, trailCount, rating } = feature.properties
@@ -92,12 +119,17 @@ export function SystemClusterMap({
         const el = popup.getElement()
         if (el) { el.style.cursor = 'pointer'; el.addEventListener('click', () => onSystemClick(slug)) }
       }
-    })
+    }
+    map.on('click', 'system-pins', pinClickHandlerRef.current)
 
-    map.on('mouseenter', 'system-pins', () => { map.getCanvas().style.cursor = 'pointer' })
-    map.on('mouseleave', 'system-pins', () => { map.getCanvas().style.cursor = '' })
-    map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer' })
-    map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = '' })
+    clusterMouseEnterRef.current = () => { map.getCanvas().style.cursor = 'pointer' }
+    clusterMouseLeaveRef.current = () => { map.getCanvas().style.cursor = '' }
+    pinMouseEnterRef.current = () => { map.getCanvas().style.cursor = 'pointer' }
+    pinMouseLeaveRef.current = () => { map.getCanvas().style.cursor = '' }
+    map.on('mouseenter', 'clusters', clusterMouseEnterRef.current)
+    map.on('mouseleave', 'clusters', clusterMouseLeaveRef.current)
+    map.on('mouseenter', 'system-pins', pinMouseEnterRef.current)
+    map.on('mouseleave', 'system-pins', pinMouseLeaveRef.current)
   }, [systems, onSystemClick])
 
   useEffect(() => {
@@ -115,20 +147,18 @@ export function SystemClusterMap({
     map.on('load', () => {
       addData(map)
       setLoaded(true)
-      onMapReady?.(map)
+      onMapReadyRef.current?.(map)
     })
 
-    if (onMoveEnd) {
-      map.on('moveend', () => {
-        const b = map.getBounds()
-        if (!b) return
-        onMoveEnd(
-          { ne: [b.getNorthEast().lng, b.getNorthEast().lat], sw: [b.getSouthWest().lng, b.getSouthWest().lat] },
-          [map.getCenter().lng, map.getCenter().lat],
-          map.getZoom()
-        )
-      })
-    }
+    map.on('moveend', () => {
+      const b = map.getBounds()
+      if (!b) return
+      onMoveEndRef.current?.(
+        { ne: [b.getNorthEast().lng, b.getNorthEast().lat], sw: [b.getSouthWest().lng, b.getSouthWest().lat] },
+        [map.getCenter().lng, map.getCenter().lat],
+        map.getZoom()
+      )
+    })
 
     mapRef.current = map
     return () => { map.remove() }
@@ -148,7 +178,7 @@ export function SystemClusterMap({
     map.setStyle(MAPBOX_STYLES[newStyle])
     map.once('style.load', () => {
       addData(map)
-      onMapReady?.(map)
+      onMapReadyRef.current?.(map)
       if (newStyle === '3d' || newStyle === '3d-satellite') {
         if (!map.getSource('mapbox-dem')) {
           map.addSource('mapbox-dem', { type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize: 512, maxzoom: 14 })
@@ -160,7 +190,7 @@ export function SystemClusterMap({
         map.easeTo({ pitch: 0 })
       }
     })
-  }, [addData, onMapReady])
+  }, [addData])
 
   return (
     <div className={`relative ${className}`}>

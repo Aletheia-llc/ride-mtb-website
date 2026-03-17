@@ -54,6 +54,7 @@ export function TrailMap({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const hoveredIdRef = useRef<string | null>(null)
+  const prevTrailIdsRef = useRef<string[]>([])
 
   // Store callback in ref so map event handlers always see latest
   const onTrailClickRef = useRef(onTrailClick)
@@ -61,9 +62,8 @@ export function TrailMap({
 
   const addTrailLayers = useCallback(
     (map: mapboxgl.Map) => {
-      // Remove old sources/layers from previous render
-      for (const trail of trails) {
-        const sourceId = `trail-${trail.id}`
+      // Remove layers/sources added in the previous render pass
+      for (const sourceId of prevTrailIdsRef.current) {
         if (map.getLayer(`${sourceId}-line`)) {
           map.removeLayer(`${sourceId}-line`)
         }
@@ -71,6 +71,8 @@ export function TrailMap({
           map.removeSource(sourceId)
         }
       }
+
+      const newIds: string[] = []
 
       for (const trail of trails) {
         const coords = parseTrackToCoords(trail.trackData)
@@ -129,7 +131,12 @@ export function TrailMap({
           const restore = trail.id === selectedTrailId ? 5 : 3
           map.setPaintProperty(layerId, 'line-width', restore)
         })
+
+        newIds.push(sourceId)
       }
+
+      // Record IDs for cleanup on the next call
+      prevTrailIdsRef.current = newIds
     },
     [trails, selectedTrailId],
   )
