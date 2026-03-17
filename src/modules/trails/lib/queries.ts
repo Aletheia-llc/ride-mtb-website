@@ -455,3 +455,17 @@ export async function getSystemTrailsForMap(systemId: string) {
     },
   })
 }
+
+// ── 15. getHelpfulMarksByUser ─────────────────────────────────
+
+export async function getHelpfulMarksByUser(
+  userId: string,
+  reviewIds: string[],
+): Promise<Set<string>> {
+  if (reviewIds.length === 0) return new Set()
+  const marks = await db.trailReviewHelpful.findMany({
+    where: { userId, reviewId: { in: reviewIds } },
+    select: { reviewId: true },
+  })
+  return new Set(marks.map((m) => m.reviewId))
+}

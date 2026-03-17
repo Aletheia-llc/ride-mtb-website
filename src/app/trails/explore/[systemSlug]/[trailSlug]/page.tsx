@@ -19,7 +19,7 @@ import { ConditionReportForm } from '@/modules/trails/components/ConditionReport
 import { Card } from '@/ui/components'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
-import { getTrailBySlug, isTrailFavorited, getRecentConditionReports } from '@/modules/trails/lib/queries'
+import { getTrailBySlug, isTrailFavorited, getRecentConditionReports, getHelpfulMarksByUser } from '@/modules/trails/lib/queries'
 
 const POI_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   feature: Zap,
@@ -66,9 +66,12 @@ export default async function TrailDetailPage({ params }: Props) {
   }
 
   const currentUserId = session?.user?.id ?? null
-  const [favorited, conditionReports] = await Promise.all([
+  const [favorited, conditionReports, helpfulMarks] = await Promise.all([
     currentUserId ? isTrailFavorited(trail.id, currentUserId) : Promise.resolve(false),
     getRecentConditionReports(trail.id),
+    currentUserId && trail.reviews.length > 0
+      ? getHelpfulMarksByUser(currentUserId, trail.reviews.map((r) => r.id))
+      : Promise.resolve(new Set<string>()),
   ])
 
   // Prepare map data if GPS track exists
@@ -326,6 +329,7 @@ export default async function TrailDetailPage({ params }: Props) {
                   <HelpfulButton
                     reviewId={review.id}
                     initialCount={review.helpfulCount}
+                    initialHasMarked={helpfulMarks.has(review.id)}
                     isAuthenticated={currentUserId != null}
                   />
                 </div>
