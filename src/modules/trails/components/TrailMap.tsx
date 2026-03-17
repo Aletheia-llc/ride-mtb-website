@@ -59,6 +59,7 @@ export function TrailMap({
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const hoveredIdRef = useRef<string | null>(null)
   const prevTrailIdsRef = useRef<string[]>([])
+  const trailheadMarkerRef = useRef<mapboxgl.Marker | null>(null)
 
   // Store callback in ref so map event handlers always see latest
   const onTrailClickRef = useRef(onTrailClick)
@@ -174,7 +175,7 @@ export function TrailMap({
       const el = document.createElement('div')
       el.className = 'trailhead-marker'
       el.style.cssText = 'width:16px;height:16px;background:#16a34a;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);cursor:pointer'
-      new mapboxgl.Marker({ element: el })
+      trailheadMarkerRef.current = new mapboxgl.Marker({ element: el })
         .setLngLat([trailheadLng, trailheadLat])
         .setPopup(new mapboxgl.Popup({ offset: 15 }).setHTML('<div style="font-size:12px;font-weight:600;padding:2px 0;">Trailhead</div>'))
         .addTo(map)
@@ -183,6 +184,8 @@ export function TrailMap({
     mapRef.current = map
 
     return () => {
+      trailheadMarkerRef.current?.remove()
+      trailheadMarkerRef.current = null
       map.remove()
       mapRef.current = null
     }
@@ -195,6 +198,26 @@ export function TrailMap({
     if (!map || !map.isStyleLoaded()) return
     addTrailLayers(map)
   }, [addTrailLayers])
+
+  // Update trailhead marker when coords change
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !map.isStyleLoaded()) return
+
+    if (trailheadMarkerRef.current) {
+      trailheadMarkerRef.current.remove()
+      trailheadMarkerRef.current = null
+    }
+
+    if (trailheadLat != null && trailheadLng != null) {
+      const el = document.createElement('div')
+      el.style.cssText = 'width:16px;height:16px;background:#16a34a;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);cursor:pointer'
+      trailheadMarkerRef.current = new mapboxgl.Marker({ element: el })
+        .setLngLat([trailheadLng, trailheadLat])
+        .setPopup(new mapboxgl.Popup({ offset: 15 }).setHTML('<div style="font-size:12px;font-weight:600;padding:2px 0;">Trailhead</div>'))
+        .addTo(map)
+    }
+  }, [trailheadLat, trailheadLng])
 
   return (
     <div
