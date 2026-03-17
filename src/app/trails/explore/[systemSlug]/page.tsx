@@ -41,12 +41,12 @@ export default async function SystemDetailPage({ params }: Props) {
 
   // Trails with GPS data for the map
   const trailsWithGps = system.trails
-    .filter((t) => t.gpsTrack?.simplifiedTrack)
+    .filter((t) => t.gpsTrack?.trackData)
     .map((t) => ({
       id: t.id,
       name: t.name,
       slug: t.slug,
-      trackData: t.gpsTrack!.simplifiedTrack!,
+      trackData: t.gpsTrack!.trackData!,
       difficulty: t.physicalDifficulty,
     }))
 

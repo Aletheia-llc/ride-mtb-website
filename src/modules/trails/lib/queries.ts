@@ -71,7 +71,7 @@ export async function getTrailSystemBySlug(slug: string) {
           gpsTrack: {
             select: {
               id: true,
-              simplifiedTrack: true,
+              trackData: true,
               boundsNeLat: true,
               boundsNeLng: true,
               boundsSwLat: true,

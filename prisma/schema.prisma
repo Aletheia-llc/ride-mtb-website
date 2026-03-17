@@ -97,6 +97,7 @@ model User {
   shops           Shop[]
   shopReviews     ShopReview[]
   reviewHelpfulVotes ReviewHelpful[]
+  trailReviewHelpful TrailReviewHelpful[]
   coachProfile    CoachProfile?
   creatorProfile  CreatorProfile?
   quizSessions          QuizSession[]
@@ -608,11 +609,30 @@ model TrailSystem {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   regionId      String?
+  coverImageUrl     String?
+  phone             String?
+  trailheadLat      Float?
+  trailheadLng      Float?
+  trailheadNotes    String?
+  parkingInfo       String?
+  seasonalNotes     String?
+  passRequired      Boolean   @default(false)
+  dogFriendly       Boolean   @default(true)
+  eMtbAllowed       Boolean   @default(true)
+  isFeatured        Boolean   @default(false)
+  totalVertFt       Float     @default(0)
+  averageRating     Float?
+  reviewCount       Int       @default(0)
+  rideCount         Int       @default(0)
+  importSource      String?
+  externalId        String?
+  submittedByUserId String?
   trails        Trail[]
   region        TrailRegion? @relation(fields: [regionId], references: [id])
   pois          PointOfInterest[]
   rideLogs      RideLog[]
   creatorVideos   CreatorVideo[]
+  photos            TrailSystemPhoto[]
 
   @@index([city, state])
   @@index([latitude, longitude])
@@ -639,6 +659,25 @@ model Trail {
   updatedAt         DateTime      @updatedAt
   currentCondition      ConditionType?
   conditionReportedAt   DateTime?
+  difficultyLabel       String?
+  hasGpsTrack           Boolean   @default(false)
+  features              String[]
+  surfaceType           String?
+  direction             String?
+  averageRating         Float?
+  avgFlowRating         Float?
+  avgSceneryRating      Float?
+  avgTechnicalRating    Float?
+  avgMaintenanceRating  Float?
+  reviewCount           Int       @default(0)
+  rideCount             Int       @default(0)
+  lastRiddenAt          DateTime?
+  avgRideSpeedMph       Float?
+  avgRideDurationMin    Float?
+  gpsContributionCount  Int       @default(0)
+  importSource          String?
+  externalId            String?
+  submittedByUserId     String?
   system            TrailSystem   @relation(fields: [trailSystemId], references: [id])
   gpsTrack          TrailGpsTrack?
   reviews           TrailReview[]
@@ -646,6 +685,7 @@ model Trail {
   conditionReports  ConditionReport[]
   pois              PointOfInterest[]
   rideLogs          RideLog[]
+  photos            TrailPhoto[]
 
   @@index([trailSystemId, status])
   @@index([trailType])
@@ -661,7 +701,10 @@ model TrailGpsTrack {
   boundsSwLat      Float?
   boundsSwLng      Float?
   pointCount       Int      @default(0)
-  simplifiedTrack  String?  @db.Text
+  trackData        String?  @db.Text
+  elevationProfile String?  @db.Text
+  contributorCount Int      @default(1)
+  boundsJson       String?  @db.Text
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   trail            Trail    @relation(fields: [trailId], references: [id], onDelete: Cascade)
@@ -681,9 +724,15 @@ model TrailReview {
   comment         String?  @db.Text
   rideDate        DateTime?
   bikeType        String?
+  title           String?
+  body            String?  @db.Text
+  helpfulCount    Int      @default(0)
+  isHidden        Boolean  @default(false)
+  reportCount     Int      @default(0)
   createdAt       DateTime @default(now())
   trail           Trail    @relation(fields: [trailId], references: [id])
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  helpfulVotes    TrailReviewHelpful[]
 
   @@unique([trailId, userId])
   @@index([trailId, createdAt])
@@ -743,6 +792,10 @@ model PointOfInterest {
   lat             Float
   lng             Float
   distanceAlongMi Float?
+  photoUrl          String?
+  videoUrl          String?
+  isApproved        Boolean  @default(true)
+  submittedByUserId String?
   createdAt       DateTime @default(now())
   trail           Trail?       @relation(fields: [trailId], references: [id], onDelete: Cascade)
   trailSystem     TrailSystem? @relation(fields: [trailSystemId], references: [id], onDelete: Cascade)
@@ -759,10 +812,62 @@ model TrailRegion {
   country     String        @default("US")
   lat         Float?
   lng         Float?
+  coverImageUrl     String?
+  boundsNeLat       Float?
+  boundsNeLng       Float?
+  boundsSwLat       Float?
+  boundsSwLng       Float?
+  trailSystemCount  Int     @default(0)
+  totalTrailCount   Int     @default(0)
   systems     TrailSystem[]
   createdAt   DateTime      @default(now())
 
   @@map("trail_regions")
+}
+
+model TrailPhoto {
+  id          String   @id @default(cuid())
+  trailId     String
+  url         String
+  filename    String?
+  caption     String?
+  sortOrder   Int      @default(0)
+  isCover     Boolean  @default(false)
+  latitude    Float?
+  longitude   Float?
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+  trail       Trail    @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@index([trailId, sortOrder])
+  @@map("trail_photos")
+}
+
+model TrailSystemPhoto {
+  id            String      @id @default(cuid())
+  trailSystemId String
+  url           String
+  filename      String?
+  caption       String?
+  sortOrder     Int         @default(0)
+  isCover       Boolean     @default(false)
+  uploadedBy    String?
+  createdAt     DateTime    @default(now())
+  trailSystem   TrailSystem @relation(fields: [trailSystemId], references: [id], onDelete: Cascade)
+
+  @@index([trailSystemId, sortOrder])
+  @@map("trail_system_photos")
+}
+
+model TrailReviewHelpful {
+  id       String      @id @default(cuid())
+  reviewId String
+  userId   String
+  review   TrailReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@map("trail_review_helpful")
 }
 
 // ============================================================

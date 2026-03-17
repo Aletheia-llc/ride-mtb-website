@@ -56,7 +56,7 @@ export interface TrailDetail {
   }
   gpsTrack: {
     id: string
-    simplifiedTrack: string | null
+    trackData: string | null
     boundsNeLat: number | null
     boundsNeLng: number | null
     boundsSwLat: number | null

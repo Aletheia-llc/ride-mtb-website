@@ -48,14 +48,14 @@ export default async function TrailDetailPage({ params }: Props) {
   ])
 
   // Prepare map data if GPS track exists
-  const hasGpsData = !!trail.gpsTrack?.simplifiedTrack
+  const hasGpsData = !!trail.gpsTrack?.trackData
   const mapTrails = hasGpsData
     ? [
         {
           id: trail.id,
           name: trail.name,
           slug: trail.slug,
-          trackData: trail.gpsTrack!.simplifiedTrack!,
+          trackData: trail.gpsTrack!.trackData!,
           difficulty: trail.physicalDifficulty,
         },
       ]
@@ -109,7 +109,7 @@ export default async function TrailDetailPage({ params }: Props) {
               Elevation Profile
             </h3>
             <ElevationProfile
-              trackData={trail.gpsTrack!.simplifiedTrack!}
+              trackData={trail.gpsTrack!.trackData!}
             />
           </Card>
         )}
