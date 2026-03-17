@@ -1,3 +1,13 @@
+export const SYSTEM_TYPE_LABELS: Record<string, string> = {
+  trail_network: 'Trail Network',
+  bike_park: 'Bike Park',
+  ski_resort: 'Ski Resort',
+  open_space: 'Open Space',
+  urban_park: 'Urban Park',
+  skills_park: 'Skills Park',
+  private_property: 'Private',
+}
+
 export function getDifficultyColor(physical: number | null | undefined, technical: number | null | undefined): string {
   const d = Math.max(physical ?? 1, technical ?? 1)
   if (d <= 2) return '#22c55e'   // green — easy
