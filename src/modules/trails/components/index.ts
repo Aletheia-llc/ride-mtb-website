@@ -30,3 +30,10 @@ export { ElevationProfile } from './ElevationProfile'
 // Pre-wrapped dynamic imports (safe for Server Components)
 export { TrailMapDynamic } from './TrailMapDynamic'
 export { ElevationProfileDynamic } from './ElevationProfileDynamic'
+
+export { MapStyleSelector } from './MapStyleSelector'
+export type { MapStyle } from './MapStyleSelector'
+export { TrailLines } from './TrailLines'
+export type { TrailLineData } from './TrailLines'
+export { SystemClusterMap } from './SystemClusterMap'
+export { SystemClusterMapDynamic } from './SystemClusterMapDynamic'

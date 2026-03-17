@@ -153,6 +153,7 @@ export function TrailMap({
     })
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+    map.addControl(new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), 'top-right')
 
     map.on('load', () => {
       addTrailLayers(map)
