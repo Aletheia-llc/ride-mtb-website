@@ -12,15 +12,63 @@
 
 Done first. All other workstreams depend on it.
 
+### New `EventStatus` enum
+
+The monolith's shared `ContentStatus` enum (`draft`, `published`, `archived`) does not cover the event lifecycle. Add a dedicated `EventStatus` enum and migrate `Event.status` from `ContentStatus` to `EventStatus`:
+
+```prisma
+enum EventStatus {
+  draft
+  pending_review
+  published
+  cancelled
+  postponed
+  completed
+}
+```
+
+The `Event.status` field type changes from `ContentStatus @default(published)` to `EventStatus @default(published)`. `CoachingClinic.status` also uses `EventStatus`. A Prisma migration with a `ALTER TYPE` + `ALTER COLUMN` handles this.
+
+### `EventType` enum — merged superset
+
+The monolith currently has 7 values (`group_ride`, `race`, `skills_clinic`, `trail_work`, `social`, `demo_day`, `other`). The standalone repo has 14 different values. The new enum is an **explicit merged superset** that preserves all existing monolith values (so existing rows remain valid) while adding new ones from the standalone repo:
+
+```prisma
+enum EventType {
+  // Preserved from monolith (existing rows use these)
+  group_ride
+  race           // legacy — new submissions should use race_* variants
+  skills_clinic  // legacy — new submissions should use clinic or camp
+  trail_work
+  social
+  demo_day
+  other
+
+  // Added from standalone repo
+  race_xc
+  race_enduro
+  race_dh
+  race_marathon
+  race_other
+  clinic
+  camp
+  expo
+  bike_park_day
+  virtual_challenge
+}
+```
+
+**No data migration required** — existing rows keep their current `EventType` values (`race`, `skills_clinic`, etc.). The legacy values are deprecated for new submissions only (enforced in the submit form via UI, not DB constraint). This avoids a breaking migration against production data.
+
 ### Event model additions
 
-The monolith's `Event` model has a partial port (noted by `// New fields from race calendar port` comment). Complete the migration by adding all remaining fields from the standalone repo:
+Add all remaining fields from the standalone repo. The monolith already has `latitude Float?`, `longitude Float?`, `eventTypeEnum`, `organizerId`, `registrationUrl`, `registrationDeadline`, `costCents`, `isFree`, `isFeatured`, `resultsUrl`, `resultsPosted`. Remove `eventTypeEnum` (superseded by the expanded `EventType`) and `costCents` (superseded by `isFree`/`registrationUrl`). Add the truly missing fields:
 
 ```prisma
 model Event {
-  // existing fields...
+  // existing fields kept as-is...
 
-  // Location (structured)
+  // Location (structured — lat/longitude already exist as Float?)
   venueName            String?
   address              String?
   city                 String?
@@ -45,53 +93,26 @@ model Event {
   timezone             String?
   isAllDay             Boolean  @default(false)
 
-  // Registration
-  registrationDeadline DateTime?
-
-  // Engagement (denormalized counters)
+  // Engagement counters (denormalized)
   viewCount            Int      @default(0)
   commentCount         Int      @default(0)
   rsvpCount            Int      @default(0)
 
-  // Results
-  resultsUrl           String?
-  resultsPosted        Boolean  @default(false)
-
-  // External import tracking
+  // External import tracking (app-level dedup only, no DB unique constraint)
   importSource         String?
   externalId           String?
 
-  // Cleanup: remove eventTypeEnum (conflicting partial port field)
+  // status field type changes from ContentStatus to EventStatus (see above)
 }
 ```
 
-Remove the `eventTypeEnum` and raw `costCents` fields added during the incomplete port — superseded by `isFree`/`registrationUrl` pattern from the standalone repo.
+**Float vs Decimal:** `Event.latitude`/`longitude` remain `Float?` (already in prod). `UserEventPreference` uses `Decimal @db.Decimal(10, 7)` to match the standalone repo. `CoachingClinic` uses `Float?` for consistency with `Event`. This inconsistency is intentional — `Float` is sufficient for map pin precision and avoids a costly column migration on the events table.
 
-### EventType enum expansion
+**Cost handling:** `Event` uses `isFree Boolean` + `registrationUrl String?` (no in-platform cost field — registration is external). `CoachingClinic` uses `costCents Int?` + `isFree Boolean` because clinics are coach-priced and may eventually support in-platform display. This difference is intentional.
 
-Expand from 7 → 14 types to match the standalone repo:
+**Import dedup:** Deduplication by `[importSource, externalId]` is enforced at the application level in `dedup.ts` (query before insert), not via a DB unique constraint. The reason: imported events may have missing `externalId` values, and a partial unique constraint would be complex. A `@@index([importSource, externalId])` is added for query performance.
 
-```prisma
-enum EventType {
-  group_ride
-  race_xc
-  race_enduro
-  race_dh
-  race_marathon
-  race_other
-  skills_clinic
-  camp
-  clinic
-  expo
-  trail_work
-  virtual_challenge
-  demo_day
-  social
-  other
-}
-```
-
-### UserEventPreference (new model)
+### `UserEventPreference` (new model)
 
 ```prisma
 model UserEventPreference {
@@ -99,7 +120,7 @@ model UserEventPreference {
   userId          String   @unique
   homeLatitude    Decimal? @db.Decimal(10, 7)
   homeLongitude   Decimal? @db.Decimal(10, 7)
-  searchRadius    Int      @default(100)
+  searchRadius    Int      @default(100)       // km
   followedTypes   String[] @default([])
   newEventAlerts  Boolean  @default(true)
   reminderDays    Int      @default(3)
@@ -110,31 +131,44 @@ model UserEventPreference {
 }
 ```
 
-### CoachProfile additions
+### `OrganizerProfile` → field alignment
 
-Add geocoded coordinates to the existing `CoachProfile` model:
+The monolith uses `OrganizerProfile` (table `organizer_profiles`) with field `orgName`. The standalone repo uses `EventOrganizer` with field `name`. **We keep the monolith model name `OrganizerProfile`** but align the fields. `orgName` is renamed to `name` via a Prisma migration (rename column, update all query references). Add missing fields:
+
+```prisma
+model OrganizerProfile {
+  // orgName renamed to name
+  name           String      // renamed from orgName
+  description    String?     // added (was missing)
+  contactEmail   String?     // added
+  socialLinks    String[]    @default([])  // added
+  isActive       Boolean     @default(true) // added (existing records default true)
+  // all other existing fields retained
+}
+```
+
+### `CoachProfile` additions
 
 ```prisma
 model CoachProfile {
   // existing fields...
   latitude   Float?
   longitude  Float?
-  // existing relations...
   clinics    CoachingClinic[]
 }
 ```
 
-Existing coaches are batch-geocoded from their `location` string via a one-time migration script.
+Existing coaches are batch-geocoded from their `location` string via a one-time script (`scripts/geocode-coaches.ts`). New coaches are geocoded on profile save in `createOrganizerProfile` action.
 
-### CoachingClinic (new model)
+### `CoachingClinic` (new model)
 
 ```prisma
 model CoachingClinic {
-  id          String        @id @default(cuid())
+  id          String      @id @default(cuid())
   coachId     String
-  slug        String        @unique
+  slug        String      @unique
   title       String
-  description String?       @db.Text
+  description String?     @db.Text
   startDate   DateTime
   endDate     DateTime?
   location    String
@@ -142,12 +176,12 @@ model CoachingClinic {
   longitude   Float?
   capacity    Int?
   costCents   Int?
-  isFree      Boolean       @default(false)
+  isFree      Boolean     @default(false)
   calcomLink  String?
-  status      ContentStatus @default(published)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  coach       CoachProfile  @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  status      EventStatus @default(published)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  coach       CoachProfile @relation(fields: [coachId], references: [id], onDelete: Cascade)
 
   @@index([startDate, status])
   @@index([latitude, longitude])
@@ -155,25 +189,27 @@ model CoachingClinic {
 }
 ```
 
-### OrganizerProfile additions
+### Environment variables
 
-Add missing fields to align with the standalone repo's richer organizer model:
+Add `MAPBOX_ACCESS_TOKEN` (server-side secret, distinct from `NEXT_PUBLIC_MAPBOX_TOKEN`) for server-side geocoding in `/api/geocode`, the import pipeline, and `scripts/geocode-coaches.ts`. The public token must not be used server-side in API routes. Add to Vercel env vars and `.env.local`.
 
-```prisma
-model OrganizerProfile {
-  // existing fields...
-  description    String?
-  contactEmail   String?
-  socialLinks    String[] @default([])
-  isActive       Boolean  @default(true)
-}
+### Cron jobs
+
+Add 3 new cron jobs to `vercel.json`:
+
+```json
+{ "path": "/api/cron/events/reminders",     "schedule": "0 9 * * *" },
+{ "path": "/api/cron/events/complete-past",  "schedule": "0 0 * * *" },
+{ "path": "/api/cron/events/geocode",        "schedule": "0 2 * * *" }
 ```
+
+This brings the total cron count to 9. The project is on Vercel Pro (supports up to 40 crons). All cron routes require `Authorization: Bearer ${CRON_SECRET}` header.
 
 ---
 
 ## Workstream 2 — UnifiedMap Component
 
-A new shared module at `src/modules/map/`. Not owned by trails, events, or coaching — it's platform-level infrastructure.
+A new shared module at `src/modules/map/`. Not owned by trails, events, or coaching — it is platform-level infrastructure.
 
 ### Component API
 
@@ -187,66 +223,80 @@ A new shared module at `src/modules/map/`. Not owned by trails, events, or coach
 
 - `defaultLayers` — which layers are active on mount
 - `availableLayers` — which layers appear in the toggle panel
-- Each page passes its own defaults; users can freely toggle any available layer
+- Each page passes its own defaults; users can freely toggle any available layer on or off
 
 ### File structure
 
 ```
 src/modules/map/
   components/
-    UnifiedMap.tsx          # Mapbox init, style switcher, layer orchestration
-    LayerToggle.tsx         # floating panel with per-layer checkboxes
+    UnifiedMap.tsx          # Mapbox init, layer orchestration, exports dynamic wrapper
+    MapStyleSelector.tsx    # extracted from existing trails MapStyleSelector (renamed from SystemClusterMap's inline switcher — same name kept)
+    LayerToggle.tsx         # floating panel with per-layer checkboxes + color swatches
     layers/
-      TrailsLayer.tsx       # ports existing SystemClusterMap logic
-      EventsLayer.tsx       # event pins, color-coded by EventType
-      CoachesLayer.tsx      # coach profile pins + clinic session pins
+      TrailsLayer.tsx       # fetches /api/trails/map, renders trail system cluster pins
+      EventsLayer.tsx       # fetches /api/events/map, renders event pins color-coded by type
+      CoachesLayer.tsx      # fetches /api/coaching/map, renders coach + clinic pins
     popups/
-      TrailSystemPopup.tsx  # trail system popup (name, trail count, link)
-      EventPopup.tsx        # event popup (title, date, RSVP count, link)
+      TrailSystemPopup.tsx  # name, trail count, link to /trails/explore/[slug]
+      EventPopup.tsx        # title, date, discipline badge, RSVP count, link to event detail
       CoachPopup.tsx        # two-stage expandable (see below)
   hooks/
-    useMapLayers.ts         # layer visibility state (Set<LayerName>)
+    useMapLayers.ts         # layer visibility state — Set<LayerName>, persisted to localStorage
   types/
-    index.ts                # LayerName, MapPin, etc.
-  index.ts
+    index.ts                # LayerName = 'trails' | 'events' | 'coaching'; MapPin types
+  index.ts                  # exports UnifiedMapDynamic (next/dynamic, ssr: false)
 ```
+
+### Data fetching per layer (client-side)
+
+All three layers are client components that fetch their own data via API routes after mount. This avoids prop-drilling from server components into the client map and supports live toggling.
+
+| Layer | API endpoint | Returns |
+|-------|-------------|---------|
+| TrailsLayer | `GET /api/trails/map` | `{ id, slug, name, city, state, latitude, longitude, trailCount }[]` |
+| EventsLayer | `GET /api/events/map` | `{ id, slug, title, startDate, eventType, latitude, longitude, rsvpCount }[]` |
+| CoachesLayer | `GET /api/coaching/map` | `{ coaches: CoachPin[], clinics: ClinicPin[] }` |
+
+`/api/trails/map` is a new lightweight endpoint that returns only what the map needs (no GPS track data). The existing `/trails/map` server component currently fetches via `getTrailSystems({})` — it is updated to use this new endpoint pattern so the `TrailsLayer` client component can self-fetch.
 
 ### Layer details
 
 **TrailsLayer**
-- Ports the existing `SystemClusterMap` logic. Trail system pins clustered at low zoom.
-- Pin click → `/trails/explore/[slug]`
-- Pin color: single green (existing behavior)
+- Trail system cluster pins (one pin per system, clustered at low zoom)
+- Green pins, existing cluster behavior
+- Click → popup with system name, trail count, "Explore Trails" link
 
 **EventsLayer**
-- Event pins fetched from `/api/events/map` (returns published future events with lat/lng)
-- Clustered at low zoom, expand on zoom in
-- Pin color coded by EventType discipline:
-  - Races (xc/enduro/dh/marathon/other): red family (`#ef4444`)
-  - Group rides: green (`#22c55e`)
-  - Clinics/camps: blue (`#3b82f6`)
-  - Trail work: amber (`#f59e0b`)
-  - Social/expo/demo: purple (`#a855f7`)
-  - Virtual/other: gray (`#6b7280`)
-- Popup: event title, date, discipline badge, RSVP count, link to event detail
+- Event pins fetched from `/api/events/map` (published future events with lat/lng only — events without coordinates are excluded)
+- Clustered at low zoom
+- Pin color by `EventType` discipline group:
+  - Races (`race`, `race_xc`, `race_enduro`, `race_dh`, `race_marathon`, `race_other`): red `#ef4444`
+  - Group rides: green `#22c55e`
+  - Clinics/camps/skills (`clinic`, `camp`, `skills_clinic`): blue `#3b82f6`
+  - Trail work: amber `#f59e0b`
+  - Social/expo/demo/bike_park (`social`, `expo`, `demo_day`, `bike_park_day`): purple `#a855f7`
+  - Virtual/other: gray `#6b7280`
+- Popup: title, date, discipline badge (matching color), RSVP count, "View Event" link
 
 **CoachesLayer**
-- Two pin types within one layer toggle:
-  - Coach profile pins: coach's general location. Green circle marker with coach avatar.
-  - Clinic session pins: specific date/location events. Blue square marker.
-- Coach popup is two-stage expandable:
-  - **Compact:** name, top 2 specialties, hourly rate
-  - **Expanded** (click "More info"): bio excerpt, certifications, "Book a Session" → `calcomLink`
-- Clinic popup: title, date, coach name, cost/free badge, remaining capacity, "Book This Clinic" → `calcomLink`
+- Two Mapbox sources within one layer toggle:
+  - `coach-profiles` source: coach location pins (green circle marker)
+  - `coaching-clinics` source: clinic session pins (blue square marker)
+- **CoachPopup** — two-stage expandable:
+  - Compact: name, top 2 specialties, hourly rate
+  - Expanded (click "More info"): bio excerpt, certifications, "Book a Session" → `calcomLink`
+- **ClinicPopup**: title, date, coach name, cost/free badge, remaining capacity, "Book This Clinic" → `calcomLink`
 
 **LayerToggle**
 - Floating panel, top-left of map
-- One checkbox row per available layer with color swatch and label
-- Persisted to `localStorage` so user preference survives navigation
+- One row per available layer: color swatch + label + checkbox
+- Toggle state persisted to `localStorage` key `ride-mtb-map-layers` — survives page navigation
 
-### Style switcher
-
-Reuses the existing Standard/Satellite/Terrain/3D/3D Sat switcher from the trails map — extracted into a shared `MapStyleSwitcher` component inside this module.
+**MapStyleSelector**
+- Extracted from the existing trail map's inline style switcher buttons (Standard/Satellite/Terrain/3D/3D Sat)
+- Lives in `src/modules/map/components/MapStyleSelector.tsx`
+- The existing `src/modules/trails/components/` version is removed and replaced with an import from the map module
 
 ### Map pages using UnifiedMap
 
@@ -256,7 +306,15 @@ Reuses the existing Standard/Satellite/Terrain/3D/3D Sat switcher from the trail
 | `/events/map` | `['events']` | `['trails', 'events', 'coaching']` |
 | `/coaching/map` | `['coaching']` | `['trails', 'events', 'coaching']` |
 
-The existing `/trails/map` page is updated to use `UnifiedMap` instead of `SystemClusterMapDynamic`.
+The existing `/trails/map` page is updated to use `<UnifiedMapDynamic>` instead of `<SystemClusterMapDynamic>`. `SystemClusterMap.tsx` is deleted after migration.
+
+### New API endpoints for map data
+
+| Route | Description |
+|-------|-------------|
+| `GET /api/trails/map` | Published trail systems with lat/lng (lightweight, map-only) |
+| `GET /api/events/map` | Published future events with lat/lng and eventType |
+| `GET /api/coaching/map` | Active coach profiles with lat/lng + upcoming clinics with lat/lng |
 
 ---
 
@@ -268,10 +326,10 @@ Full port of the standalone `ride-mtb-events-race-calendar` repo into `src/modul
 
 | Route | Description |
 |-------|-------------|
-| `/events/map` | Full-screen `UnifiedMap`, `defaultLayers={['events']}` |
+| `/events/map` | Full-screen `UnifiedMap`, `defaultLayers={['events']}`, `availableLayers` all three |
 | `/events/search` | Dedicated search with URL params, cursor pagination |
-| `/events/near-me` | Geolocation prompt → events within user's search radius (uses `UserEventPreference`) |
-| `/events/my-events` | User's RSVPs grouped into upcoming/past, countdown badges |
+| `/events/near-me` | Geolocation prompt → events within user's search radius (`UserEventPreference`) |
+| `/events/my-events` | User's RSVPs grouped into upcoming/past with countdown badges |
 | `/events/preferences` | Home location, search radius, followed disciplines, reminder days |
 | `/events/submit` | User submission form → `status: pending_review` |
 | `/admin/submissions` | Admin review queue for user-submitted events |
@@ -282,17 +340,17 @@ Full port of the standalone `ride-mtb-events-race-calendar` repo into `src/modul
 
 **Discovery**
 - `EventFilterBar` — filter by type, difficulty, free/paid, date range
-- `EventSplitView` — desktop: list + map side-by-side; mobile: tabbed
+- `EventSplitView` — desktop: list + `UnifiedMap` (with `defaultLayers={['events']}`, `availableLayers={['events']}`) side-by-side; mobile: tabbed list/map. Uses `UnifiedMap` directly — no circular dependency since the map module has no dependency on events.
 - `NearMePrompt` — geolocation permission request UI
 - `SearchBar` — search input with debounce
 
 **Event detail (richer than current)**
-- `EventHero` — full-width cover image + title + key metadata
+- `EventHero` — full-width cover image, title, key metadata
 - `EventInfoGrid` — 2-col grid: date/time/location | registration/results/organizer
-- `EventTypeBadge` — color-coded discipline label (matches EventsLayer colors)
+- `EventTypeBadge` — color-coded discipline label (same color mapping as `EventsLayer` pins)
 - `DifficultyBadge` — difficulty level indicator
 - `IcalDownload` — download `.ics` file
-- `RelatedEvents` — "Similar events" row
+- `RelatedEvents` — "Similar events" row (same `eventType`, upcoming)
 - `ResultsBanner` — shown when `resultsPosted = true`
 - `AttendeeRow` — avatar stack + RSVP count
 
@@ -302,10 +360,10 @@ Full port of the standalone `ride-mtb-events-race-calendar` repo into `src/modul
 
 **Submission**
 - `SubmitEventForm` — full submission form
-- `LocationPicker` — address autocomplete (Mapbox geocoding) + map preview (reused by coaching clinic form)
+- `LocationPicker` — address autocomplete (Mapbox geocoding via `NEXT_PUBLIC_MAPBOX_TOKEN`) + map preview. Reused by coaching clinic form.
 
 **Admin**
-- `SubmissionQueue` — pending review list with approve/reject actions
+- `SubmissionQueue` — pending_review list with approve/reject actions
 - `ImportManager` — trigger import, view dedup results
 - `OrganizerManager` — verify badge, block organizer
 
@@ -316,7 +374,7 @@ Full port of the standalone `ride-mtb-events-race-calendar` repo into `src/modul
 | `/api/events/search` | GET | Full-text search, cursor pagination |
 | `/api/events/near` | GET | Haversine from user home coords + radius |
 | `/api/events/map` | GET | Published future events with lat/lng for EventsLayer |
-| `/api/geocode` | POST | Reverse geocode via Mapbox (used by LocationPicker + import) |
+| `/api/geocode` | POST | Reverse geocode via Mapbox (`MAPBOX_ACCESS_TOKEN`, server-side secret) |
 | `/api/import` | POST | Trigger BikeReg/USAC import pipeline |
 | `/api/cron/events/reminders` | GET | Send reminder notifications, auth via `CRON_SECRET` |
 | `/api/cron/events/complete-past` | GET | Mark past events as `completed` |
@@ -325,45 +383,50 @@ Full port of the standalone `ride-mtb-events-race-calendar` repo into `src/modul
 ### New server actions (in `src/modules/events/actions/`)
 
 - `preferences.ts` — `getUserPreferences`, `updateUserPreferences`
-- `submit.ts` — `submitEvent` (creates pending_review event + admin notification)
-- `ical.ts` — `generateEventIcal` (returns `.ics` file content)
-- Expand `admin.ts` — `approveSubmission`, `rejectSubmission`, `verifyOrganizer`
+- `submit.ts` — `submitEvent` (creates `pending_review` event + admin notification)
+- `ical.ts` — `generateEventIcal` (returns `.ics` string)
+- `admin.ts` (new file — does not exist yet) — `approveSubmission`, `rejectSubmission`, `verifyOrganizer`
 
 ### Import pipeline (`src/modules/events/lib/import/`)
 
-- `bikereg.ts` — BikeReg event scraper/importer
+- `bikereg.ts` — BikeReg event scraper/importer (sample data until API access)
 - `usac.ts` — USAC race importer
-- `dedup.ts` — deduplication by `[importSource, externalId]` unique constraint
-- Imported events auto-geocoded via `/api/cron/events/geocode`
+- `dedup.ts` — application-level dedup: query by `[importSource, externalId]` before insert; no DB unique constraint (see schema section)
 
 ---
 
 ## Workstream 4 — Coaching Clinics
 
+### New API route
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/api/coaching/map` | GET | Active coach profiles with lat/lng + upcoming clinics with lat/lng. Returns `{ coaches: { id, name, latitude, longitude, specialties, hourlyRate, calcomLink }[], clinics: { id, slug, title, startDate, latitude, longitude, costCents, isFree, calcomLink, coachName }[] }` |
+
 ### New pages
 
 | Route | Description |
 |-------|-------------|
-| `/coaching/map` | Full-screen `UnifiedMap`, `defaultLayers={['coaching']}` |
+| `/coaching/map` | Full-screen `UnifiedMap`, `defaultLayers={['coaching']}`, all layers available |
 | `/coaching/clinics` | Browse upcoming clinics, filterable by specialty/location |
-| `/coaching/clinics/[slug]` | Clinic detail: description, date, coach info, cost, booking |
+| `/coaching/clinics/[slug]` | Clinic detail: description, date, coach info, cost, booking link |
 | `/coaching/dashboard/clinics` | Coach's clinic management list |
-| `/coaching/dashboard/clinics/new` | Create clinic form (reuses `LocationPicker`) |
+| `/coaching/dashboard/clinics/new` | Create clinic form (reuses `LocationPicker` from events) |
 | `/coaching/dashboard/clinics/[id]/edit` | Edit clinic |
 
-### New components (added to `src/modules/coaching/components/`)
+### New components (`src/modules/coaching/components/`)
 
-- `CoachingClinicCard` — compact card for list/browse view
+- `CoachingClinicCard` — compact card for list/browse view (title, date, location, cost, coach name)
 - `CoachingClinicForm` — create/edit form with `LocationPicker` + map preview
 - `ClinicList` — filterable, paginated clinic list
 
 ### Booking flow
 
-Clinics with a `calcomLink` → "Book This Clinic" button linking to Cal.com. No in-platform payment processing. If no Cal.com link, shows coach contact info instead.
+Clinics with `calcomLink` → "Book This Clinic" button linking to Cal.com. No in-platform payment. Clinics without a Cal.com link show coach contact info (email from `OrganizerProfile.contactEmail` or coach user email).
 
 ### Batch geocoding script
 
-One-time script (`scripts/geocode-coaches.ts`) that iterates all `CoachProfile` records with a non-null `location` string but null `latitude`/`longitude`, calls the Mapbox Geocoding API, and writes coordinates back. Run once after the migration, then new coaches are geocoded on profile save.
+`scripts/geocode-coaches.ts` — iterates all `CoachProfile` records with non-null `location` but null `latitude`/`longitude`, calls Mapbox Geocoding API (`MAPBOX_ACCESS_TOKEN`), writes coordinates back. Run once after migration. New coaches geocoded on profile save via server action.
 
 ---
 
@@ -371,17 +434,19 @@ One-time script (`scripts/geocode-coaches.ts`) that iterates all `CoachProfile` 
 
 ```
 User toggles EventsLayer ON
-  → useMapLayers updates Set<LayerName>
-  → UnifiedMap passes active layers to each layer component
-  → EventsLayer mounts, fetches /api/events/map
-  → Mapbox source + layer added with color-coded pins
-  → User clicks pin → EventPopup renders with event data
+  → useMapLayers updates Set<LayerName> (persisted to localStorage)
+  → UnifiedMap passes active layers down to layer components
+  → EventsLayer mounts, fetches GET /api/events/map
+  → Mapbox source + layer added with color-coded pins by eventType
+  → User clicks pin → EventPopup renders
+  → "View Event" → navigates to /events/[slug]
 
-User toggles CoachesLayer ON (same map, now showing all three)
-  → CoachesLayer mounts, fetches /api/coaching/map
-  → Two Mapbox sources: coach-profiles + coaching-clinics
-  → Two pin styles rendered simultaneously
-  → Click coach pin → CoachPopup (compact) → expand → booking link
+User toggles CoachesLayer ON (all three layers now active)
+  → CoachesLayer mounts, fetches GET /api/coaching/map
+  → Two Mapbox sources added: coach-profiles + coaching-clinics
+  → Two pin styles rendered simultaneously on same map
+  → Click coach pin → CoachPopup compact view
+  → Click "More info" → CoachPopup expanded view with booking link
 ```
 
 ---
@@ -389,10 +454,10 @@ User toggles CoachesLayer ON (same map, now showing all three)
 ## Out of Scope
 
 - In-platform payment processing for clinics (Cal.com handles this)
-- Real-time RSVP updates (WebSockets) — polling/revalidation sufficient
-- Email delivery for event notifications (DB notification records created; email integration is a future feature)
-- BikeReg/USAC live API access (import pipeline scaffolded but uses sample data until API keys obtained)
-- A standalone `/map` top-level route — each section keeps its own map page
+- Real-time RSVP updates (WebSockets) — server revalidation sufficient
+- Email delivery for event notifications (DB records created; email integration is a future feature)
+- BikeReg/USAC live API access (pipeline scaffolded but uses sample data)
+- A standalone top-level `/map` route — each section keeps its own map page
 
 ---
 
@@ -400,8 +465,10 @@ User toggles CoachesLayer ON (same map, now showing all three)
 
 1. `/events/map`, `/events/near-me`, `/events/my-events`, `/events/preferences`, `/events/submit` all functional
 2. `/coaching/map` and `/coaching/clinics` functional
-3. All three map pages use `UnifiedMap` — toggling all layers simultaneously works correctly
-4. Existing `/trails/map` page updated to use `UnifiedMap` with no regressions
+3. All three map pages (`/trails/map`, `/events/map`, `/coaching/map`) use `UnifiedMap` — toggling all layers simultaneously works correctly
+4. Existing `/trails/map` updated to use `UnifiedMap` with no visual regressions
 5. Admin submission queue, import UI, and organizer verification working
-6. Schema migration runs cleanly against production Supabase
-7. Existing events, trails, and coaching pages unaffected
+6. Schema migration runs cleanly against production Supabase (no broken rows from EventType expansion)
+7. `MAPBOX_ACCESS_TOKEN` server-side secret configured in Vercel and `.env.local`
+8. 3 new cron jobs registered in `vercel.json`
+9. Existing events, trails, and coaching pages unaffected
