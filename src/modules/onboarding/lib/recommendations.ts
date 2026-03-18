@@ -43,7 +43,7 @@ export async function getRecommendations(user: RecommendationInput) {
   // Community recommendation
   const firstInterest = user.interests[0]
   const communitySlug = firstInterest ? (INTEREST_TO_SLUG[firstInterest] ?? 'general-discussion') : 'general-discussion'
-  const community = await db.forumCategory.findFirst({
+  const community = await db.category.findFirst({
     where: { slug: communitySlug },
   })
 

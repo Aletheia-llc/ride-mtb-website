@@ -10,7 +10,7 @@ export function ProfileStats({ counts }: ProfileStatsProps) {
   const stats = [
     {
       label: 'Forum Posts',
-      value: counts.forumPosts,
+      value: counts.posts,
       icon: <MessageSquare className="h-5 w-5" />,
     },
     {

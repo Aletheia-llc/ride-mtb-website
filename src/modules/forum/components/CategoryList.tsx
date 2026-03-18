@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { Card } from '@/ui/components'
 import { MessageSquare } from 'lucide-react'
 import type { ForumCategory } from '@/modules/forum/types'
-import { formatRelativeTime } from '@/modules/forum/types'
 
 interface CategoryListProps {
   categories: ForumCategory[]
@@ -21,8 +20,6 @@ export function CategoryList({ categories }: CategoryListProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {categories.map((category) => {
-        const latestThread = category.threads[0] ?? null
-
         return (
           <Link
             key={category.id}
@@ -49,21 +46,9 @@ export function CategoryList({ categories }: CategoryListProps) {
               <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
                 <span className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
                   <MessageSquare className="h-3.5 w-3.5" />
-                  {category._count.threads} {category._count.threads === 1 ? 'thread' : 'threads'}
+                  {category._count.posts} {category._count.posts === 1 ? 'thread' : 'threads'}
                 </span>
-
-                {latestThread && (
-                  <span className="truncate text-xs text-[var(--color-text-muted)]">
-                    {formatRelativeTime(latestThread.createdAt)}
-                  </span>
-                )}
               </div>
-
-              {latestThread && (
-                <p className="mt-2 truncate text-xs text-[var(--color-text-muted)]">
-                  Latest: {latestThread.title}
-                </p>
-              )}
             </Card>
           </Link>
         )

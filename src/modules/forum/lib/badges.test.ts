@@ -2,89 +2,75 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/db/client', () => ({
   db: {
-    forumPost: {
-      count: vi.fn(),
-    },
-    forumThread: {
-      count: vi.fn(),
-    },
-    user: {
-      findUnique: vi.fn(),
-    },
-    forumUserBadge: {
-      upsert: vi.fn(),
-      findUnique: vi.fn(),
-    },
+    post: { count: vi.fn() },
+    comment: { count: vi.fn() },
+    badge: { findUnique: vi.fn() },
+    userBadge: { upsert: vi.fn() },
   },
 }))
 
 import { db } from '@/lib/db/client'
-import { checkAndGrantBadges } from './badges'
+import { checkAndAwardBadges } from './badges'
 
-describe('checkAndGrantBadges', () => {
+const mockDb = db as unknown as {
+  post: { count: ReturnType<typeof vi.fn> }
+  comment: { count: ReturnType<typeof vi.fn> }
+  badge: { findUnique: ReturnType<typeof vi.fn> }
+  userBadge: { upsert: ReturnType<typeof vi.fn> }
+}
+
+describe('checkAndAwardBadges', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('grants first-post badge when user has exactly 1 post', async () => {
-    vi.mocked(db.forumPost.count).mockResolvedValue(1)
-    vi.mocked(db.forumThread.count).mockResolvedValue(0)
-    vi.mocked(db.user.findUnique).mockResolvedValue({
-      id: 'user-1',
-      karma: 0,
-      createdAt: new Date(),
-    } as never)
-    vi.mocked(db.forumUserBadge.upsert).mockResolvedValue({} as never)
+  it('awards first-post badge when user has 1 post', async () => {
+    mockDb.post.count.mockResolvedValue(1)
+    mockDb.comment.count.mockResolvedValue(0)
+    mockDb.badge.findUnique.mockResolvedValue({ id: 'badge-1' })
+    mockDb.userBadge.upsert.mockResolvedValue({})
 
-    await checkAndGrantBadges('user-1', 'post')
+    await checkAndAwardBadges('user-1')
 
-    expect(db.forumUserBadge.upsert).toHaveBeenCalledWith(
+    expect(mockDb.userBadge.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId_badgeSlug: { userId: 'user-1', badgeSlug: 'first-post' } },
-        create: expect.objectContaining({ userId: 'user-1', badgeSlug: 'first-post' }),
+        where: { userId_badgeId: { userId: 'user-1', badgeId: 'badge-1' } },
       }),
     )
   })
 
-  it('does not grant first-post badge when user has 0 posts', async () => {
-    vi.mocked(db.forumPost.count).mockResolvedValue(0)
-    vi.mocked(db.forumThread.count).mockResolvedValue(0)
-    vi.mocked(db.user.findUnique).mockResolvedValue({
-      id: 'user-1',
-      karma: 0,
-      createdAt: new Date(),
-    } as never)
+  it('does not award badge when count is below threshold', async () => {
+    mockDb.post.count.mockResolvedValue(0)
+    mockDb.comment.count.mockResolvedValue(0)
+    mockDb.badge.findUnique.mockResolvedValue(null)
+    mockDb.userBadge.upsert.mockResolvedValue({})
 
-    await checkAndGrantBadges('user-1', 'post')
+    await checkAndAwardBadges('user-1')
 
-    const upsertCalls = vi.mocked(db.forumUserBadge.upsert).mock.calls
-    const firstPostCalls = upsertCalls.filter((call) => {
-      const arg = call[0] as { where?: { userId_badgeSlug?: { badgeSlug?: string } } }
-      return arg.where?.userId_badgeSlug?.badgeSlug === 'first-post'
-    })
-    expect(firstPostCalls).toHaveLength(0)
+    expect(mockDb.userBadge.upsert).not.toHaveBeenCalled()
   })
 
-  it('upsert is idempotent — calling twice with postCount=2 upserts first-post twice (DB unique constraint prevents duplication)', async () => {
-    vi.mocked(db.forumPost.count).mockResolvedValue(2)
-    vi.mocked(db.forumThread.count).mockResolvedValue(0)
-    vi.mocked(db.user.findUnique).mockResolvedValue({
-      id: 'user-1',
-      karma: 0,
-      createdAt: new Date(),
-    } as never)
-    vi.mocked(db.forumUserBadge.upsert).mockResolvedValue({} as never)
+  it('awards first-comment badge when user has 1 comment', async () => {
+    mockDb.post.count.mockResolvedValue(0)
+    mockDb.comment.count.mockResolvedValue(1)
+    mockDb.badge.findUnique.mockResolvedValue({ id: 'badge-comment-1' })
+    mockDb.userBadge.upsert.mockResolvedValue({})
 
-    // Call twice — upsert is idempotent at DB level
-    await checkAndGrantBadges('user-1', 'post')
-    await checkAndGrantBadges('user-1', 'post')
+    await checkAndAwardBadges('user-1')
 
-    // first-post badge condition (>= 1) is met for count=2, so upsert IS called
-    // The DB unique constraint (not app logic) prevents actual duplicates
-    const upsertCalls = vi.mocked(db.forumUserBadge.upsert).mock.calls
-    const firstPostCalls = upsertCalls.filter((call) => {
-      const arg = call[0] as { where?: { userId_badgeSlug?: { badgeSlug?: string } } }
-      return arg.where?.userId_badgeSlug?.badgeSlug === 'first-post'
-    })
-    // Called twice (once per checkAndGrantBadges call), DB handles idempotency
-    expect(firstPostCalls).toHaveLength(2)
+    expect(mockDb.userBadge.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId_badgeId: { userId: 'user-1', badgeId: 'badge-comment-1' } },
+      }),
+    )
+  })
+
+  it('skips award when badge does not exist in db', async () => {
+    mockDb.post.count.mockResolvedValue(10)
+    mockDb.comment.count.mockResolvedValue(0)
+    mockDb.badge.findUnique.mockResolvedValue(null)
+    mockDb.userBadge.upsert.mockResolvedValue({})
+
+    await checkAndAwardBadges('user-1')
+
+    expect(mockDb.userBadge.upsert).not.toHaveBeenCalled()
   })
 })

@@ -8,7 +8,7 @@ export async function joinForumCommunity(categoryId: string) {
   const user = await requireAuth()
   const userId = user.id
 
-  const category = await db.forumCategory.findUnique({
+  const category = await db.category.findUnique({
     where: { id: categoryId },
     select: { id: true, isGated: true, slug: true },
   })
@@ -16,15 +16,15 @@ export async function joinForumCommunity(categoryId: string) {
   if (!category) throw new Error('Community not found')
   if (!category.isGated) throw new Error('This is not a gated community')
 
-  await db.forumCommunityMembership.upsert({
+  await db.communityMembership.upsert({
     where: { userId_categoryId: { userId, categoryId } },
     create: { userId, categoryId },
     update: {},
   })
 
   // Recalculate from source of truth to prevent drift on duplicate joins
-  void db.forumCommunityMembership.count({ where: { categoryId } }).then((count) =>
-    db.forumCategory.update({ where: { id: categoryId }, data: { memberCount: count } })
+  void db.communityMembership.count({ where: { categoryId } }).then((count) =>
+    db.category.update({ where: { id: categoryId }, data: { memberCount: count } })
   ).catch(() => {})
 
   revalidatePath(`/forum/${category.slug}`)
@@ -36,20 +36,20 @@ export async function leaveForumCommunity(categoryId: string) {
   const user = await requireAuth()
   const userId = user.id
 
-  const category = await db.forumCategory.findUnique({
+  const category = await db.category.findUnique({
     where: { id: categoryId },
     select: { id: true, slug: true, memberCount: true },
   })
 
   if (!category) throw new Error('Community not found')
 
-  await db.forumCommunityMembership.deleteMany({
+  await db.communityMembership.deleteMany({
     where: { userId, categoryId },
   })
 
   // Recalculate from source of truth to prevent drift on double-leave
-  void db.forumCommunityMembership.count({ where: { categoryId } }).then((count) =>
-    db.forumCategory.update({ where: { id: categoryId }, data: { memberCount: count } })
+  void db.communityMembership.count({ where: { categoryId } }).then((count) =>
+    db.category.update({ where: { id: categoryId }, data: { memberCount: count } })
   ).catch(() => {})
 
   revalidatePath(`/forum/${category.slug}`)

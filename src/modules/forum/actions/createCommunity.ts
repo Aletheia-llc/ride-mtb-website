@@ -35,14 +35,14 @@ export async function createForumCommunity(formData: FormData) {
   if (!name) throw new Error('Name is required')
   if (!slug) throw new Error('Slug is required')
 
-  const existing = await db.forumCategory.findUnique({ where: { slug } })
+  const existing = await db.category.findUnique({ where: { slug } })
   if (existing) throw new Error('A category with that slug already exists')
 
   // Get max sortOrder so community appears at end
-  const maxSort = await db.forumCategory.aggregate({ _max: { sortOrder: true } })
+  const maxSort = await db.category.aggregate({ _max: { sortOrder: true } })
   const nextSort = (maxSort._max.sortOrder ?? 0) + 1
 
-  await db.forumCategory.create({
+  await db.category.create({
     data: {
       name,
       slug,

@@ -18,6 +18,8 @@ interface TrailMapProps {
   selectedTrailId?: string | null
   onTrailClick?: (slug: string) => void
   className?: string
+  trailheadLat?: number | null
+  trailheadLng?: number | null
 }
 
 const DEFAULT_CENTER: [number, number] = [-109.55, 38.58]
@@ -50,10 +52,14 @@ export function TrailMap({
   selectedTrailId = null,
   onTrailClick,
   className = '',
+  trailheadLat,
+  trailheadLng,
 }: TrailMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const hoveredIdRef = useRef<string | null>(null)
+  const prevTrailIdsRef = useRef<string[]>([])
+  const trailheadMarkerRef = useRef<mapboxgl.Marker | null>(null)
 
   // Store callback in ref so map event handlers always see latest
   const onTrailClickRef = useRef(onTrailClick)
@@ -61,9 +67,8 @@ export function TrailMap({
 
   const addTrailLayers = useCallback(
     (map: mapboxgl.Map) => {
-      // Remove old sources/layers from previous render
-      for (const trail of trails) {
-        const sourceId = `trail-${trail.id}`
+      // Remove layers/sources added in the previous render pass
+      for (const sourceId of prevTrailIdsRef.current) {
         if (map.getLayer(`${sourceId}-line`)) {
           map.removeLayer(`${sourceId}-line`)
         }
@@ -71,6 +76,8 @@ export function TrailMap({
           map.removeSource(sourceId)
         }
       }
+
+      const newIds: string[] = []
 
       for (const trail of trails) {
         const coords = parseTrackToCoords(trail.trackData)
@@ -129,7 +136,12 @@ export function TrailMap({
           const restore = trail.id === selectedTrailId ? 5 : 3
           map.setPaintProperty(layerId, 'line-width', restore)
         })
+
+        newIds.push(sourceId)
       }
+
+      // Record IDs for cleanup on the next call
+      prevTrailIdsRef.current = newIds
     },
     [trails, selectedTrailId],
   )
@@ -153,14 +165,27 @@ export function TrailMap({
     })
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+    map.addControl(new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), 'top-right')
 
     map.on('load', () => {
       addTrailLayers(map)
     })
 
+    if (trailheadLat != null && trailheadLng != null) {
+      const el = document.createElement('div')
+      el.className = 'trailhead-marker'
+      el.style.cssText = 'width:16px;height:16px;background:#16a34a;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);cursor:pointer'
+      trailheadMarkerRef.current = new mapboxgl.Marker({ element: el })
+        .setLngLat([trailheadLng, trailheadLat])
+        .setPopup(new mapboxgl.Popup({ offset: 15 }).setHTML('<div style="font-size:12px;font-weight:600;padding:2px 0;">Trailhead</div>'))
+        .addTo(map)
+    }
+
     mapRef.current = map
 
     return () => {
+      trailheadMarkerRef.current?.remove()
+      trailheadMarkerRef.current = null
       map.remove()
       mapRef.current = null
     }
@@ -173,6 +198,26 @@ export function TrailMap({
     if (!map || !map.isStyleLoaded()) return
     addTrailLayers(map)
   }, [addTrailLayers])
+
+  // Update trailhead marker when coords change
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !map.isStyleLoaded()) return
+
+    if (trailheadMarkerRef.current) {
+      trailheadMarkerRef.current.remove()
+      trailheadMarkerRef.current = null
+    }
+
+    if (trailheadLat != null && trailheadLng != null) {
+      const el = document.createElement('div')
+      el.style.cssText = 'width:16px;height:16px;background:#16a34a;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);cursor:pointer'
+      trailheadMarkerRef.current = new mapboxgl.Marker({ element: el })
+        .setLngLat([trailheadLng, trailheadLat])
+        .setPopup(new mapboxgl.Popup({ offset: 15 }).setHTML('<div style="font-size:12px;font-weight:600;padding:2px 0;">Trailhead</div>'))
+        .addTo(map)
+    }
+  }, [trailheadLat, trailheadLng])
 
   return (
     <div

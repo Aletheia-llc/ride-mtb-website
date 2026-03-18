@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
-import { getBookmarkedThreads } from '@/modules/forum/lib/queries'
+import { getBookmarkedPosts } from '@/modules/forum/lib/queries'
 // eslint-disable-next-line no-restricted-imports
 import { ForumThreadCard } from '@/modules/forum/components/ForumThreadCard'
 // eslint-disable-next-line no-restricted-imports
@@ -19,7 +19,7 @@ export default async function ForumBookmarksPage() {
   const session = await auth()
   if (!session?.user?.id) redirect('/signin?callbackUrl=/forum/bookmarks')
 
-  const threads = await getBookmarkedThreads(session.user.id)
+  const threads = await getBookmarkedPosts(session.user.id)
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
@@ -50,7 +50,7 @@ export default async function ForumBookmarksPage() {
               {threads.map((thread) => (
                 <ForumThreadCard
                   key={thread.id}
-                  thread={thread}
+                  post={thread}
                   currentUserId={session.user.id}
                   initialBookmarked={true}
                 />

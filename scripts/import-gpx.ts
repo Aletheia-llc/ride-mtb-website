@@ -121,7 +121,7 @@ async function processGpxFile(
     await tx.trailGpsTrack.create({
       data: {
         trailId: trail.id,
-        simplifiedTrack: JSON.stringify(simplified),
+        trackData: JSON.stringify(simplified),
         pointCount: simplified.length,
         boundsNeLat: stats.bounds.neLat,
         boundsNeLng: stats.bounds.neLng,

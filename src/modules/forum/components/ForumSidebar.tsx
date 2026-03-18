@@ -104,7 +104,7 @@ export async function ForumSidebar({ currentCategorySlug }: { currentCategorySlu
         </p>
         <div className="space-y-2">
           {latestThreads.map((thread) => {
-            const author = thread.posts[0]?.author
+            const author = thread.author
             return (
               <div key={thread.id}>
                 <Link
@@ -173,7 +173,7 @@ export async function ForumSidebar({ currentCategorySlug }: { currentCategorySlu
               style={{ backgroundColor: `${tag.color}38`, color: tag.color, border: `1px solid ${tag.color}60` }}
             >
               {tag.name}
-              <span className="rounded-full bg-white/20 px-1 text-[10px]">{tag._count.threads}</span>
+              <span className="rounded-full bg-white/20 px-1 text-[10px]">{tag._count.posts}</span>
             </Link>
           ))}
         </div>

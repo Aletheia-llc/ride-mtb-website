@@ -1,13 +1,37 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { TrailDetailView, TrailReviewForm, TrailMapDynamic as TrailMap, ElevationProfileDynamic as ElevationProfile } from '@/modules/trails'
+import { Zap, AlertTriangle, Eye, GitFork, Droplets, ParkingSquare, Activity, Wrench, MapPin } from 'lucide-react'
+import type React from 'react'
+import {
+  TrailDetailView,
+  TrailReviewForm,
+  TrailMapDynamic as TrailMap,
+  ElevationProfileDynamic as ElevationProfile,
+  PhotoGallery,
+  GetDirectionsButton,
+  ShareButton,
+  HelpfulButton,
+  TrailViewTracker,
+} from '@/modules/trails'
 import { ConditionBadge } from '@/modules/trails/components/ConditionBadge'
 import { ConditionReportForm } from '@/modules/trails/components/ConditionReportForm'
 import { Card } from '@/ui/components'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
-import { getTrailBySlug, isTrailFavorited, getRecentConditionReports } from '@/modules/trails/lib/queries'
+import { getTrailBySlug, isTrailFavorited, getRecentConditionReports, getHelpfulMarksByUser } from '@/modules/trails/lib/queries'
+
+const POI_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  feature: Zap,
+  hazard: AlertTriangle,
+  viewpoint: Eye,
+  intersection: GitFork,
+  water: Droplets,
+  parking: ParkingSquare,
+  restroom: Activity,
+  repair_station: Wrench,
+  other: MapPin,
+}
 
 interface Props {
   params: Promise<{ systemSlug: string; trailSlug: string }>
@@ -31,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function TrailDetailPage({ params }: Props) {
-  const { trailSlug } = await params
+  const { systemSlug, trailSlug } = await params
   const [trail, session] = await Promise.all([
     getTrailBySlug(trailSlug),
     auth(),
@@ -42,20 +66,23 @@ export default async function TrailDetailPage({ params }: Props) {
   }
 
   const currentUserId = session?.user?.id ?? null
-  const [favorited, conditionReports] = await Promise.all([
+  const [favorited, conditionReports, helpfulMarks] = await Promise.all([
     currentUserId ? isTrailFavorited(trail.id, currentUserId) : Promise.resolve(false),
     getRecentConditionReports(trail.id),
+    currentUserId && trail.reviews.length > 0
+      ? getHelpfulMarksByUser(currentUserId, trail.reviews.map((r) => r.id))
+      : Promise.resolve(new Set<string>()),
   ])
 
   // Prepare map data if GPS track exists
-  const hasGpsData = !!trail.gpsTrack?.simplifiedTrack
+  const hasGpsData = !!trail.gpsTrack?.trackData
   const mapTrails = hasGpsData
     ? [
         {
           id: trail.id,
           name: trail.name,
           slug: trail.slug,
-          trackData: trail.gpsTrack!.simplifiedTrack!,
+          trackData: trail.gpsTrack!.trackData!,
           difficulty: trail.physicalDifficulty,
         },
       ]
@@ -73,6 +100,16 @@ export default async function TrailDetailPage({ params }: Props) {
         ]
       : undefined
 
+  // Compute trail lat/lng center for directions button
+  const trailLat =
+    trail.gpsTrack?.boundsNeLat != null && trail.gpsTrack?.boundsSwLat != null
+      ? (trail.gpsTrack.boundsNeLat + trail.gpsTrack.boundsSwLat) / 2
+      : null
+  const trailLng =
+    trail.gpsTrack?.boundsNeLng != null && trail.gpsTrack?.boundsSwLng != null
+      ? (trail.gpsTrack.boundsNeLng + trail.gpsTrack.boundsSwLng) / 2
+      : null
+
   // Find the user's existing review, if any
   const existingReview = currentUserId
     ? trail.reviews.find(
@@ -84,6 +121,8 @@ export default async function TrailDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
+      <TrailViewTracker trailSlug={trailSlug} systemSlug={systemSlug} trailName={trail.name} />
+
       <TrailDetailView
         trail={trail}
         isFavorited={favorited}
@@ -109,11 +148,50 @@ export default async function TrailDetailPage({ params }: Props) {
               Elevation Profile
             </h3>
             <ElevationProfile
-              trackData={trail.gpsTrack!.simplifiedTrack!}
+              trackData={trail.gpsTrack!.trackData!}
             />
           </Card>
         )}
+
+        {/* Photos */}
+        {trail.photos.length > 0 && (
+          <section>
+            <h3 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Photos</h3>
+            <PhotoGallery photos={trail.photos} />
+          </section>
+        )}
+
+        {/* Points of Interest */}
+        {trail.pois.length > 0 && (
+          <section>
+            <h3 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Points of Interest</h3>
+            <ul className="space-y-2">
+              {trail.pois.map((poi) => {
+                const Icon = POI_ICONS[poi.type] ?? POI_ICONS.other
+                return (
+                  <li key={poi.id} className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] p-3">
+                    <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-text-muted)]" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--color-text)]">{poi.name}</p>
+                      {poi.description && (
+                        <p className="text-xs text-[var(--color-text-muted)]">{poi.description}</p>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )}
       </TrailDetailView>
+
+      {/* Actions */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {trailLat != null && trailLng != null && (
+          <GetDirectionsButton lat={trailLat} lng={trailLng} />
+        )}
+        <ShareButton title={trail.name} text={trail.description ?? undefined} />
+      </div>
 
       {/* Conditions section */}
       <section className="mt-8">
@@ -233,6 +311,9 @@ export default async function TrailDetailPage({ params }: Props) {
                     {review.comment}
                   </p>
                 )}
+                {review.body && (
+                  <p className="mt-3 text-sm text-[var(--color-text)]">{review.body}</p>
+                )}
                 {(review.bikeType || review.rideDate) && (
                   <div className="mt-2 flex items-center gap-4 text-xs text-[var(--color-text-muted)]">
                     {review.bikeType && <span>Bike: {review.bikeType}</span>}
@@ -244,6 +325,14 @@ export default async function TrailDetailPage({ params }: Props) {
                     )}
                   </div>
                 )}
+                <div className="mt-3 flex items-center justify-end">
+                  <HelpfulButton
+                    reviewId={review.id}
+                    initialCount={review.helpfulCount}
+                    initialHasMarked={helpfulMarks.has(review.id)}
+                    isAuthenticated={currentUserId != null}
+                  />
+                </div>
               </Card>
             ))}
           </div>
