@@ -96,7 +96,7 @@ export default async function BikeDetailPage({ params, searchParams }: Props) {
   // Category breakdown for cost card
   const categoryBreakdownMap = new Map<string, number>()
   for (const c of activeComponents) {
-    if (c.priceCents) {
+    if (c.priceCents != null) {
       categoryBreakdownMap.set(
         c.category,
         (categoryBreakdownMap.get(c.category) ?? 0) + c.priceCents / 100,
@@ -107,7 +107,7 @@ export default async function BikeDetailPage({ params, searchParams }: Props) {
     category,
     totalDollars,
   }))
-  const costComponentCount = activeComponents.filter(c => c.priceCents).length
+  const costComponentCount = activeComponents.filter(c => c.priceCents != null).length
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -255,16 +255,20 @@ export default async function BikeDetailPage({ params, searchParams }: Props) {
               </Card>
             </section>
 
+            {/* Actions */}
+            <section className="mb-8">
+              <div className="flex flex-wrap gap-2">
+                <ShareButton />
+                <DuplicateBikeButton bikeId={bike.id} />
+              </div>
+            </section>
+
             {/* Danger zone */}
             <section>
               <h2 className="mb-4 text-xl font-bold text-red-600">
                 Danger Zone
               </h2>
               <Card className="border-red-200">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <ShareButton />
-                  <DuplicateBikeButton bikeId={bike.id} />
-                </div>
                 <p className="mb-3 text-sm text-[var(--color-text-muted)]">
                   Permanently delete this bike and all its service history. This action cannot be undone.
                 </p>
