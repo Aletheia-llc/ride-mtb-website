@@ -11,6 +11,21 @@ export async function generateEventIcal(slug: string): Promise<string> {
 
   const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 
+  // RFC 5545 §3.3.11: escape TEXT property values
+  const escapeText = (s: string) =>
+    s.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n')
+
+  // RFC 5545 §3.1: fold lines longer than 75 octets (using CRLF + SPACE)
+  const fold = (line: string): string => {
+    const chunks: string[] = []
+    while (line.length > 75) {
+      chunks.push(line.slice(0, 75))
+      line = ' ' + line.slice(75)
+    }
+    chunks.push(line)
+    return chunks.join('\r\n')
+  }
+
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -19,10 +34,10 @@ export async function generateEventIcal(slug: string): Promise<string> {
     `UID:${event.id}@ride-mtb.com`,
     `DTSTART:${fmt(start)}`,
     `DTEND:${fmt(end)}`,
-    `SUMMARY:${event.title}`,
-    event.description ? `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}` : '',
-    event.location ? `LOCATION:${event.location}` : '',
+    fold(`SUMMARY:${escapeText(event.title)}`),
+    event.description ? fold(`DESCRIPTION:${escapeText(event.description)}`) : '',
+    event.location ? fold(`LOCATION:${escapeText(event.location)}`) : '',
     'END:VEVENT',
     'END:VCALENDAR',
-  ].filter(Boolean).join('\r\n')
+  ].filter(Boolean).join('\r\n') + '\r\n'
 }
