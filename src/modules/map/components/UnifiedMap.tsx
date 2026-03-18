@@ -8,10 +8,9 @@ import { LayerToggle } from './LayerToggle'
 import { useMapLayers } from '../hooks/useMapLayers'
 import type { LayerName } from '../types'
 
-// Placeholder layer components — replaced in Task 9
-const TrailsLayerLazy = (_props: { map: mapboxgl.Map }) => null
-const EventsLayerLazy = (_props: { map: mapboxgl.Map }) => null
-const CoachesLayerLazy = (_props: { map: mapboxgl.Map }) => null
+import { TrailsLayer } from './layers/TrailsLayer'
+import { EventsLayer } from './layers/EventsLayer'
+import { CoachesLayer } from './layers/CoachesLayer'
 
 interface UnifiedMapProps {
   defaultLayers: LayerName[]
@@ -95,13 +94,13 @@ export function UnifiedMap({
       <MapStyleSelector current={mapStyle} onChange={handleStyleChange} />
       {/* Layer components mount here when map is ready */}
       {mapLoaded && mapRef.current && availableLayers.includes('trails') && activeLayers.has('trails') && (
-        <TrailsLayerLazy map={mapRef.current} />
+        <TrailsLayer map={mapRef.current} />
       )}
       {mapLoaded && mapRef.current && availableLayers.includes('events') && activeLayers.has('events') && (
-        <EventsLayerLazy map={mapRef.current} />
+        <EventsLayer map={mapRef.current} />
       )}
       {mapLoaded && mapRef.current && availableLayers.includes('coaching') && activeLayers.has('coaching') && (
-        <CoachesLayerLazy map={mapRef.current} />
+        <CoachesLayer map={mapRef.current} />
       )}
     </div>
   )
