@@ -18,7 +18,7 @@ vi.mock('@/lib/db/client', () => {
   return {
     db: {
       userBike: { findFirst: vi.fn() },
-      $transaction: vi.fn((fn: (tx: typeof tx) => unknown) => fn(tx)),
+      $transaction: vi.fn((fn) => fn(tx)),
       _tx: tx,
     },
   }
