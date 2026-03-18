@@ -2957,13 +2957,28 @@ enum ResultStatus {
   @@map("ResultStatus")
 }
 
-// Placeholder stub — full model added in Task 4
 model CoachingClinic {
-  id        String   @id @default(cuid())
-  coachId   String
-  createdAt DateTime @default(now())
-  coach     CoachProfile @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  id          String       @id @default(cuid())
+  coachId     String
+  slug        String       @unique
+  title       String
+  description String?      @db.Text
+  startDate   DateTime
+  endDate     DateTime?
+  location    String
+  latitude    Float?
+  longitude   Float?
+  capacity    Int?
+  costCents   Int?
+  isFree      Boolean      @default(false)
+  calcomLink  String?
+  status      EventStatus  @default(published)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  coach       CoachProfile @relation(fields: [coachId], references: [id], onDelete: Cascade)
 
+  @@index([startDate, status])
+  @@index([latitude, longitude])
   @@map("coaching_clinics")
 }
 
