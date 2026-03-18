@@ -34,14 +34,16 @@ export function IcalDownload({ slug }: IcalDownloadProps) {
   }
 
   return (
-    <button
-      onClick={handleDownload}
-      disabled={loading}
-      className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg-secondary)] disabled:opacity-60"
-    >
-      <CalendarPlus className="h-4 w-4" />
-      {loading ? 'Preparing…' : 'Add to Calendar'}
-    </button>
-    {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    <>
+      <button
+        onClick={handleDownload}
+        disabled={loading}
+        className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg-secondary)] disabled:opacity-60"
+      >
+        <CalendarPlus className="h-4 w-4" />
+        {loading ? 'Preparing…' : 'Add to Calendar'}
+      </button>
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    </>
   )
 }

@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const { db } = await import('@/lib/db/client')
 
     const events = await db.event.findMany({
-      where: { latitude: null, location: { not: null }, status: 'published' },
+      where: { latitude: null, location: { not: undefined }, status: 'published' },
       select: { id: true, location: true },
       take: 20,
     })
