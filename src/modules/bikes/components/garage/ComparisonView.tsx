@@ -14,9 +14,12 @@ function bestIndex(values: (number | null)[], prefer: 'min' | 'max'): number | n
     .map((v, i) => ({ v, i }))
     .filter((x): x is { v: number; i: number } => x.v !== null)
   if (indexed.length < 2) return null
-  return prefer === 'min'
-    ? indexed.reduce((a, b) => a.v <= b.v ? a : b).i
-    : indexed.reduce((a, b) => a.v >= b.v ? a : b).i
+  const best = prefer === 'min'
+    ? indexed.reduce((a, b) => a.v < b.v ? a : b)
+    : indexed.reduce((a, b) => a.v > b.v ? a : b)
+  // If multiple values equal the best, return null (tie — no highlight)
+  const tieCount = indexed.filter(x => x.v === best.v).length
+  return tieCount > 1 ? null : best.i
 }
 
 interface Row {
@@ -35,7 +38,7 @@ const ROWS: Row[] = [
   { label: 'Frame Material', render: b => b.frameMaterial },
   { label: 'Travel', render: b => b.travel != null ? `${b.travel}mm` : null, rawValue: b => b.travel, prefer: 'max' },
   { label: 'Frame Weight', render: b => b.frameWeightLbs != null ? `${b.frameWeightLbs} lbs` : null, rawValue: b => b.frameWeightLbs, prefer: 'min' },
-  { label: 'Components', render: b => b.componentCount.toString(), rawValue: b => b.componentCount, prefer: 'max' },
+  { label: 'Components', render: b => b.componentCount > 0 ? b.componentCount.toString() : null, rawValue: b => b.componentCount || null, prefer: 'max' },
   { label: 'Component Cost', render: b => b.componentCostDollars > 0 ? `$${Math.round(b.componentCostDollars).toLocaleString()}` : null, rawValue: b => b.componentCostDollars || null, prefer: 'min' },
   { label: 'Total Investment', render: b => b.totalInvestmentDollars > 0 ? `$${Math.round(b.totalInvestmentDollars).toLocaleString()}` : null, rawValue: b => b.totalInvestmentDollars || null, prefer: 'min' },
   { label: 'Purchase Year', render: b => b.purchaseYear?.toString() ?? null, rawValue: b => b.purchaseYear, prefer: 'max' },
