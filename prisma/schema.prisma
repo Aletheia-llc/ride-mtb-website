@@ -119,6 +119,7 @@ model User {
   mulliganUses             MulliganUse[]
   manufacturerPicks  ManufacturerPick[]
   manufacturerScores ManufacturerEventScore[]
+  eventPreference    UserEventPreference?
 
   @@map("users")
 }
@@ -888,7 +889,7 @@ model Event {
   maxAttendees Int?
   imageUrl    String?
   eventType   EventType   @default(group_ride)
-  status      ContentStatus @default(published)
+  status               EventStatus    @default(published)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   // New fields from race calendar port
@@ -905,8 +906,43 @@ model Event {
   rsvps       EventRsvp[]
   comments    EventComment[]
 
+  // Location structured
+  venueName            String?
+  address              String?
+  city                 String?
+  state                String?
+  zipCode              String?
+  country              String    @default("US")
+
+  // Rich metadata
+  shortDescription     String?
+  coverImageUrl        String?
+  tags                 String[]  @default([])
+  difficulty           String?
+
+  // Virtual events
+  isVirtual            Boolean   @default(false)
+  virtualPlatform      String?
+  virtualUrl           String?
+
+  // Time
+  startTime            String?
+  endTime              String?
+  timezone             String?
+  isAllDay             Boolean   @default(false)
+
+  // Counters (denormalized)
+  viewCount            Int       @default(0)
+  commentCount         Int       @default(0)
+  rsvpCount            Int       @default(0)
+
+  // Import tracking
+  importSource         String?
+  externalId           String?
+
   @@index([startDate])
   @@index([creatorId])
+  @@index([importSource, externalId])
   @@map("events")
 }
 
@@ -954,6 +990,21 @@ model EventRsvp {
 
   @@unique([eventId, userId])
   @@map("event_rsvps")
+}
+
+model UserEventPreference {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  homeLatitude    Decimal?  @db.Decimal(10, 7)
+  homeLongitude   Decimal?  @db.Decimal(10, 7)
+  searchRadius    Int       @default(100)
+  followedTypes   String[]  @default([])
+  newEventAlerts  Boolean   @default(true)
+  reminderDays    Int       @default(3)
+  resultsAlerts   Boolean   @default(true)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_event_preferences")
 }
 
 // ============================================================
@@ -1693,6 +1744,17 @@ enum ContentStatus {
   archived
 }
 
+enum EventStatus {
+  draft
+  pending_review
+  published
+  cancelled
+  postponed
+  completed
+
+  @@map("event_statuses")
+}
+
 enum Tier {
   gold
   silver
@@ -1833,6 +1895,7 @@ enum PoiType {
 }
 
 enum EventType {
+  // Preserved from monolith (existing rows use these)
   group_ride
   race
   skills_clinic
@@ -1840,6 +1903,18 @@ enum EventType {
   social
   demo_day
   other
+
+  // Added from standalone repo
+  race_xc
+  race_enduro
+  race_dh
+  race_marathon
+  race_other
+  clinic
+  camp
+  expo
+  bike_park_day
+  virtual_challenge
 }
 
 enum RsvpStatus {
