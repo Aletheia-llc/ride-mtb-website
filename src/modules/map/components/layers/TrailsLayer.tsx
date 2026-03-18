@@ -8,12 +8,176 @@ interface TrailsLayerProps {
   map: mapboxgl.Map
 }
 
+interface TrailLine {
+  id: string
+  slug: string
+  name: string
+  physicalDifficulty: number | null
+  technicalDifficulty: number | null
+  distance: number | null
+  trackData: [number, number, number][]
+  systemSlug: string
+}
+
+function difficultyColor(physical: number | null, technical: number | null): string {
+  const d = Math.max(physical ?? 1, technical ?? 1)
+  if (d <= 2) return '#22c55e'
+  if (d === 3) return '#3b82f6'
+  if (d === 4) return '#f59e0b'
+  return '#ef4444'
+}
+
 export function TrailsLayer({ map }: TrailsLayerProps) {
   const loadedRef = useRef(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (loadedRef.current) return
     loadedRef.current = true
+
+    // --- Trail lines helpers ---
+
+    function ensureTrailLinesSource() {
+      if (!map.getSource('trail-lines')) {
+        map.addSource('trail-lines', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] },
+        })
+        map.addLayer({
+          id: 'trail-lines-layer',
+          type: 'line',
+          source: 'trail-lines',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 2.5,
+            'line-opacity': 0.85,
+          },
+        })
+
+        map.on('mouseenter', 'trail-lines-layer', (e) => {
+          map.getCanvas().style.cursor = 'pointer'
+          const feature = e.features?.[0]
+          if (!feature?.properties) return
+          const { name, distance } = feature.properties
+          const distLabel = distance ? ` · ${Number(distance).toFixed(1)} mi` : ''
+          new mapboxgl.Popup({ closeButton: false, closeOnClick: false, offset: 8, maxWidth: '180px' })
+            .setHTML(`<div style="font-family:sans-serif;font-size:12px;padding:2px 0"><strong>${name}</strong>${distLabel}</div>`)
+            .setLngLat(e.lngLat)
+            .addTo(map)
+        })
+
+        map.on('mousemove', 'trail-lines-layer', (e) => {
+          const popups = document.querySelectorAll('.mapboxgl-popup')
+          popups.forEach((p) => p.remove())
+          const feature = e.features?.[0]
+          if (!feature?.properties) return
+          const { name, distance } = feature.properties
+          const distLabel = distance ? ` · ${Number(distance).toFixed(1)} mi` : ''
+          new mapboxgl.Popup({ closeButton: false, closeOnClick: false, offset: 8, maxWidth: '180px' })
+            .setHTML(`<div style="font-family:sans-serif;font-size:12px;padding:2px 0"><strong>${name}</strong>${distLabel}</div>`)
+            .setLngLat(e.lngLat)
+            .addTo(map)
+        })
+
+        map.on('mouseleave', 'trail-lines-layer', () => {
+          map.getCanvas().style.cursor = ''
+          const popups = document.querySelectorAll('.mapboxgl-popup')
+          popups.forEach((p) => p.remove())
+        })
+
+        map.on('click', 'trail-lines-layer', (e) => {
+          const feature = e.features?.[0]
+          if (!feature?.properties) return
+          const { name, distance, physicalDifficulty, technicalDifficulty, systemSlug, slug, color } = feature.properties
+          const distLabel = distance ? `${Number(distance).toFixed(1)} mi` : null
+          const diffLevel = Math.max(physicalDifficulty ?? 1, technicalDifficulty ?? 1)
+          const diffLabels: Record<number, string> = { 1: 'Beginner', 2: 'Easy', 3: 'Intermediate', 4: 'Hard', 5: 'Expert' }
+          const diffLabel = diffLabels[diffLevel] ?? 'Unknown'
+          new mapboxgl.Popup({ offset: 8, maxWidth: '220px' })
+            .setHTML(`<div style="font-family:sans-serif;padding:4px 0">
+              <strong style="font-size:14px">${name}</strong>
+              <div style="font-size:12px;color:#666;margin-top:2px">
+                <span style="color:${color};font-weight:600">${diffLabel}</span>
+                ${distLabel ? ` · ${distLabel}` : ''}
+              </div>
+              <a href="/trails/explore/${systemSlug}/${slug}" style="display:block;margin-top:8px;font-size:12px;color:#16a34a">View Trail →</a>
+            </div>`)
+            .setLngLat(e.lngLat)
+            .addTo(map)
+        })
+      }
+    }
+
+    function clearTrailLines() {
+      const src = map.getSource('trail-lines') as mapboxgl.GeoJSONSource | undefined
+      if (src) src.setData({ type: 'FeatureCollection', features: [] })
+    }
+
+    function fetchAndRenderLines() {
+      if (!map || map._removed) return
+
+      const zoom = map.getZoom()
+      if (zoom < 11) {
+        clearTrailLines()
+        if (map.getLayer('trail-pins')) map.setLayoutProperty('trail-pins', 'visibility', 'visible')
+        return
+      }
+
+      // Hide system pins at high zoom
+      if (map.getLayer('trail-pins')) map.setLayoutProperty('trail-pins', 'visibility', 'none')
+
+      // Get visible unclustered trail system features
+      const visibleSystems = map.querySourceFeatures('trails', {
+        filter: ['!', ['has', 'point_count']],
+      })
+      const systemIds = [...new Set(visibleSystems.map((f) => f.properties?.id).filter(Boolean))] as string[]
+
+      if (systemIds.length === 0) {
+        clearTrailLines()
+        return
+      }
+
+      ensureTrailLinesSource()
+
+      fetch(`/api/trails/lines?systemIds=${systemIds.join(',')}`)
+        .then((r) => r.json())
+        .then((trails: TrailLine[]) => {
+          if (!map || map._removed) return
+
+          const features: GeoJSON.Feature[] = trails
+            .filter((t) => Array.isArray(t.trackData) && t.trackData.length >= 2)
+            .map((t) => ({
+              type: 'Feature',
+              properties: {
+                id: t.id,
+                slug: t.slug,
+                name: t.name,
+                physicalDifficulty: t.physicalDifficulty,
+                technicalDifficulty: t.technicalDifficulty,
+                distance: t.distance,
+                systemSlug: t.systemSlug,
+                color: difficultyColor(t.physicalDifficulty, t.technicalDifficulty),
+              },
+              geometry: {
+                type: 'LineString',
+                // trackData is [lat, lng, ele] — mapbox expects [lng, lat]
+                coordinates: t.trackData.map(([lat, lng]) => [lng, lat]),
+              },
+            }))
+
+          const src = map.getSource('trail-lines') as mapboxgl.GeoJSONSource | undefined
+          if (src) src.setData({ type: 'FeatureCollection', features })
+        })
+        .catch(console.error)
+    }
+
+    function scheduleFetch() {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(fetchAndRenderLines, 300)
+    }
+
+    // --- Trail system pins (existing logic) ---
 
     fetch('/api/trails/map')
       .then((r) => r.json())
@@ -70,15 +234,29 @@ export function TrailsLayer({ map }: TrailsLayerProps) {
             })
           }
         })
+
+        // Register zoom/move listeners after pins are loaded
+        map.on('zoomend', scheduleFetch)
+        map.on('moveend', scheduleFetch)
+
+        // Run once in case map is already at high zoom
+        fetchAndRenderLines()
       })
       .catch(console.error)
 
     return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
       if (!map || map._removed) return
-      for (const layer of ['trail-clusters', 'trail-cluster-count', 'trail-pins']) {
+
+      map.off('zoomend', scheduleFetch)
+      map.off('moveend', scheduleFetch)
+
+      for (const layer of ['trail-lines-layer', 'trail-clusters', 'trail-cluster-count', 'trail-pins']) {
         if (map.getLayer(layer)) map.removeLayer(layer)
       }
-      if (map.getSource('trails')) map.removeSource('trails')
+      for (const source of ['trail-lines', 'trails']) {
+        if (map.getSource(source)) map.removeSource(source)
+      }
     }
   }, [map])
 
