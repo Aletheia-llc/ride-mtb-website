@@ -35,10 +35,13 @@ export function StatsClient({ stats }: { stats: BikeStats }) {
   return (
     <div>
       {/* Tab bar */}
-      <div className="mb-6 flex w-fit gap-0.5 rounded-lg border border-[var(--color-border)] p-1">
+      <div role="tablist" aria-label="Stats sections" className="mb-6 flex w-fit gap-0.5 rounded-lg border border-[var(--color-border)] p-1">
         {tabs.map(t => (
           <button
             key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
             className={[
               'rounded px-4 py-2 text-sm font-medium transition-colors',

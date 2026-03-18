@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { requireAuth } from '@/lib/auth/guards'
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- server component, direct module import is intentional
 import { getBikeStats } from '@/modules/bikes/lib/garage-queries'
 import { StatsClient } from './StatsClient'
 
