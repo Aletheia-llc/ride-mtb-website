@@ -1,8 +1,8 @@
 import 'server-only'
-import { db } from '@/lib/db/client'
+import { db, pool } from '@/lib/db/client'
 import { paginate } from '@/lib/db/helpers'
 import { uniqueSlug } from '@/lib/slugify'
-import type { EventSummary, EventDetailData, EventType, RsvpStatus, EventRsvpData } from '../types'
+import type { EventSummary, EventDetailData, EventType, RsvpStatus, EventRsvpData, EventMapPin, EventSearchResult, SearchEventsParams, NearMeParams, UserEventPreferenceData } from '../types'
 
 // ── getUpcomingEvents ─────────────────────────────────────
 
@@ -282,4 +282,138 @@ export async function deleteEvent(
 
   await db.event.delete({ where: { id: eventId } })
   return true
+}
+
+// ── getEventsForMap ───────────────────────────────────────
+
+export async function getEventsForMap(): Promise<EventMapPin[]> {
+  const events = await db.event.findMany({
+    where: {
+      status: 'published',
+      latitude: { not: null },
+      longitude: { not: null },
+      startDate: { gte: new Date() },
+    },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      startDate: true,
+      eventType: true,
+      latitude: true,
+      longitude: true,
+      rsvpCount: true,
+    },
+    orderBy: { startDate: 'asc' },
+  })
+  return events.map(e => ({
+    ...e,
+    latitude: e.latitude!,
+    longitude: e.longitude!,
+    eventType: e.eventType as string,
+  }))
+}
+
+// ── searchEvents ──────────────────────────────────────────
+
+export async function searchEvents(params: SearchEventsParams): Promise<{ events: EventSearchResult[]; nextCursor: string | null }> {
+  const limit = params.limit ?? 20
+  const where: Record<string, unknown> = {
+    status: 'published',
+    startDate: { gte: params.startDate ?? new Date() },
+  }
+  if (params.query) {
+    where.OR = [
+      { title: { contains: params.query, mode: 'insensitive' } },
+      { description: { contains: params.query, mode: 'insensitive' } },
+      { city: { contains: params.query, mode: 'insensitive' } },
+    ]
+  }
+  if (params.eventType) where.eventType = params.eventType
+  if (params.endDate) (where.startDate as Record<string, unknown>).lte = params.endDate
+  if (params.isFree !== undefined) where.isFree = params.isFree
+  if (params.cursor) where.id = { gt: params.cursor }
+
+  const events = await db.event.findMany({
+    where,
+    select: {
+      id: true, slug: true, title: true, startDate: true, eventType: true,
+      status: true, city: true, state: true, coverImageUrl: true, isFree: true, rsvpCount: true,
+    },
+    orderBy: { startDate: 'asc' },
+    take: limit + 1,
+  })
+  const hasMore = events.length > limit
+  const items = hasMore ? events.slice(0, limit) : events
+  return {
+    events: items.map(e => ({ ...e, eventType: e.eventType as string, status: e.status as string })),
+    nextCursor: hasMore ? items[items.length - 1].id : null,
+  }
+}
+
+// ── getEventsNearLocation ─────────────────────────────────
+
+export async function getEventsNearLocation(params: NearMeParams): Promise<EventSearchResult[]> {
+  const limit = params.limit ?? 20
+  const result = await pool.query<EventSearchResult>(`
+    SELECT id, slug, title, "startDate", "eventType"::text, status::text, city, state,
+           "coverImageUrl", "isFree", "rsvpCount"
+    FROM events
+    WHERE status = 'published'
+      AND latitude IS NOT NULL
+      AND longitude IS NOT NULL
+      AND "startDate" >= NOW()
+      AND (
+        6371 * acos(
+          cos(radians($1)) * cos(radians(latitude)) *
+          cos(radians(longitude) - radians($2)) +
+          sin(radians($1)) * sin(radians(latitude))
+        )
+      ) <= $3
+    ORDER BY "startDate" ASC
+    LIMIT $4
+  `, [params.latitude, params.longitude, params.radiusKm, limit])
+  return result.rows
+}
+
+// ── getUserEventPreference ────────────────────────────────
+
+export async function getUserEventPreference(userId: string) {
+  return db.userEventPreference.findUnique({ where: { userId } })
+}
+
+// ── upsertUserEventPreference ─────────────────────────────
+
+export async function upsertUserEventPreference(userId: string, data: UserEventPreferenceData) {
+  return db.userEventPreference.upsert({
+    where: { userId },
+    create: { userId, ...data },
+    update: { ...data },
+  })
+}
+
+// ── getMyRsvps ────────────────────────────────────────────
+
+export async function getMyRsvps(userId: string) {
+  return db.eventRsvp.findMany({
+    where: { userId },
+    include: { event: { select: { id: true, slug: true, title: true, startDate: true, eventType: true, city: true, state: true } } },
+    orderBy: { createdAt: 'desc' },
+  })
+}
+
+// ── getEventsNeedingGeocoding ─────────────────────────────
+
+export async function getEventsNeedingGeocoding(limit = 50): Promise<Array<{ id: string; address: string | null; city: string | null; state: string | null }>> {
+  return db.event.findMany({
+    where: {
+      latitude: null,
+      OR: [
+        { address: { not: null } },
+        { city: { not: null } },
+      ],
+    },
+    select: { id: true, address: true, city: true, state: true },
+    take: limit,
+  })
 }

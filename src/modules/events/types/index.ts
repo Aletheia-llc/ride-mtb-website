@@ -51,3 +51,57 @@ export interface EventDetailData {
   rsvps: EventRsvpData[]
   rsvpCount: number
 }
+
+export type EventStatusType = 'draft' | 'pending_review' | 'published' | 'cancelled' | 'postponed' | 'completed'
+
+export interface EventMapPin {
+  id: string
+  slug: string
+  title: string
+  startDate: Date
+  eventType: string
+  latitude: number
+  longitude: number
+  rsvpCount: number
+}
+
+export interface EventSearchResult {
+  id: string
+  slug: string
+  title: string
+  startDate: Date
+  eventType: string
+  status: string
+  city: string | null
+  state: string | null
+  coverImageUrl: string | null
+  isFree: boolean
+  rsvpCount: number
+}
+
+export interface SearchEventsParams {
+  query?: string
+  eventType?: string
+  startDate?: Date
+  endDate?: Date
+  isFree?: boolean
+  cursor?: string
+  limit?: number
+}
+
+export interface NearMeParams {
+  latitude: number
+  longitude: number
+  radiusKm: number
+  limit?: number
+}
+
+export interface UserEventPreferenceData {
+  homeLatitude?: number | null
+  homeLongitude?: number | null
+  searchRadius: number
+  followedTypes: string[]
+  newEventAlerts: boolean
+  reminderDays: number
+  resultsAlerts: boolean
+}
