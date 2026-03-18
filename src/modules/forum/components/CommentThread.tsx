@@ -8,6 +8,23 @@ import { ForumPagination } from './ForumPagination'
 import { ReplyForm } from '@/modules/forum/components/ReplyForm'
 import type { ForumComment } from '@/modules/forum/types'
 
+function buildCommentTree(comments: ForumComment[]): ForumComment[] {
+  const map = new Map<string, ForumComment & { replies: ForumComment[] }>()
+  for (const c of comments) {
+    map.set(c.id, { ...c, replies: [] })
+  }
+  const roots: ForumComment[] = []
+  for (const c of comments) {
+    const node = map.get(c.id)!
+    if (c.parentId && map.has(c.parentId)) {
+      map.get(c.parentId)!.replies!.push(node)
+    } else {
+      roots.push(node)
+    }
+  }
+  return roots
+}
+
 interface CommentThreadProps {
   comments: ForumComment[]
   total: number
@@ -90,11 +107,12 @@ export function CommentThread({
         </p>
       ) : (
         <div className="divide-y divide-[var(--color-border)]">
-          {comments.map((comment) => (
+          {buildCommentTree(comments).map((comment) => (
             <CommentCard
               key={comment.id}
               comment={comment}
               currentUserId={currentUserId}
+              depth={0}
             />
           ))}
         </div>

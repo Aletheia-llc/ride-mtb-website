@@ -72,6 +72,7 @@ export interface ForumComment {
   createdAt: Date
   updatedAt: Date
   author: ForumAuthor
+  replies?: ForumComment[]
 }
 
 export interface LinkPreviewData {

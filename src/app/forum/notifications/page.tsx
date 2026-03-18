@@ -25,7 +25,7 @@ function timeAgo(date: Date): string {
 
 export default async function NotificationsPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/auth/signin')
+  if (!session?.user?.id) redirect('/signin')
 
   const notifications = await db.forumNotification.findMany({
     where: { userId: session.user.id },
