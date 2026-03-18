@@ -23,7 +23,7 @@ export default async function TrailMapPage() {
     }))
 
   return (
-    <div className="h-[calc(100vh-var(--nav-height))]">
+    <div className="h-[calc(100vh_-_var(--nav-height))]">
       <Suspense fallback={<div className="h-full bg-[var(--color-bg-secondary)]" />}>
         <SystemClusterMapDynamic
           systems={pins}
