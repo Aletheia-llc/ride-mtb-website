@@ -11,6 +11,8 @@ import { formatRelativeTime } from '@/modules/forum/types'
 import { votePost } from '@/modules/forum/actions/votePost'
 // eslint-disable-next-line no-restricted-imports
 import { ReplyForm } from '@/modules/forum/components/ReplyForm'
+// eslint-disable-next-line no-restricted-imports
+import { ReportButton } from '@/modules/forum/components/ReportButton'
 import type { ForumComment } from '@/modules/forum/types'
 
 interface CommentCardProps {
@@ -139,6 +141,9 @@ export function CommentCard({ comment, currentUserId, depth = 0, threadId, isLoc
                 <MessageSquare className="h-3.5 w-3.5" />
                 {showReply ? 'Cancel' : 'Reply'}
               </button>
+            )}
+            {currentUserId && currentUserId !== comment.authorId && (
+              <ReportButton targetType="comment" targetId={comment.id} />
             )}
             {comment.editedAt && (
               <span className="text-xs text-[var(--color-text-muted)] italic">

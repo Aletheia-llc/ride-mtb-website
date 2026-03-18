@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ChevronUp, ChevronDown, Bookmark, Flag, Share2, Pencil, Trash2 } from 'lucide-react'
+import { ChevronUp, ChevronDown, Bookmark, Share2, Pencil, Trash2 } from 'lucide-react'
 import { formatRelativeTime } from '@/modules/forum/types'
 // eslint-disable-next-line no-restricted-imports
 import { votePost } from '@/modules/forum/actions/votePost'
@@ -14,6 +14,8 @@ import { votePost } from '@/modules/forum/actions/votePost'
 import { toggleForumBookmark } from '@/modules/forum/actions/bookmarkThread'
 // eslint-disable-next-line no-restricted-imports
 import { LinkPreviewCard } from '@/modules/forum/components/LinkPreviewCard'
+// eslint-disable-next-line no-restricted-imports
+import { ReportButton } from '@/modules/forum/components/ReportButton'
 import type { PostDetail as PostDetailType } from '@/modules/forum/types'
 
 interface PostDetailProps {
@@ -277,10 +279,9 @@ export function PostDetail({ post, currentUserId, isBookmarked: initialBookmarke
           </div>
         )}
         {currentUserId && !isAuthor && (
-          <button className="ml-auto flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-red-500">
-            <Flag className="h-4 w-4" />
-            Report
-          </button>
+          <div className="ml-auto">
+            <ReportButton targetType="post" targetId={post.id} />
+          </div>
         )}
       </div>
     </article>
