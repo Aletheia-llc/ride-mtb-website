@@ -10,9 +10,11 @@ interface IcalDownloadProps {
 
 export function IcalDownload({ slug }: IcalDownloadProps) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleDownload() {
     setLoading(true)
+    setError(null)
     try {
       const icalString = await generateEventIcal(slug)
       const blob = new Blob([icalString], { type: 'text/calendar' })
@@ -24,6 +26,8 @@ export function IcalDownload({ slug }: IcalDownloadProps) {
       anchor.click()
       document.body.removeChild(anchor)
       URL.revokeObjectURL(url)
+    } catch {
+      setError('Failed to generate calendar file. Try again.')
     } finally {
       setLoading(false)
     }
@@ -38,5 +42,6 @@ export function IcalDownload({ slug }: IcalDownloadProps) {
       <CalendarPlus className="h-4 w-4" />
       {loading ? 'Preparing…' : 'Add to Calendar'}
     </button>
+    {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
   )
 }

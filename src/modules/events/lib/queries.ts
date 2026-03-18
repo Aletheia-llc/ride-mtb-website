@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { db, pool } from '@/lib/db/client'
 import type { UserEventPreference } from '@/generated/prisma/client'
 import { paginate } from '@/lib/db/helpers'
@@ -72,7 +73,7 @@ export async function getUpcomingEvents(
 
 // ── getEventBySlug ────────────────────────────────────────
 
-export async function getEventBySlug(slug: string): Promise<EventDetailData | null> {
+export const getEventBySlug = cache(async function getEventBySlug(slug: string): Promise<EventDetailData | null> {
   const event = await db.event.findUnique({
     where: { slug },
     include: {
@@ -131,7 +132,7 @@ export async function getEventBySlug(slug: string): Promise<EventDetailData | nu
     organizerName: event.organizer?.name ?? null,
     organizerVerified: event.organizer?.isVerified ?? false,
   }
-}
+})
 
 // ── getRelatedEvents ──────────────────────────────────────
 
