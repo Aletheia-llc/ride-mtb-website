@@ -13,7 +13,7 @@ ALTER TABLE "coaching_clinics" ADD COLUMN IF NOT EXISTS "capacity"    INTEGER;
 ALTER TABLE "coaching_clinics" ADD COLUMN IF NOT EXISTS "costCents"   INTEGER;
 ALTER TABLE "coaching_clinics" ADD COLUMN IF NOT EXISTS "isFree"      BOOLEAN      NOT NULL DEFAULT false;
 ALTER TABLE "coaching_clinics" ADD COLUMN IF NOT EXISTS "calcomLink"  TEXT;
-ALTER TABLE "coaching_clinics" ADD COLUMN IF NOT EXISTS "status"      TEXT         NOT NULL DEFAULT 'published';
+ALTER TABLE "coaching_clinics" ADD COLUMN IF NOT EXISTS "status"      "event_statuses" NOT NULL DEFAULT 'published';
 ALTER TABLE "coaching_clinics" ADD COLUMN IF NOT EXISTS "updatedAt"   TIMESTAMPTZ  NOT NULL DEFAULT NOW();
 
 -- Unique constraint on slug
