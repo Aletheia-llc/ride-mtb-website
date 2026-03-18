@@ -1,5 +1,6 @@
 import 'server-only'
 import { db, pool } from '@/lib/db/client'
+import type { UserEventPreference } from '@/generated/prisma/client'
 import { paginate } from '@/lib/db/helpers'
 import { uniqueSlug } from '@/lib/slugify'
 import type { EventSummary, EventDetailData, EventType, RsvpStatus, EventRsvpData, EventMapPin, EventSearchResult, SearchEventsParams, NearMeParams, UserEventPreferenceData } from '../types'
@@ -330,9 +331,13 @@ export async function searchEvents(params: SearchEventsParams): Promise<{ events
     ]
   }
   if (params.eventType) where.eventType = params.eventType
-  if (params.endDate) (where.startDate as Record<string, unknown>).lte = params.endDate
+  if (params.endDate) {
+    where.startDate = {
+      gte: params.startDate ?? new Date(),
+      lte: params.endDate,
+    }
+  }
   if (params.isFree !== undefined) where.isFree = params.isFree
-  if (params.cursor) where.id = { gt: params.cursor }
 
   const events = await db.event.findMany({
     where,
@@ -342,6 +347,7 @@ export async function searchEvents(params: SearchEventsParams): Promise<{ events
     },
     orderBy: { startDate: 'asc' },
     take: limit + 1,
+    ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
   })
   const hasMore = events.length > limit
   const items = hasMore ? events.slice(0, limit) : events
@@ -378,13 +384,13 @@ export async function getEventsNearLocation(params: NearMeParams): Promise<Event
 
 // ── getUserEventPreference ────────────────────────────────
 
-export async function getUserEventPreference(userId: string) {
+export async function getUserEventPreference(userId: string): Promise<UserEventPreference | null> {
   return db.userEventPreference.findUnique({ where: { userId } })
 }
 
 // ── upsertUserEventPreference ─────────────────────────────
 
-export async function upsertUserEventPreference(userId: string, data: UserEventPreferenceData) {
+export async function upsertUserEventPreference(userId: string, data: UserEventPreferenceData): Promise<UserEventPreference> {
   return db.userEventPreference.upsert({
     where: { userId },
     create: { userId, ...data },
