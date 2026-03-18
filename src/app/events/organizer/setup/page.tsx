@@ -1,13 +1,11 @@
 'use client'
 import Link from 'next/link'
 import { useActionState } from 'react'
-import { createOrganizerProfile } from '@/modules/events/actions/createOrganizerProfile'
-
-type OrganizerState = { errors: Record<string, string>; success?: boolean }
+import { createOrganizerProfile, type OrganizerState } from '@/modules/events/actions/createOrganizerProfile'
 
 export default function OrganizerSetupPage() {
   const [state, formAction, pending] = useActionState<OrganizerState, FormData>(
-    createOrganizerProfile as (s: OrganizerState, f: FormData) => Promise<OrganizerState>,
+    createOrganizerProfile,
     { errors: {} },
   )
 
