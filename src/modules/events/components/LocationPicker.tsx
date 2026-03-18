@@ -10,19 +10,24 @@ export function LocationPicker({ onLocationChange }: LocationPickerProps) {
   const [address, setAddress] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function geocode() {
     if (!address.trim()) return
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/geocode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address }),
       })
+      if (!res.ok) throw new Error('Location lookup failed')
       const data = await res.json()
       setResult(data.placeName ?? address)
       onLocationChange({ address, latitude: data.latitude, longitude: data.longitude })
+    } catch {
+      setError('Could not find location. Try a different address.')
     } finally {
       setLoading(false)
     }
@@ -44,6 +49,7 @@ export function LocationPicker({ onLocationChange }: LocationPickerProps) {
         </button>
       </div>
       {result && <p className="text-xs text-[var(--color-text-muted)]">📍 {result}</p>}
+      {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   )
 }
