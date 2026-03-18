@@ -892,7 +892,6 @@ model Event {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   // New fields from race calendar port
-  eventTypeEnum         EventTypeEnum?
   organizerId           String?
   organizer             OrganizerProfile? @relation(fields: [organizerId], references: [id])
   registrationUrl       String?
@@ -1843,22 +1842,6 @@ enum EventType {
   other
 }
 
-enum EventTypeEnum {
-  RACE
-  ENDURO
-  DOWNHILL
-  CROSS_COUNTRY
-  TRAIL_RIDE
-  GROUP_RIDE
-  SKILLS_CLINIC
-  KIDS_CAMP
-  BIKEPACKING
-  FUNDRAISER
-  SOCIAL
-  FESTIVAL
-  OTHER
-}
-
 enum RsvpStatus {
   going
   maybe
@@ -2529,7 +2512,7 @@ model FantasyEvent {
   country          String
   raceDate         DateTime
   rosterDeadline   DateTime
-  status           EventStatus       @default(upcoming)
+  status           FantasyEventStatus @default(upcoming)
   scraperUrl       String
   scraperUrlStages String?
   forumThreadId    String?
@@ -2858,7 +2841,7 @@ enum SeriesStatus {
   @@map("SeriesStatus")
 }
 
-enum EventStatus {
+enum FantasyEventStatus {
   upcoming
   roster_open
   locked
