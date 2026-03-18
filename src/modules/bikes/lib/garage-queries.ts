@@ -256,13 +256,14 @@ export async function getBikeStats(userId: string): Promise<BikeStats> {
   const componentBrandSpend: Record<string, number> = {}
 
   const bikeBreakdown = bikes.map(bike => {
+    // filter here because vitest mocks don't apply prisma where clauses
     const active = bike.components.filter(c => c.isActive)
     const componentCostDollars = active.reduce((sum, c) => sum + (c.priceCents ?? 0), 0) / 100
     const componentWeightGrams = active.reduce((sum, c) => sum + (c.weightGrams ?? 0), 0)
 
     const localBrandSpend: Record<string, number> = {}
     for (const c of active) {
-      if (c.priceCents) {
+      if (c.priceCents != null) {
         const dollars = c.priceCents / 100
         categorySpending[c.category] = (categorySpending[c.category] ?? 0) + dollars
         componentBrandSpend[c.brand] = (componentBrandSpend[c.brand] ?? 0) + dollars
@@ -311,8 +312,9 @@ export async function getBikesForCompare(
     include: { components: { where: { isActive: true } } },
   })
 
+  const bikeMap = new Map(bikes.map(b => [b.id, b]))
   return bikeIds
-    .map(id => bikes.find(b => b.id === id))
+    .map(id => bikeMap.get(id))
     .filter((b): b is NonNullable<typeof b> => b !== undefined)
     .map(bike => {
       const componentCostDollars = bike.components.reduce(
