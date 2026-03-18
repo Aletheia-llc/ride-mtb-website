@@ -6,7 +6,7 @@ export const metadata = { title: 'Event Preferences | Ride MTB' }
 
 export default async function EventPreferencesPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/auth/signin')
+  if (!session?.user?.id) redirect('/signin')
 
   const prefs = await getUserEventPreference(session.user.id)
 

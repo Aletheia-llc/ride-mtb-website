@@ -7,7 +7,7 @@ export const metadata = { title: 'My Events | Ride MTB' }
 
 export default async function MyEventsPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/auth/signin')
+  if (!session?.user?.id) redirect('/signin')
 
   const rsvps = await getMyRsvps(session.user.id)
 

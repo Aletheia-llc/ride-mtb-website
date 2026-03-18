@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { searchEvents } from '@/modules/events/lib/queries'
 import { EventFilterBar } from '@/modules/events/components/EventFilterBar'
 import { EventTypeBadge } from '@/modules/events/components/EventTypeBadge'
@@ -25,18 +26,19 @@ export default async function EventsSearchPage({ searchParams }: Props) {
       </Suspense>
       <div className="mt-4 space-y-3">
         {events.map((event) => (
-          <a key={event.id} href={`/events/${event.slug}`}
+          <Link key={event.id} href={`/events/${event.slug}`}
             className="block rounded-lg border border-[var(--color-border)] p-4 hover:border-[var(--color-primary)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-semibold text-[var(--color-text)]">{event.title}</p>
                 <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">
-                  {new Date(event.startDate).toLocaleDateString()} · {event.city}, {event.state}
+                  {new Date(event.startDate).toLocaleDateString()}
+                  {event.city && event.state ? ` · ${event.city}, ${event.state}` : ''}
                 </p>
               </div>
               <EventTypeBadge eventType={event.eventType} />
             </div>
-          </a>
+          </Link>
         ))}
         {events.length === 0 && (
           <p className="py-12 text-center text-sm text-[var(--color-text-muted)]">No events found.</p>

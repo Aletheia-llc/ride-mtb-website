@@ -6,7 +6,7 @@ export async function GET() {
     const result = await pool.query(`
       SELECT id, slug, name, city, state, latitude, longitude,
              "averageRating",
-             (SELECT COUNT(*) FROM trails WHERE "systemId" = trail_systems.id) AS "trailCount"
+             (SELECT COUNT(*) FROM trails WHERE "trailSystemId" = trail_systems.id) AS "trailCount"
       FROM trail_systems
       WHERE latitude IS NOT NULL AND longitude IS NOT NULL
       ORDER BY name

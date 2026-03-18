@@ -6,7 +6,7 @@ export const metadata = { title: 'Submit an Event | Ride MTB' }
 
 export default async function SubmitEventPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/auth/signin')
+  if (!session?.user?.id) redirect('/signin')
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
