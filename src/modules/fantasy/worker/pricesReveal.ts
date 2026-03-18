@@ -78,11 +78,11 @@ export async function handlePricesReveal(payload: { eventId: string }) {
       const content = lines.join('\n')
 
       try {
-        await db.forumPost.create({
+        await db.comment.create({
           data: {
-            threadId: forumThreadId,
+            postId: forumThreadId,
             authorId: botUserId,
-            content,
+            body: content,
           },
         })
         console.log(
