@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { auth } from '@/lib/auth/config'
 import { getUserEventPreference } from '@/modules/events/lib/queries'
 
@@ -12,7 +13,7 @@ export default async function NearMePage() {
       <h1 className="mb-4 text-2xl font-bold text-[var(--color-text)]">Events Near Me</h1>
       {!prefs?.homeLatitude ? (
         <p className="text-sm text-[var(--color-text-muted)]">
-          Set your home location in <a href="/events/preferences" className="text-[var(--color-primary)] hover:underline">preferences</a> to find events near you.
+          Set your home location in <Link href="/events/preferences" className="text-[var(--color-primary)] hover:underline">preferences</Link> to find events near you.
         </p>
       ) : (
         <p className="text-sm text-[var(--color-text-muted)]">Loading events within {prefs.searchRadius}km…</p>
