@@ -3,14 +3,14 @@ import type {
   FantasySeries, FantasyEvent, Rider, RiderEventEntry,
   FantasyTeam, FantasyPick, FantasyEventScore, FantasySeasonScore,
   FantasyLeague, FantasyLeagueMember, ExpertPick,
-  Discipline, SeriesStatus, EventStatus, Gender,
+  Discipline, SeriesStatus, FantasyEventStatus, Gender,
 } from '@/generated/prisma/client'
 
 export type {
   FantasySeries, FantasyEvent, Rider, RiderEventEntry,
   FantasyTeam, FantasyPick, FantasyEventScore, FantasySeasonScore,
   FantasyLeague, FantasyLeagueMember, ExpertPick,
-  Discipline, SeriesStatus, EventStatus, Gender,
+  Discipline, SeriesStatus, FantasyEventStatus, Gender,
 }
 
 export interface SeriesWithEvents extends FantasySeries {

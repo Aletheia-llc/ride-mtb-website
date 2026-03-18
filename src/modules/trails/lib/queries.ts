@@ -63,15 +63,63 @@ export async function getTrailSystems(filters?: TrailSystemFilters) {
 export async function getTrailSystemBySlug(slug: string) {
   return db.trailSystem.findUnique({
     where: { slug },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      city: true,
+      state: true,
+      country: true,
+      latitude: true,
+      longitude: true,
+      websiteUrl: true,
+      systemType: true,
+      status: true,
+      totalMiles: true,
+      trailCount: true,
+      regionId: true,
+      coverImageUrl: true,
+      phone: true,
+      trailheadLat: true,
+      trailheadLng: true,
+      trailheadNotes: true,
+      parkingInfo: true,
+      seasonalNotes: true,
+      passRequired: true,
+      dogFriendly: true,
+      eMtbAllowed: true,
+      isFeatured: true,
+      totalVertFt: true,
+      averageRating: true,
+      reviewCount: true,
+      rideCount: true,
+      importSource: true,
+      externalId: true,
+      submittedByUserId: true,
+      createdAt: true,
+      updatedAt: true,
       trails: {
         where: { status: 'open' },
         orderBy: { name: 'asc' },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          trailType: true,
+          physicalDifficulty: true,
+          technicalDifficulty: true,
+          distance: true,
+          elevationGain: true,
+          status: true,
+          currentCondition: true,
+          hasGpsTrack: true,
+          features: true,
+          averageRating: true,
           gpsTrack: {
             select: {
               id: true,
-              simplifiedTrack: true,
+              trackData: true,
               boundsNeLat: true,
               boundsNeLng: true,
               boundsSwLat: true,
@@ -79,6 +127,11 @@ export async function getTrailSystemBySlug(slug: string) {
             },
           },
         },
+      },
+      photos: {
+        take: 5,
+        orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }],
+        select: { url: true, caption: true, isCover: true },
       },
     },
   })
@@ -102,10 +155,10 @@ export async function getTrailList(
     trailSystemId: system.id,
     ...(filters?.trailType && { trailType: filters.trailType }),
     ...(filters?.status && { status: filters.status }),
-    ...((filters?.minDifficulty || filters?.maxDifficulty) && {
+    ...((filters?.minDifficulty != null || filters?.maxDifficulty != null) && {
       physicalDifficulty: {
-        ...(filters?.minDifficulty && { gte: filters.minDifficulty }),
-        ...(filters?.maxDifficulty && { lte: filters.maxDifficulty }),
+        ...(filters?.minDifficulty != null && { gte: filters.minDifficulty }),
+        ...(filters?.maxDifficulty != null && { lte: filters.maxDifficulty }),
       },
     }),
   }
@@ -140,14 +193,56 @@ export async function getTrailBySlug(slug: string) {
       system: {
         select: { name: true, slug: true, city: true, state: true },
       },
-      gpsTrack: true,
+      gpsTrack: {
+        select: {
+          id: true,
+          trackData: true,
+          boundsNeLat: true,
+          boundsNeLng: true,
+          boundsSwLat: true,
+          boundsSwLng: true,
+          pointCount: true,
+          elevationProfile: true,
+          boundsJson: true,
+        },
+      },
       reviews: {
         orderBy: { createdAt: 'desc' },
         take: 10,
-        include: {
+        select: {
+          id: true,
+          rating: true,
+          flowRating: true,
+          sceneryRating: true,
+          technicalRating: true,
+          maintenanceRating: true,
+          comment: true,
+          rideDate: true,
+          bikeType: true,
+          title: true,
+          body: true,
+          helpfulCount: true,
+          createdAt: true,
           user: {
             select: { name: true, image: true },
           },
+        },
+      },
+      photos: {
+        take: 10,
+        orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }],
+        select: { url: true, caption: true, isCover: true },
+      },
+      pois: {
+        where: { isApproved: true },
+        select: {
+          id: true,
+          type: true,
+          name: true,
+          description: true,
+          lat: true,
+          lng: true,
+          photoUrl: true,
         },
       },
       _count: { select: { reviews: true, favorites: true } },
@@ -323,4 +418,54 @@ export async function getTrailSystemsInBounds(
       _count: { select: { trails: true } },
     },
   })
+}
+
+// ── 13. getFeaturedSystems ────────────────────────────────────
+
+export async function getFeaturedSystems(limit = 6) {
+  return db.trailSystem.findMany({
+    where: { status: 'open', isFeatured: true },
+    take: limit,
+    orderBy: { reviewCount: 'desc' },
+    include: {
+      photos: {
+        where: { isCover: true },
+        take: 1,
+        select: { url: true },
+      },
+      _count: { select: { trails: true } },
+    },
+  })
+}
+
+// ── 14. getSystemTrailsForMap ─────────────────────────────────
+
+export async function getSystemTrailsForMap(systemId: string) {
+  return db.trail.findMany({
+    where: { trailSystemId: systemId, hasGpsTrack: true, status: 'open' },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      physicalDifficulty: true,
+      technicalDifficulty: true,
+      gpsTrack: {
+        select: { trackData: true },
+      },
+    },
+  })
+}
+
+// ── 15. getHelpfulMarksByUser ─────────────────────────────────
+
+export async function getHelpfulMarksByUser(
+  userId: string,
+  reviewIds: string[],
+): Promise<Set<string>> {
+  if (reviewIds.length === 0) return new Set()
+  const marks = await db.trailReviewHelpful.findMany({
+    where: { userId, reviewId: { in: reviewIds } },
+    select: { reviewId: true },
+  })
+  return new Set(marks.map((m) => m.reviewId))
 }

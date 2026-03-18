@@ -5,13 +5,13 @@ import { getRecommendations } from './recommendations'
 vi.mock('@/lib/db/client', () => ({
   db: {
     learnCourse: { findFirst: vi.fn() },
-    forumCategory: { findFirst: vi.fn() },
+    category: { findFirst: vi.fn() },
     trailSystem: { findFirst: vi.fn() },
   },
 }))
 
 const mockLearnCourse = vi.mocked(db.learnCourse.findFirst)
-const mockForumCategory = vi.mocked(db.forumCategory.findFirst)
+const mockForumCategory = vi.mocked(db.category.findFirst)
 const mockTrailSystem = vi.mocked(db.trailSystem.findFirst)
 
 beforeEach(() => {

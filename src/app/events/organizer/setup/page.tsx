@@ -1,13 +1,11 @@
 'use client'
 import Link from 'next/link'
 import { useActionState } from 'react'
-import { createOrganizerProfile } from '@/modules/events/actions/createOrganizerProfile'
-
-type OrganizerState = { errors: Record<string, string>; success?: boolean }
+import { createOrganizerProfile, type OrganizerState } from '@/modules/events/actions/createOrganizerProfile'
 
 export default function OrganizerSetupPage() {
   const [state, formAction, pending] = useActionState<OrganizerState, FormData>(
-    createOrganizerProfile as (s: OrganizerState, f: FormData) => Promise<OrganizerState>,
+    createOrganizerProfile,
     { errors: {} },
   )
 
@@ -25,7 +23,7 @@ export default function OrganizerSetupPage() {
       <form action={formAction} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Organization Name</label>
-          <input name="orgName" required maxLength={200} className="w-full rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)]" />
+          <input name="name" required maxLength={200} className="w-full rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)]" />
         </div>
         <div>
           <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Bio</label>

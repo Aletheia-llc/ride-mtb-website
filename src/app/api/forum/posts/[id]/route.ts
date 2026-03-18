@@ -16,19 +16,19 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params
-  const body = await req.json().catch(() => ({}))
-  const content: unknown = body?.content
+  const requestBody = await req.json().catch(() => ({}))
+  const body_content: unknown = requestBody?.body
 
-  if (typeof content !== 'string' || content.trim().length === 0) {
-    return NextResponse.json({ error: 'content_required' }, { status: 400 })
+  if (typeof body_content !== 'string' || body_content.trim().length === 0) {
+    return NextResponse.json({ error: 'body_required' }, { status: 400 })
   }
-  if (content.length > 10000) {
-    return NextResponse.json({ error: 'content_too_long' }, { status: 400 })
+  if (body_content.length > 10000) {
+    return NextResponse.json({ error: 'body_too_long' }, { status: 400 })
   }
 
-  const post = await db.forumPost.findUnique({
+  const post = await db.comment.findUnique({
     where: { id },
-    select: { id: true, authorId: true, createdAt: true, deletedAt: true, content: true },
+    select: { id: true, authorId: true, createdAt: true, deletedAt: true, body: true },
   })
 
   if (!post || post.deletedAt !== null) {
@@ -49,10 +49,10 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     }
   }
 
-  const updated = await db.forumPost.update({
+  const updated = await db.comment.update({
     where: { id },
-    data: { content: content.trim(), editedAt: new Date() },
-    select: { id: true, content: true, editedAt: true },
+    data: { body: body_content.trim(), editedAt: new Date() },
+    select: { id: true, body: true, editedAt: true },
   })
 
   return NextResponse.json(updated)
@@ -66,20 +66,20 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const post = await db.forumPost.findUnique({
+  const comment = await db.comment.findUnique({
     where: { id },
-    select: { id: true, authorId: true, isFirst: true, threadId: true, deletedAt: true },
+    select: { id: true, authorId: true, deletedAt: true },
   })
 
-  if (!post) {
+  if (!comment) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  if (post.deletedAt) {
-    return NextResponse.json({ error: 'Post already deleted' }, { status: 404 })
+  if (comment.deletedAt) {
+    return NextResponse.json({ error: 'Comment already deleted' }, { status: 404 })
   }
 
-  const isAuthor = post.authorId === session.user.id
+  const isAuthor = comment.authorId === session.user.id
   const isAdmin = session.user.role === 'admin'
 
   if (!isAuthor && !isAdmin) {
@@ -88,17 +88,10 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
   const now = new Date()
 
-  await db.forumPost.update({
+  await db.comment.update({
     where: { id },
     data: { deletedAt: now },
   })
-
-  if (post.isFirst) {
-    await db.forumThread.update({
-      where: { id: post.threadId },
-      data: { deletedAt: now },
-    })
-  }
 
   return new NextResponse(null, { status: 204 })
 }

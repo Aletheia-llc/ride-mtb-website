@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth/guards'
 import { db } from '@/lib/db/client'
-import type { EventStatus } from '@/generated/prisma/client'
+import type { FantasyEventStatus } from '@/generated/prisma/client'
 
 const createEventSchema = z.object({
   seriesId: z.string().min(1, 'Series is required'),
@@ -148,7 +148,7 @@ export async function updateEventStatus(
 
     await db.fantasyEvent.update({
       where: { id },
-      data: { status: status as EventStatus },
+      data: { status: status as FantasyEventStatus },
     })
 
     revalidatePath('/admin/fantasy/events')

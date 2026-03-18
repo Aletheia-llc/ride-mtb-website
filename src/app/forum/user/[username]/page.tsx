@@ -9,7 +9,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
-import { getForumUserProfile, getUserForumThreads, getUserForumBookmarks } from '@/modules/forum/lib/queries'
+import { getForumUserProfile, getUserPosts, getBookmarkedPosts } from '@/modules/forum/lib/queries'
 // eslint-disable-next-line no-restricted-imports
 import { ForumThreadCard } from '@/modules/forum/components/ForumThreadCard'
 
@@ -55,10 +55,12 @@ export default async function ForumUserProfilePage({ params }: PageProps) {
   if (!user) notFound()
 
   const currentUserId = session?.user?.id ?? null
-  const [threads, bookmarkedIds] = await Promise.all([
-    getUserForumThreads(user.id),
-    currentUserId ? getUserForumBookmarks(currentUserId) : Promise.resolve(new Set<string>()),
+  const [{ posts: threads }, bookmarkedPosts] = await Promise.all([
+    getUserPosts(user.username!),
+    currentUserId ? getBookmarkedPosts(currentUserId) : Promise.resolve([]),
   ])
+
+  const bookmarkedIds = new Set(bookmarkedPosts.map((p) => p.id))
 
   const displayName = user.name || user.username || 'Anonymous'
   const avatarSrc = user.avatarUrl || user.image
@@ -103,7 +105,7 @@ export default async function ForumUserProfilePage({ params }: PageProps) {
             </span>
             <span className="flex items-center gap-1">
               <MessageSquare className="h-4 w-4" />
-              {user._count.forumPosts} posts
+              {user._count.posts} posts
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
@@ -125,15 +127,15 @@ export default async function ForumUserProfilePage({ params }: PageProps) {
       </div>
 
       {/* Badges */}
-      {user.forumBadges && user.forumBadges.length > 0 && (
+      {user.userBadges && user.userBadges.length > 0 && (
         <div className="mb-8">
           <h2 className="mb-3 text-lg font-bold text-[var(--color-text)]">Badges</h2>
           <div className="flex flex-wrap gap-3">
-            {user.forumBadges.map((ub) => {
+            {user.userBadges.map((ub, index) => {
               const Icon = BADGE_ICONS[ub.badge.icon] ?? Award
               return (
                 <div
-                  key={ub.badgeSlug}
+                  key={index}
                   className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2"
                   title={ub.badge.description}
                 >
@@ -159,7 +161,7 @@ export default async function ForumUserProfilePage({ params }: PageProps) {
           {threads.map((thread) => (
             <ForumThreadCard
               key={thread.id}
-              thread={thread}
+              post={thread}
               currentUserId={currentUserId}
               initialBookmarked={bookmarkedIds.has(thread.id)}
             />

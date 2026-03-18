@@ -30,7 +30,7 @@ export interface UserProfileData {
     lastGrantAt: Date | null
   } | null
   _count: {
-    forumPosts: number
+    posts: number
     trailReviews: number
     rideLogs: number
     gearReviews: number

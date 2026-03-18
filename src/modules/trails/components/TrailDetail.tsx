@@ -11,11 +11,9 @@ interface TrailDetailProps {
   children?: React.ReactNode // Slot for map and elevation profile
 }
 
-const M_TO_FT = 3.28084
-
-function formatFeet(meters: number | null): string | null {
-  if (meters == null) return null
-  return `${Math.round(meters * M_TO_FT).toLocaleString()} ft`
+function formatFeet(feet: number | null): string | null {
+  if (feet == null) return null
+  return `${Math.round(feet).toLocaleString()} ft`
 }
 
 function formatMiles(miles: number | null): string | null {
@@ -69,7 +67,7 @@ export function TrailDetailView({
         </Link>
         <span>/</span>
         <Link
-          href={`/trails/systems/${trail.system.slug}`}
+          href={`/trails/explore/${trail.system.slug}`}
           className="transition-colors hover:text-[var(--color-text)]"
         >
           {trail.system.name}

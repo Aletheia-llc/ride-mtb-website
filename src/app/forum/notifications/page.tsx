@@ -25,7 +25,7 @@ function timeAgo(date: Date): string {
 
 export default async function NotificationsPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/auth/signin')
+  if (!session?.user?.id) redirect('/signin')
 
   const notifications = await db.forumNotification.findMany({
     where: { userId: session.user.id },
@@ -33,7 +33,7 @@ export default async function NotificationsPage() {
     take: 50,
     include: {
       actor: { select: { name: true, username: true } },
-      thread: { select: { title: true, slug: true } },
+      post: { select: { title: true, slug: true } },
     },
   })
 
@@ -57,8 +57,8 @@ export default async function NotificationsPage() {
           {notifications.map((n) => {
             const config = TYPE_CONFIG[n.type] ?? TYPE_CONFIG.REPLY_TO_THREAD
             const Icon = config.icon
-            const href = n.thread
-              ? `/forum/thread/${n.thread.slug}${n.postId ? `#${n.postId}` : ''}`
+            const href = n.post
+              ? `/forum/thread/${n.post.slug}${n.commentId ? `#${n.commentId}` : ''}`
               : '/forum'
 
             return (
@@ -78,10 +78,10 @@ export default async function NotificationsPage() {
                       <span className="font-semibold">Your post</span>
                     )}{' '}
                     {config.label}
-                    {n.thread && (
+                    {n.post && (
                       <>
                         {' '}in{' '}
-                        <span className="font-medium">{n.thread.title}</span>
+                        <span className="font-medium">{n.post.title}</span>
                       </>
                     )}
                   </p>

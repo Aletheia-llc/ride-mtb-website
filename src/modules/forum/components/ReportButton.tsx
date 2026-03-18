@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Flag } from 'lucide-react'
 // eslint-disable-next-line no-restricted-imports
-import { reportForumPost, reportForumThread } from '@/modules/forum/actions/reportContent'
+import { reportContent } from '@/modules/forum/actions/reportContent'
 
 const REPORT_REASONS = [
   'Spam',
@@ -15,7 +15,7 @@ const REPORT_REASONS = [
 ]
 
 interface ReportButtonProps {
-  targetType: 'post' | 'thread'
+  targetType: 'post' | 'comment'
   targetId: string
   className?: string
 }
@@ -33,11 +33,7 @@ export function ReportButton({ targetType, targetId, className }: ReportButtonPr
     if (!finalReason.trim()) return
 
     startTransition(async () => {
-      if (targetType === 'post') {
-        await reportForumPost(targetId, finalReason)
-      } else {
-        await reportForumThread(targetId, finalReason)
-      }
+      await reportContent({ targetType, targetId, reason: finalReason })
       setSubmitted(true)
     })
   }

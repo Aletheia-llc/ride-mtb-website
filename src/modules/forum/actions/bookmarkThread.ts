@@ -1,16 +1,22 @@
 'use server'
-import { requireAuth } from '@/lib/auth/guards'
+
+import { auth } from '@/lib/auth'
 import { db } from '@/lib/db/client'
 
-export async function toggleForumBookmark(threadId: string): Promise<{ bookmarked: boolean }> {
-  const user = await requireAuth()
-  const existing = await db.forumBookmark.findUnique({
-    where: { userId_threadId: { userId: user.id, threadId } },
+export async function toggleForumBookmark(postId: string) {
+  const session = await auth()
+  if (!session?.user?.id) return { error: 'Not authenticated' }
+
+  const userId = session.user.id
+  const existing = await db.bookmark.findUnique({
+    where: { userId_postId: { userId, postId } },
   })
+
   if (existing) {
-    await db.forumBookmark.delete({ where: { id: existing.id } })
+    await db.bookmark.delete({ where: { id: existing.id } })
     return { bookmarked: false }
+  } else {
+    await db.bookmark.create({ data: { userId, postId } })
+    return { bookmarked: true }
   }
-  await db.forumBookmark.create({ data: { userId: user.id, threadId } })
-  return { bookmarked: true }
 }

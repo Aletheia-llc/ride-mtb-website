@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 type EventItem = { id: string; title: string; slug: string; startDate: Date; status: string; _count?: { rsvps?: number } }
-type Organizer = { orgName: string; bio: string | null; isVerified: boolean; events: EventItem[] }
+type Organizer = { name: string; bio: string | null; isVerified: boolean; events: EventItem[] }
 
 export function OrganizerDashboard({ organizer }: { organizer: Organizer }) {
   return (
@@ -9,7 +9,7 @@ export function OrganizerDashboard({ organizer }: { organizer: Organizer }) {
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <div className="flex items-center gap-3">
           <div>
-            <p className="font-semibold text-[var(--color-text)]">{organizer.orgName}</p>
+            <p className="font-semibold text-[var(--color-text)]">{organizer.name}</p>
             {organizer.isVerified && <span className="text-xs text-[var(--color-primary)]">&#10003; Verified</span>}
           </div>
         </div>

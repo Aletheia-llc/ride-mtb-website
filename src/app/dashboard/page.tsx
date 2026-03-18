@@ -41,7 +41,7 @@ export default async function DashboardPage() {
   const stats = [
     { label: 'Total XP', value: totalXp.toLocaleString(), icon: Trophy, color: 'text-yellow-500' },
     { label: 'Day Streak', value: streakDays, icon: Flame, color: 'text-orange-500' },
-    { label: 'Forum Posts', value: profile._count.forumPosts, icon: MessageSquare, color: 'text-[var(--color-primary)]' },
+    { label: 'Forum Posts', value: profile._count.posts, icon: MessageSquare, color: 'text-[var(--color-primary)]' },
     { label: 'Trail Reviews', value: profile._count.trailReviews, icon: Map, color: 'text-green-500' },
   ]
 
