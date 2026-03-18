@@ -964,17 +964,21 @@ model EventComment {
 }
 
 model OrganizerProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  orgName     String
-  bio         String?
-  websiteUrl  String?
-  logoUrl     String?
-  isVerified  Boolean  @default(false)
-  eventCount  Int      @default(0)
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events      Event[]
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  name           String
+  bio            String?
+  websiteUrl     String?
+  logoUrl        String?
+  isVerified     Boolean  @default(false)
+  eventCount     Int      @default(0)
+  description    String?
+  contactEmail   String?
+  socialLinks    String[] @default([])
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events         Event[]
 
   @@map("organizer_profiles")
 }
@@ -1677,9 +1681,12 @@ model CoachProfile {
   calcomLink   String?
   certifications Json   @default("[]")
   isActive     Boolean  @default(true)
+  latitude     Float?
+  longitude    Float?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id])
+  clinics      CoachingClinic[]
 
   @@map("coach_profiles")
 }
@@ -2948,5 +2955,15 @@ enum ResultStatus {
   override_pending
 
   @@map("ResultStatus")
+}
+
+// Placeholder stub — full model added in Task 4
+model CoachingClinic {
+  id        String   @id @default(cuid())
+  coachId   String
+  createdAt DateTime @default(now())
+  coach     CoachProfile @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@map("coaching_clinics")
 }
 

@@ -25,7 +25,7 @@ export default function OrganizerSetupPage() {
       <form action={formAction} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Organization Name</label>
-          <input name="orgName" required maxLength={200} className="w-full rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)]" />
+          <input name="name" required maxLength={200} className="w-full rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)]" />
         </div>
         <div>
           <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Bio</label>
