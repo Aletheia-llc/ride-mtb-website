@@ -77,6 +77,7 @@ export async function getEventBySlug(slug: string): Promise<EventDetailData | nu
     where: { slug },
     include: {
       creator: { select: { name: true, image: true } },
+      organizer: { select: { name: true, isVerified: true } },
       rsvps: {
         include: {
           user: { select: { name: true, image: true } },
@@ -116,7 +117,64 @@ export async function getEventBySlug(slug: string): Promise<EventDetailData | nu
     creatorImage: event.creator.image,
     rsvps,
     rsvpCount: rsvps.filter((r) => r.status === 'going').length,
+    // New enriched fields
+    shortDescription: event.shortDescription,
+    coverImageUrl: event.coverImageUrl,
+    difficulty: event.difficulty,
+    isFree: event.isFree,
+    registrationUrl: event.registrationUrl,
+    resultsPosted: event.resultsPosted,
+    resultsUrl: event.resultsUrl,
+    status: event.status as string,
+    // Organizer fields
+    organizerId: event.organizerId,
+    organizerName: event.organizer?.name ?? null,
+    organizerVerified: event.organizer?.isVerified ?? false,
   }
+}
+
+// ── getRelatedEvents ──────────────────────────────────────
+
+export async function getRelatedEvents(
+  currentSlug: string,
+  eventType: string,
+  limit = 4,
+): Promise<EventSummary[]> {
+  const rawEvents = await db.event.findMany({
+    where: {
+      status: 'published',
+      eventType: eventType as EventType,
+      startDate: { gte: new Date() },
+      NOT: { slug: currentSlug },
+    },
+    orderBy: { startDate: 'asc' },
+    take: limit,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      location: true,
+      startDate: true,
+      endDate: true,
+      eventType: true,
+      imageUrl: true,
+      creator: { select: { name: true } },
+      _count: { select: { rsvps: true } },
+    },
+  })
+
+  return rawEvents.map((e) => ({
+    id: e.id,
+    title: e.title,
+    slug: e.slug,
+    location: e.location,
+    startDate: e.startDate,
+    endDate: e.endDate,
+    eventType: e.eventType as EventType,
+    imageUrl: e.imageUrl,
+    creatorName: e.creator.name,
+    rsvpCount: e._count.rsvps,
+  }))
 }
 
 // ── createEvent ───────────────────────────────────────────
