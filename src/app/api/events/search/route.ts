@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
       eventType: searchParams.get('type') ?? undefined,
       isFree: searchParams.get('free') === 'true' ? true : undefined,
       cursor: searchParams.get('cursor') ?? undefined,
-      limit: searchParams.get('limit') ? Number(searchParams.get('limit')) : 20,
+      limit: searchParams.get('limit') ? (Number(searchParams.get('limit')) || 20) : 20,
     })
     return NextResponse.json(result)
   } catch (error) {

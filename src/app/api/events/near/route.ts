@@ -4,10 +4,17 @@ import { getEventsNearLocation } from '@/modules/events/lib/queries'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl
-    const lat = Number(searchParams.get('lat'))
-    const lng = Number(searchParams.get('lng'))
-    const radius = Number(searchParams.get('radius') ?? '100')
-    if (!lat || !lng) return NextResponse.json({ error: 'lat and lng required' }, { status: 400 })
+    const latRaw = searchParams.get('lat')
+    const lngRaw = searchParams.get('lng')
+    if (latRaw === null || lngRaw === null) {
+      return NextResponse.json({ error: 'lat and lng required' }, { status: 400 })
+    }
+    const lat = Number(latRaw)
+    const lng = Number(lngRaw)
+    if (isNaN(lat) || isNaN(lng)) {
+      return NextResponse.json({ error: 'lat and lng must be numbers' }, { status: 400 })
+    }
+    const radius = Number(searchParams.get('radius')) || 100
     const events = await getEventsNearLocation({ latitude: lat, longitude: lng, radiusKm: radius })
     return NextResponse.json(events)
   } catch (error) {
