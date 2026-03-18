@@ -57,7 +57,7 @@ export function GarageView({ bikes }: GarageViewProps) {
           )}
 
           {bikes.length >= 2 && !compareMode && (
-            <Button variant="secondary" size="sm" onClick={() => setCompareMode(true)}>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setCompareMode(true)}>
               <GitCompare className="mr-1.5 h-4 w-4" />
               Compare
             </Button>
@@ -66,13 +66,14 @@ export function GarageView({ bikes }: GarageViewProps) {
           {compareMode && (
             <>
               <Button
+                type="button"
                 size="sm"
                 onClick={handleCompare}
                 disabled={selectedIds.length < 2}
               >
                 Compare ({selectedIds.length})
               </Button>
-              <Button variant="secondary" size="sm" onClick={exitCompareMode}>
+              <Button type="button" variant="secondary" size="sm" onClick={exitCompareMode}>
                 Cancel
               </Button>
             </>
@@ -92,7 +93,10 @@ export function GarageView({ bikes }: GarageViewProps) {
             compareMode ? (
               <div
                 key={bike.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleSelect(bike.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleSelect(bike.id) }}
                 className={[
                   'relative cursor-pointer rounded-lg transition-all',
                   selectedIds.includes(bike.id)
