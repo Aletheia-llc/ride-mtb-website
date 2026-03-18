@@ -40,7 +40,7 @@ export default async function ForumSearchPage({ searchParams }: SearchPageProps)
           <Search className="mx-auto mb-4 h-12 w-12 text-[var(--color-text-muted)]" />
           <h2 className="mb-2 text-lg font-semibold text-[var(--color-text)]">Search the forum</h2>
           <p className="text-sm text-[var(--color-text-muted)]">
-            Use the search bar in the forum sidebar to find threads, replies, and members.
+            Type in the search bar above to find threads, replies, and members.
           </p>
         </div>
       </div>
