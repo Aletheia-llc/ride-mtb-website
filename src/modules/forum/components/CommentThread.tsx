@@ -113,6 +113,8 @@ export function CommentThread({
               comment={comment}
               currentUserId={currentUserId}
               depth={0}
+              threadId={threadId}
+              isLocked={isLocked}
             />
           ))}
         </div>

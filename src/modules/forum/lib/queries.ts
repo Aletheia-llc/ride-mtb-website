@@ -489,6 +489,7 @@ export async function createCommentRecord(data: {
   postId: string
   authorId: string
   body: string
+  parentId?: string
 }) {
   return db.$transaction(async (tx) => {
     const comment = await tx.comment.create({
@@ -496,6 +497,7 @@ export async function createCommentRecord(data: {
         postId: data.postId,
         authorId: data.authorId,
         body: data.body,
+        parentId: data.parentId ?? null,
       },
     })
     await tx.post.update({

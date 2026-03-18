@@ -69,6 +69,7 @@ export async function createPost(
       postId,
       authorId: user.id,
       body: content,
+      parentId,
     })
 
     await grantXP({

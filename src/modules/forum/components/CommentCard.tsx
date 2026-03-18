@@ -5,23 +5,28 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ChevronUp, ChevronDown } from 'lucide-react'
+import { ChevronUp, ChevronDown, MessageSquare } from 'lucide-react'
 import { formatRelativeTime } from '@/modules/forum/types'
 // eslint-disable-next-line no-restricted-imports
 import { votePost } from '@/modules/forum/actions/votePost'
+// eslint-disable-next-line no-restricted-imports
+import { ReplyForm } from '@/modules/forum/components/ReplyForm'
 import type { ForumComment } from '@/modules/forum/types'
 
 interface CommentCardProps {
   comment: ForumComment
   currentUserId?: string
   depth?: number
+  threadId: string
+  isLocked: boolean
 }
 
 const MAX_DEPTH = 3
 
-export function CommentCard({ comment, currentUserId, depth = 0 }: CommentCardProps) {
+export function CommentCard({ comment, currentUserId, depth = 0, threadId, isLocked }: CommentCardProps) {
   const [voteScore, setVoteScore] = useState(comment.voteScore)
   const [voting, setVoting] = useState(false)
+  const [showReply, setShowReply] = useState(false)
 
   const author = comment.author
   const joinedYear = author.createdAt ? new Date(author.createdAt).getFullYear() : null
@@ -46,7 +51,7 @@ export function CommentCard({ comment, currentUserId, depth = 0 }: CommentCardPr
         {replies.length > 0 && depth < MAX_DEPTH && (
           <div className="ml-6 border-l-2 border-[var(--color-border)] pl-4">
             {replies.map((reply) => (
-              <CommentCard key={reply.id} comment={reply} currentUserId={currentUserId} depth={depth + 1} />
+              <CommentCard key={reply.id} comment={reply} currentUserId={currentUserId} depth={depth + 1} threadId={threadId} isLocked={isLocked} />
             ))}
           </div>
         )}
@@ -126,18 +131,44 @@ export function CommentCard({ comment, currentUserId, depth = 0 }: CommentCardPr
                 <ChevronDown className="h-4 w-4" />
               </button>
             </div>
+            {currentUserId && !isLocked && depth < MAX_DEPTH && (
+              <button
+                onClick={() => setShowReply((v) => !v)}
+                className="flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                {showReply ? 'Cancel' : 'Reply'}
+              </button>
+            )}
             {comment.editedAt && (
               <span className="text-xs text-[var(--color-text-muted)] italic">
                 edited {formatRelativeTime(comment.editedAt)}
               </span>
             )}
           </div>
+          {showReply && (
+            <div className="mt-3">
+              <ReplyForm
+                threadId={threadId}
+                isLocked={isLocked}
+                parentId={comment.id}
+                onSuccess={() => setShowReply(false)}
+              />
+            </div>
+          )}
         </div>
       </div>
       {replies.length > 0 && depth < MAX_DEPTH && (
         <div className="ml-6 border-l-2 border-[var(--color-border)] pl-4">
           {replies.map((reply) => (
-            <CommentCard key={reply.id} comment={reply} currentUserId={currentUserId} depth={depth + 1} />
+            <CommentCard
+              key={reply.id}
+              comment={reply}
+              currentUserId={currentUserId}
+              depth={depth + 1}
+              threadId={threadId}
+              isLocked={isLocked}
+            />
           ))}
         </div>
       )}
