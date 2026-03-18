@@ -1,17 +1,19 @@
 // src/modules/bikes/components/garage/ShareButton.tsx
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Share2, Check } from 'lucide-react'
 
 export function ShareButton() {
   const [copied, setCopied] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setCopied(false), 2000)
     } catch {
       // clipboard API not available (non-HTTPS or permissions denied)
     }
