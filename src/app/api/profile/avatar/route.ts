@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Upload failed. Please try again.' }, { status: 500 })
   }
 
-  const avatarUrl = getPublicUrl(StorageFolders.avatars, filename)
+  const baseUrl = getPublicUrl(StorageFolders.avatars, filename)
+  const avatarUrl = `${baseUrl}?t=${Date.now()}`
 
   try {
     await db.user.update({

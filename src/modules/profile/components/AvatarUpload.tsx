@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import ReactCrop, { centerCrop, makeAspectCrop, convertToPixelCrop, type Crop } from 'react-image-crop'
+import ReactCrop, { centerCrop, makeAspectCrop, convertToPixelCrop, type Crop, type PixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { Camera, Loader2, X } from 'lucide-react'
 import { Avatar } from '@/ui/components/Avatar'
@@ -20,6 +20,7 @@ export function AvatarUpload({ currentAvatarUrl, currentImage, displayName }: Av
 
   const [imgSrc, setImgSrc] = useState('')
   const [crop, setCrop] = useState<Crop>()
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,6 +28,10 @@ export function AvatarUpload({ currentAvatarUrl, currentImage, displayName }: Av
   function onSelectFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File too large. Please choose an image under 5MB.')
+      return
+    }
     const reader = new FileReader()
     reader.onload = () => {
       setImgSrc(reader.result as string)
@@ -46,22 +51,22 @@ export function AvatarUpload({ currentAvatarUrl, currentImage, displayName }: Av
 
   function getCroppedBlob(): Promise<Blob> {
     const image = imgRef.current
-    if (!image || !crop) throw new Error('No crop selected')
+    if (!image || !completedCrop) throw new Error('No crop selected')
 
     const canvas = document.createElement('canvas')
     const SIZE = 400
     canvas.width = SIZE
     canvas.height = SIZE
 
-    const ctx = canvas.getContext('2d')!
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas 2D not available')
 
-    const pixelCrop = convertToPixelCrop(crop, image.naturalWidth, image.naturalHeight)
     ctx.drawImage(
       image,
-      pixelCrop.x,
-      pixelCrop.y,
-      pixelCrop.width,
-      pixelCrop.height,
+      completedCrop.x,
+      completedCrop.y,
+      completedCrop.width,
+      completedCrop.height,
       0, 0, SIZE, SIZE,
     )
 
@@ -129,7 +134,7 @@ export function AvatarUpload({ currentAvatarUrl, currentImage, displayName }: Av
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={onSelectFile}
       />
@@ -154,6 +159,7 @@ export function AvatarUpload({ currentAvatarUrl, currentImage, displayName }: Av
             <ReactCrop
               crop={crop}
               onChange={setCrop}
+              onComplete={(c) => setCompletedCrop(c)}
               aspect={1}
               circularCrop
               className="max-h-72 w-full overflow-hidden rounded-lg"
@@ -180,7 +186,7 @@ export function AvatarUpload({ currentAvatarUrl, currentImage, displayName }: Av
               <button
                 type="button"
                 onClick={handleUpload}
-                disabled={isUploading || !crop}
+                disabled={isUploading || !completedCrop}
                 className="inline-flex items-center gap-2 justify-center rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
               >
                 {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
