@@ -21,6 +21,12 @@ export async function saveListing(listingId: string): Promise<void> {
     throw new Error('Listing not found')
   }
 
+  const existingSave = await db.listingSave.findUnique({
+    where: { userId_listingId: { userId, listingId } },
+  })
+
+  if (existingSave) return // already saved — idempotent
+
   await db.listingSave.create({
     data: { userId, listingId },
   })
@@ -77,6 +83,8 @@ export async function unsaveListing(listingId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function toggleSave(listingId: string): Promise<{ saved: boolean }> {
+  // Call requireAuth() once here; delegates (saveListing/unsaveListing) will call it
+  // again, but that is a minor cost. The single source of truth for userId is here.
   const user = await requireAuth()
   const userId = user.id
 

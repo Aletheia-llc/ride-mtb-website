@@ -91,7 +91,7 @@ export async function resolveReport(reportId: string, action: string): Promise<v
 
   const report = await db.listingReport.findUnique({
     where: { id: reportId },
-    select: { id: true, resolved: true },
+    select: { id: true, resolved: true, listingId: true },
   })
 
   if (!report) {
@@ -109,26 +109,19 @@ export async function resolveReport(reportId: string, action: string): Promise<v
 
   // If action is to remove the listing, update it
   if (action === 'remove_listing') {
-    const fullReport = await db.listingReport.findUnique({
-      where: { id: reportId },
-      select: { listingId: true },
+    const listing = await db.listing.findUnique({
+      where: { id: report.listingId },
+      select: { slug: true },
     })
 
-    if (fullReport) {
-      const listing = await db.listing.findUnique({
-        where: { id: fullReport.listingId },
-        select: { slug: true },
-      })
+    await db.listing.update({
+      where: { id: report.listingId },
+      data: { status: 'removed' },
+    })
 
-      await db.listing.update({
-        where: { id: fullReport.listingId },
-        data: { status: 'removed' },
-      })
-
-      if (listing) {
-        revalidatePath(`/marketplace/${listing.slug}`)
-        revalidatePath('/marketplace')
-      }
+    if (listing) {
+      revalidatePath(`/marketplace/${listing.slug}`)
+      revalidatePath('/marketplace')
     }
   }
 
