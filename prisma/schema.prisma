@@ -888,7 +888,7 @@ model Event {
   maxAttendees Int?
   imageUrl    String?
   eventType   EventType   @default(group_ride)
-  status      ContentStatus @default(published)
+  status      CommunityEventStatus @default(published)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   // New fields from race calendar port
@@ -1692,6 +1692,17 @@ enum ContentStatus {
   draft
   published
   archived
+}
+
+enum CommunityEventStatus {
+  draft
+  pending_review
+  published
+  cancelled
+  postponed
+  completed
+
+  @@map("event_statuses")
 }
 
 enum Tier {
