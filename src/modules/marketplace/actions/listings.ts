@@ -6,7 +6,6 @@ import { auth } from '@/lib/auth/config'
 import {
   getListingBySlug,
   getListings,
-  searchListings,
   getFeaturedListings,
   listingInclude,
 } from '@/modules/marketplace/lib/queries'
