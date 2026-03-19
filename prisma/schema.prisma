@@ -1909,16 +1909,27 @@ enum MediaType {
 }
 
 enum ListingCategory {
-  complete_bikes
-  frames
+  complete_bike
+  frame
+  fork
+  shock
   wheels
-  suspension
+  tires
   drivetrain
   brakes
   cockpit
-  protection
+  saddle_seatpost
+  pedals
+  dropper_post
+  helmet
+  goggles_eyewear
   clothing
-  accessories
+  pack_hydration
+  tools
+  electronics
+  protection
+  rack_transport
+  vehicle
   other
 }
 
@@ -1932,11 +1943,13 @@ enum ItemCondition {
 
 enum ListingStatus {
   draft
+  pending_review
   active
   sold
   reserved
   expired
   removed
+  cancelled
 }
 
 enum MerchCategory {
