@@ -16,7 +16,8 @@ import { checkImageSafety } from './moderation'
 const mockClient = { safeSearchDetection: vi.fn() }
 
 beforeEach(() => {
-  vi.mocked(ImageAnnotatorClient).mockImplementation(() => mockClient as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  vi.mocked(ImageAnnotatorClient).mockImplementation(function () { return mockClient } as any)
 })
 
 describe('checkImageSafety', () => {
