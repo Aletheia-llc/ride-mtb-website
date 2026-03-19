@@ -1298,9 +1298,8 @@ model Transaction {
   platformFee           Float             @default(0)
   sellerPayout          Float             @default(0)
   totalCharged          Float
-  stripePaymentIntentId String?
+  stripePaymentIntentId String?  @unique
   stripeTransferId      String?
-  paymentIntentId       String?  @unique
   trackingNumber        String?
   trackingCarrier       String?
   shippedAt             DateTime?
