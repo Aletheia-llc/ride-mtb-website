@@ -2,9 +2,9 @@
  * Shipping rate utilities for the marketplace module.
  *
  * Uses a mock rate generator that approximates real carrier pricing based on
- * dimensional weight and zip-code distance. When an EASYPOST_API_KEY env var
- * is present this module can be extended to call the real EasyPost API; until
- * then the mock is transparent to callers.
+ * dimensional weight and zip-code distance. Live carrier rate fetching (e.g.
+ * EasyPost/Shippo) is not yet implemented — see the TODO inside
+ * getShippingEstimates().
  *
  * Systematic adaptations from standalone:
  *   - `prisma` → `db`
@@ -19,11 +19,11 @@ import type { ShippingRate, ShippingEstimateRequest } from '../types'
 // Mock rate generator
 // ---------------------------------------------------------------------------
 
+const FLAT_RATE_ESTIMATED_DAYS = 5
+
 /**
  * Generate plausible shipping rates from dimensional-weight and distance
  * heuristics. Rates are sorted cheapest-first.
- *
- * Replace with a real EasyPost/Shippo API call when EASYPOST_API_KEY is set.
  */
 export function generateMockRates(params: ShippingEstimateRequest): ShippingRate[] {
   const { fromZip, toZip, weight, length, width, height } = params
@@ -122,6 +122,9 @@ export async function getShippingEstimates(
     listing.packageWidth &&
     listing.packageHeight
 
+  // TODO: Add EasyPost/Shippo live rate fetch here when EASYPOST_API_KEY is available
+  // For now, always returns mock rates
+
   // Seller set a flat shipping cost but no dimensions — return single flat rate
   if (!hasPackageDimensions && listing.shippingCost !== null) {
     const flatCost = Number(listing.shippingCost)
@@ -131,7 +134,7 @@ export async function getShippingEstimates(
         carrier: 'Seller',
         service: 'Flat Rate Shipping',
         rate: flatCost,
-        estimatedDays: 5,
+        estimatedDays: FLAT_RATE_ESTIMATED_DAYS,
       },
     ]
   }
