@@ -109,6 +109,7 @@ export type CreateListingInput = {
   city?: string
   state?: string
   zipCode?: string
+  fromGarageBikeId?: string  // UserBike.id — set when listed via "Sell from Garage"
 }
 
 export type UpdateListingInput = Partial<CreateListingInput>

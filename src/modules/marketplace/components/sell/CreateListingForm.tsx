@@ -75,6 +75,7 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
   const [city, setCity] = useState(initialData?.city ?? '')
   const [state, setState] = useState(initialData?.state ?? '')
   const [zipCode, setZipCode] = useState(initialData?.zipCode ?? '')
+  const fromGarageBikeId = initialData?.fromGarageBikeId
   const [photos, setPhotos] = useState<PhotoItem[]>(
     initialData?.photos ?? [],
   )
@@ -182,6 +183,7 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
         city: city.trim() || undefined,
         state: state.trim() || undefined,
         zipCode: zipCode.trim() || undefined,
+        fromGarageBikeId: fromGarageBikeId || undefined,
       }
 
       if (isEditMode && initialData?.id) {

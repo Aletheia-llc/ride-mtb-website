@@ -186,6 +186,24 @@ export default async function BikeDetailPage({ params, searchParams }: Props) {
               </Card>
             </section>
 
+            {/* Sell this bike */}
+            <section className="mb-8">
+              <h2 className="mb-4 text-xl font-bold text-[var(--color-text)]">
+                Ready to Sell?
+              </h2>
+              <Card>
+                <p className="mb-3 text-sm text-[var(--color-text-muted)]">
+                  Create a marketplace listing pre-filled with this bike&apos;s details.
+                </p>
+                <Link
+                  href={`/marketplace/sell?fromBike=${bike.id}`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-dark)]"
+                >
+                  Sell This Bike
+                </Link>
+              </Card>
+            </section>
+
             {/* Danger zone */}
             <section>
               <h2 className="mb-4 text-xl font-bold text-red-600">

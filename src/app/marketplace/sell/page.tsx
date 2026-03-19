@@ -11,7 +11,16 @@ export default async function SellPage({ searchParams }: SellPageProps) {
   const sp = await searchParams
   const user = await requireAuth()
 
-  let initialData: { title: string; category: ListingCategory } | undefined = undefined
+  let initialData:
+    | {
+        title: string
+        category: ListingCategory
+        brand?: string
+        year?: number
+        description?: string
+        fromGarageBikeId?: string
+      }
+    | undefined = undefined
 
   const fromBike = typeof sp.fromBike === 'string' ? sp.fromBike : undefined
   if (fromBike) {
@@ -22,6 +31,10 @@ export default async function SellPage({ searchParams }: SellPageProps) {
       initialData = {
         title: `${bike.year ?? ''} ${bike.brand} ${bike.model}`.trim(),
         category: 'complete_bike' as ListingCategory,
+        brand: bike.brand ?? undefined,
+        year: bike.year ?? undefined,
+        description: bike.notes ?? undefined,
+        fromGarageBikeId: bike.id,
       }
     }
   }

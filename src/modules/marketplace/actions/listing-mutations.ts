@@ -95,6 +95,7 @@ const createListingSchema = z.object({
     .string()
     .regex(/^\d{5}$/, 'ZIP code must be 5 digits')
     .optional(),
+  fromGarageBikeId: z.string().optional(),
 })
 
 const updateListingSchema = createListingSchema.partial()
@@ -120,6 +121,16 @@ export async function createListing(data: CreateListingInput): Promise<ListingWi
   const validated = parsed.data
   const slug = slugify(validated.title)
 
+  // Verify fromGarageBikeId belongs to this user (metadata only — clear silently if not)
+  let verifiedFromGarageBikeId: string | undefined = validated.fromGarageBikeId
+  if (verifiedFromGarageBikeId) {
+    const owned = await db.userBike.findUnique({
+      where: { id: verifiedFromGarageBikeId, userId },
+      select: { id: true },
+    })
+    if (!owned) verifiedFromGarageBikeId = undefined
+  }
+
   const listing = await db.listing.create({
     data: {
       slug,
@@ -143,6 +154,7 @@ export async function createListing(data: CreateListingInput): Promise<ListingWi
       city: validated.city,
       state: validated.state,
       zipCode: validated.zipCode,
+      fromGarageBikeId: verifiedFromGarageBikeId,
       sellerId: userId,
       status: 'pending_review',
     },
