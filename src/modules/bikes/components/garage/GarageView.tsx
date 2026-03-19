@@ -93,17 +93,13 @@ export function GarageView({ bikes }: GarageViewProps) {
             compareMode ? (
               <div
                 key={bike.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => toggleSelect(bike.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleSelect(bike.id) }}
                 className={[
-                  'relative cursor-pointer rounded-lg transition-all',
+                  'relative rounded-lg transition-all',
                   selectedIds.includes(bike.id)
                     ? 'ring-2 ring-[var(--color-primary)] ring-offset-2'
                     : 'opacity-80 hover:opacity-100',
                   selectedIds.length >= 3 && !selectedIds.includes(bike.id)
-                    ? 'cursor-not-allowed opacity-40'
+                    ? 'pointer-events-none opacity-40'
                     : '',
                 ].join(' ')}
               >
@@ -112,7 +108,10 @@ export function GarageView({ bikes }: GarageViewProps) {
                     {selectedIds.indexOf(bike.id) + 1}
                   </div>
                 )}
-                <BikeCard bike={bike} />
+                <BikeCard
+                  bike={bike}
+                  onCardClick={(e) => { e.preventDefault(); toggleSelect(bike.id) }}
+                />
               </div>
             ) : (
               <BikeCard key={bike.id} bike={bike} />
