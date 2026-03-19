@@ -32,10 +32,24 @@ export default async function CheckoutPage({
     notFound()
   }
 
-  const { clientSecret, paymentIntentId } = await createPaymentIntent(
-    listing.id,
-    offerId,
-  )
+  let clientSecret: string
+  let paymentIntentId: string
+  try {
+    ;({ clientSecret, paymentIntentId } = await createPaymentIntent(
+      listing.id,
+      offerId,
+    ))
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unable to process checkout.'
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <h1 className="mb-4 text-2xl font-bold text-[var(--color-text)]">Checkout</h1>
+        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-500">
+          {message}
+        </div>
+      </div>
+    )
+  }
 
   const shippingCost = Number(listing.shippingCost ?? 0)
   const salePrice = Number(listing.price)

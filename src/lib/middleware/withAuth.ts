@@ -15,8 +15,15 @@ const protectedPaths = [
   '/marketplace/checkout',
 ]
 
-// Cookie names NextAuth v5 uses (plain HTTP + Secure prefix for HTTPS)
-const SESSION_COOKIE_NAMES = ['next-auth.session-token', '__Secure-next-auth.session-token']
+// Cookie names NextAuth v5 (Auth.js) uses (plain HTTP + Secure prefix for HTTPS)
+// v5 renamed the cookies from `next-auth.*` → `authjs.*`
+const SESSION_COOKIE_NAMES = [
+  'authjs.session-token',
+  '__Secure-authjs.session-token',
+  // Legacy v4 names kept for backwards compatibility during migration
+  'next-auth.session-token',
+  '__Secure-next-auth.session-token',
+]
 
 export function withAuth(next: NextMiddleware): NextMiddleware {
   return async (request: NextRequest, event: NextFetchEvent) => {
