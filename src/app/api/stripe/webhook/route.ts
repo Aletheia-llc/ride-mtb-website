@@ -20,21 +20,72 @@ export async function POST(req: NextRequest) {
 
   switch (event.type as string) {
     case 'account.updated': {
-      const account = event.data.object as {
-        id: string
-        details_submitted: boolean
-        charges_enabled: boolean
-      }
-      if (account.details_submitted && account.charges_enabled) {
-        const profile = await db.creatorProfile.findFirst({
-          where: { stripeAccountId: account.id },
+      const account = event.data.object as Stripe.Account
+
+      // Try SellerProfile first
+      const sellerProfile = await db.sellerProfile.findFirst({
+        where: { stripeAccountId: account.id }
+      })
+
+      if (sellerProfile) {
+        await db.sellerProfile.update({
+          where: { id: sellerProfile.id },
+          data: { stripeOnboarded: account.details_submitted && account.charges_enabled }
         })
-        if (profile) {
-          await db.creatorProfile.update({
-            where: { id: profile.id },
-            data: { status: 'active' },
-          })
-        }
+        break
+      }
+
+      // Try CreatorProfile (existing creators module)
+      const creatorProfile = await db.creatorProfile.findFirst({
+        where: { stripeAccountId: account.id }
+      }).catch(() => null) // CreatorProfile may not exist yet
+
+      if (creatorProfile && account.details_submitted && account.charges_enabled) {
+        await db.creatorProfile.update({
+          where: { id: creatorProfile.id },
+          data: { status: 'active' }
+        })
+      }
+
+      break
+    }
+    case 'payment_intent.succeeded': {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent
+      const listingId = paymentIntent.metadata?.listingId
+      const buyerId = paymentIntent.metadata?.buyerId
+      const sellerId = paymentIntent.metadata?.sellerId
+      const salePrice = paymentIntent.amount / 100 // convert from cents
+      const platformFee = paymentIntent.application_fee_amount
+        ? paymentIntent.application_fee_amount / 100
+        : 0
+      const shippingCost = paymentIntent.metadata?.shippingCost
+        ? parseFloat(paymentIntent.metadata.shippingCost)
+        : 0
+      const totalCharged = salePrice
+
+      if (listingId && buyerId && sellerId) {
+        await db.transaction.upsert({
+          where: { stripePaymentIntentId: paymentIntent.id },
+          update: { status: 'paid' },
+          create: {
+            stripePaymentIntentId: paymentIntent.id,
+            listingId,
+            buyerId,
+            sellerId,
+            salePrice,
+            shippingCost,
+            platformFee,
+            sellerPayout: salePrice - platformFee,
+            totalCharged,
+            status: 'paid',
+          },
+        })
+
+        // Update listing status to reserved
+        await db.listing.update({
+          where: { id: listingId },
+          data: { status: 'reserved' },
+        }).catch(() => {}) // non-critical
       }
       break
     }
@@ -71,35 +122,6 @@ export async function POST(req: NextRequest) {
           where: { id: payout.id },
           data: { status: 'failed' },
         })
-      }
-      break
-    }
-    case 'checkout.session.completed': {
-      const checkoutSession = event.data.object as Stripe.Checkout.Session
-      if (
-        checkoutSession.metadata?.type === 'listing_fee' &&
-        checkoutSession.metadata?.listingId
-      ) {
-        const { listingId } = checkoutSession.metadata
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const dbAny = db as any
-        await db.$transaction([
-          dbAny.listingPayment.update({
-            where: { stripeSessionId: checkoutSession.id },
-            data: {
-              status: 'paid',
-              stripePaymentIntentId:
-                typeof checkoutSession.payment_intent === 'string'
-                  ? checkoutSession.payment_intent
-                  : null,
-            },
-          }),
-          db.listing.update({
-            where: { id: listingId },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            data: { status: 'active' as any },
-          }),
-        ])
       }
       break
     }
