@@ -291,6 +291,66 @@ export async function bumpListing(id: string): Promise<void> {
 }
 
 /**
+ * Mark a listing as sold.
+ */
+export async function markAsSold(id: string): Promise<void> {
+  const user = await requireAuth()
+  const userId = user.id
+
+  const existing = await db.listing.findUnique({
+    where: { id },
+    select: { sellerId: true, slug: true },
+  })
+
+  if (!existing) {
+    throw new Error('Listing not found')
+  }
+
+  if (existing.sellerId !== userId) {
+    throw new Error('You do not have permission to mark this listing as sold')
+  }
+
+  await db.listing.update({
+    where: { id },
+    data: { status: 'sold' },
+  })
+
+  revalidatePath(`/marketplace/${existing.slug}`)
+  revalidatePath('/marketplace')
+  revalidatePath('/marketplace/my')
+}
+
+/**
+ * Cancel a listing (owner-initiated cancellation).
+ */
+export async function cancelListing(id: string): Promise<void> {
+  const user = await requireAuth()
+  const userId = user.id
+
+  const existing = await db.listing.findUnique({
+    where: { id },
+    select: { sellerId: true, slug: true },
+  })
+
+  if (!existing) {
+    throw new Error('Listing not found')
+  }
+
+  if (existing.sellerId !== userId) {
+    throw new Error('You do not have permission to cancel this listing')
+  }
+
+  await db.listing.update({
+    where: { id },
+    data: { status: 'cancelled' },
+  })
+
+  revalidatePath(`/marketplace/${existing.slug}`)
+  revalidatePath('/marketplace')
+  revalidatePath('/marketplace/my')
+}
+
+/**
  * Feature a listing (promoted placement).
  * Owner or admin can feature a listing.
  */
