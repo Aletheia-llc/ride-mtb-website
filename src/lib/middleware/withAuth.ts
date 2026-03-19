@@ -1,7 +1,19 @@
 import { NextMiddleware, NextResponse } from 'next/server'
 import type { NextFetchEvent, NextRequest } from 'next/server'
 
-const protectedPaths = ['/profile', '/admin', '/coaching', '/bikes/garage', '/messages']
+const protectedPaths = [
+  '/profile',
+  '/admin',
+  '/coaching',
+  '/bikes/garage',
+  '/messages',
+  '/marketplace/sell',
+  '/marketplace/my',
+  '/marketplace/seller/dashboard',
+  '/marketplace/seller/onboarding',
+  '/marketplace/admin',
+  '/marketplace/checkout',
+]
 
 // Cookie names NextAuth v5 uses (plain HTTP + Secure prefix for HTTPS)
 const SESSION_COOKIE_NAMES = ['next-auth.session-token', '__Secure-next-auth.session-token']
