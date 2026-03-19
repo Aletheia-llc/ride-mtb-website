@@ -127,6 +127,33 @@ export async function getReviewQueue() {
 // getAdminTransactions
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// updateSellerTrust
+// ---------------------------------------------------------------------------
+
+/**
+ * Sets isTrusted on a seller profile.
+ * Trusted sellers have their new listings auto-approved.
+ * Admin-only.
+ */
+export async function updateSellerTrust(
+  sellerId: string,
+  isTrusted: boolean,
+): Promise<void> {
+  await requireAdmin()
+
+  await db.sellerProfile.update({
+    where: { id: sellerId },
+    data: { isTrusted },
+  })
+
+  revalidatePath('/marketplace/admin/sellers')
+}
+
+// ---------------------------------------------------------------------------
+// getAdminTransactions
+// ---------------------------------------------------------------------------
+
 /**
  * Returns all transactions with full details for admin review.
  * Admin-only.

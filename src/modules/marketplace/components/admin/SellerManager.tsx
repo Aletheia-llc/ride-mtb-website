@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import {
   Shield,
@@ -9,7 +9,9 @@ import {
   Ban,
   Star,
   Users,
+  Loader2,
 } from 'lucide-react'
+import { updateSellerTrust } from '@/modules/marketplace/actions/admin'
 import type { AdminSellerWithDetails } from '@/modules/marketplace/types'
 
 interface SellerManagerProps {
@@ -17,7 +19,21 @@ interface SellerManagerProps {
 }
 
 export function SellerManager({ initialSellers }: SellerManagerProps) {
-  const [sellers] = useState(initialSellers)
+  const [sellers, setSellers] = useState(initialSellers)
+  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const handleTrustToggle = (seller: AdminSellerWithDetails) => {
+    const newTrust = !seller.isTrusted
+    setPendingId(seller.id)
+    startTransition(async () => {
+      await updateSellerTrust(seller.id, newTrust)
+      setSellers((prev) =>
+        prev.map((s) => (s.id === seller.id ? { ...s, isTrusted: newTrust } : s)),
+      )
+      setPendingId(null)
+    })
+  }
 
   if (sellers.length === 0) {
     return (
@@ -138,29 +154,31 @@ export function SellerManager({ initialSellers }: SellerManagerProps) {
                   {new Date(seller.createdAt).toLocaleDateString()}
                 </td>
 
-                {/* Actions — trust/suspend actions require additional admin endpoints */}
+                {/* Actions */}
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
-                    {!seller.isTrusted ? (
+                    {pendingId === seller.id && isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-[var(--color-text-muted)]" />
+                    ) : !seller.isTrusted ? (
                       <button
-                        disabled
-                        title="Set Trusted (not yet implemented)"
-                        className="rounded-lg p-1.5 text-[var(--color-primary)] opacity-40 cursor-not-allowed"
+                        onClick={() => handleTrustToggle(seller)}
+                        title="Set Trusted"
+                        className="rounded-lg p-1.5 text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/10"
                       >
                         <ShieldCheck className="h-4 w-4" />
                       </button>
                     ) : (
                       <button
-                        disabled
-                        title="Remove Trust (not yet implemented)"
-                        className="rounded-lg p-1.5 text-amber-400 opacity-40 cursor-not-allowed"
+                        onClick={() => handleTrustToggle(seller)}
+                        title="Remove Trust"
+                        className="rounded-lg p-1.5 text-amber-400 transition-colors hover:bg-amber-400/10"
                       >
                         <ShieldX className="h-4 w-4" />
                       </button>
                     )}
                     <button
                       disabled
-                      title="Suspend Seller (not yet implemented)"
+                      title="Suspend Seller (coming soon)"
                       className="rounded-lg p-1.5 text-red-500 opacity-40 cursor-not-allowed"
                     >
                       <Ban className="h-4 w-4" />

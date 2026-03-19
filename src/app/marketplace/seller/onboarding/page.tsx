@@ -1,5 +1,8 @@
 import { requireAuth } from '@/lib/auth/guards'
-import { getMySellerProfile } from '@/modules/marketplace/actions/seller'
+import {
+  createSellerProfile,
+  getMySellerProfile,
+} from '@/modules/marketplace/actions/seller'
 import { StripeOnboarding } from '@/modules/marketplace/components/seller/StripeOnboarding'
 
 export const metadata = {
@@ -18,8 +21,11 @@ export default async function SellerOnboardingPage({
 
   const returnedFromStripe = sp.return === 'true'
 
-  // Fetch or surface existing seller profile
-  const profile = await getMySellerProfile()
+  // Ensure a seller profile exists — create one if not (idempotent)
+  let profile = await getMySellerProfile()
+  if (!profile) {
+    profile = await createSellerProfile()
+  }
   const isOnboarded = profile?.stripeOnboarded ?? false
 
   return (

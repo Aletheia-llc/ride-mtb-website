@@ -121,6 +121,14 @@ export async function createListing(data: CreateListingInput): Promise<ListingWi
   const validated = parsed.data
   const slug = slugify(validated.title)
 
+  // Auto-approve listings from trusted or verified sellers; others go to moderation
+  const sellerProfile = await db.sellerProfile.findUnique({
+    where: { userId },
+    select: { isTrusted: true, isVerified: true },
+  })
+  const listingStatus =
+    sellerProfile?.isTrusted || sellerProfile?.isVerified ? 'active' : 'pending_review'
+
   // Verify fromGarageBikeId belongs to this user (metadata only — clear silently if not)
   let verifiedFromGarageBikeId: string | undefined = validated.fromGarageBikeId
   if (verifiedFromGarageBikeId) {
@@ -156,7 +164,7 @@ export async function createListing(data: CreateListingInput): Promise<ListingWi
       zipCode: validated.zipCode,
       fromGarageBikeId: verifiedFromGarageBikeId,
       sellerId: userId,
-      status: 'pending_review',
+      status: listingStatus,
     },
     include: listingInclude,
   })
