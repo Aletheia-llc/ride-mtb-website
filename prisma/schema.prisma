@@ -82,7 +82,6 @@ model User {
   buildLogEntries BuildLogEntry[]
   mediaItems      MediaItem[]
   listings         Listing[]
-  listingFavorites ListingFavorite[]
   sellerProfile    SellerProfile?
   offers           Offer[]                 @relation("OfferBuyer")
   buyerConversations   ListingConversation[] @relation("ConvBuyer")
@@ -93,7 +92,6 @@ model User {
   sellerTransactions   Transaction[]       @relation("TxSeller")
   listingSaves     ListingSave[]
   listingReports   ListingReport[]
-  listingPayments  ListingPayment[]        @relation("ListingPayments")
   shops           Shop[]
   shopReviews     ShopReview[]
   reviewHelpfulVotes ReviewHelpful[]
@@ -1135,6 +1133,12 @@ model MediaItem {
 // MARKETPLACE
 // ============================================================
 
+enum FulfillmentType {
+  local_only
+  ship_only
+  local_or_ship
+}
+
 model Listing {
   id          String        @id @default(cuid())
   sellerId    String
@@ -1145,8 +1149,7 @@ model Listing {
   category    ListingCategory
   condition   ItemCondition
   location    String?
-  imageUrls   Json          @default("[]")
-  status      ListingStatus @default(active)
+  status      ListingStatus @default(pending_review)
   brand       String?
   modelName   String?
   year        Int?
@@ -1154,15 +1157,37 @@ model Listing {
   minOfferPercent  Int?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  tags             String[]         @default([])
+  currency         String           @default("USD")
+  fulfillment      FulfillmentType  @default(local_or_ship)
+  shippingCost     Float?
+  estimatedWeight  Float?
+  packageLength    Int?
+  packageWidth     Int?
+  packageHeight    Int?
+  city             String?
+  state            String?
+  zipCode          String?
+  country          String           @default("US")
+  latitude         Float?
+  longitude        Float?
+  isFeatured       Boolean          @default(false)
+  isBumped         Boolean          @default(false)
+  bumpedAt         DateTime?
+  viewCount        Int              @default(0)
+  saveCount        Int              @default(0)
+  messageCount     Int              @default(0)
+  expiresAt        DateTime?
+  soldAt           DateTime?
+  fromGarageBikeId String?
+  forumCrossPostId String?
   seller      User          @relation(fields: [sellerId], references: [id])
-  favorites   ListingFavorite[]
   photos      ListingPhoto[]
   offers      Offer[]
   transaction Transaction?
   saves       ListingSave[]
   reports     ListingReport[]
   conversations ListingConversation[] @relation("ConvListing")
-  payment     ListingPayment?
 
   @@index([category, status])
   @@index([sellerId])
@@ -1170,20 +1195,6 @@ model Listing {
   @@map("listings")
 }
 
-model ListingFavorite {
-  id        String   @id @default(cuid())
-  userId    String
-  listingId String
-  createdAt DateTime @default(now())
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, listingId])
-  @@index([userId, createdAt])
-  @@index([listingId])
-  @@map("listing_favorites")
-}
 
 enum OfferStatus {
   pending
@@ -1289,6 +1300,7 @@ model Transaction {
   totalCharged          Float
   stripePaymentIntentId String?
   stripeTransferId      String?
+  paymentIntentId       String?  @unique
   trackingNumber        String?
   trackingCarrier       String?
   shippedAt             DateTime?
@@ -1314,6 +1326,7 @@ model SellerProfile {
   averageRating   Float?
   ratingCount     Int      @default(0)
   isTrusted       Boolean  @default(false)
+  avgResponseTime Int?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -1331,6 +1344,7 @@ model SellerReview {
   listingId   String?
   rating      Int
   body        String?       @db.Text
+  tags        String[]      @default([])
   createdAt   DateTime      @default(now())
 
   @@unique([sellerId, reviewerId, listingId])
@@ -1898,16 +1912,27 @@ enum MediaType {
 }
 
 enum ListingCategory {
-  complete_bikes
-  frames
+  complete_bike
+  frame
+  fork
+  shock
   wheels
-  suspension
+  tires
   drivetrain
   brakes
   cockpit
-  protection
+  saddle_seatpost
+  pedals
+  dropper_post
+  helmet
+  goggles_eyewear
   clothing
-  accessories
+  pack_hydration
+  tools
+  electronics
+  protection
+  rack_transport
+  vehicle
   other
 }
 
@@ -1921,11 +1946,13 @@ enum ItemCondition {
 
 enum ListingStatus {
   draft
+  pending_review
   active
   sold
   reserved
   expired
   removed
+  cancelled
 }
 
 enum MerchCategory {
@@ -2424,31 +2451,6 @@ model Article {
   @@map("articles")
 }
 
-enum ListingPaymentStatus {
-  pending
-  paid
-  failed
-
-  @@map("listing_payment_status")
-}
-
-model ListingPayment {
-  id                    String               @id @default(cuid())
-  listingId             String               @unique
-  userId                String
-  stripeSessionId       String               @unique
-  stripePaymentIntentId String?
-  amount                Int                  @default(299)
-  currency              String               @default("usd")
-  status                ListingPaymentStatus @default(pending)
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-
-  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  user    User    @relation("ListingPayments", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("listing_payments")
-}
 
 // ============================================================
 // AFFILIATE
