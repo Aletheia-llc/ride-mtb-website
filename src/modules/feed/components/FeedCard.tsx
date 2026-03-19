@@ -1,6 +1,8 @@
 // src/modules/feed/components/FeedCard.tsx
 import Image from 'next/image'
 import Link from 'next/link'
+import { BookOpen, Map, MessageCircle, Calendar, Star, ShoppingCart } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 interface FeedCardProps {
   id: string
@@ -15,16 +17,17 @@ interface FeedCardProps {
   onClickCapture?: () => void
 }
 
-const TYPE_ICON: Record<FeedCardProps['type'], string> = {
-  course: '📚',
-  trail: '🗺',
-  forum: '💬',
-  event: '📅',
-  review: '⭐',
-  buysell: '🛒',
+const TYPE_ICON: Record<FeedCardProps['type'], LucideIcon> = {
+  course: BookOpen,
+  trail: Map,
+  forum: MessageCircle,
+  event: Calendar,
+  review: Star,
+  buysell: ShoppingCart,
 }
 
 export function FeedCard({ id, type, title, subtitle, url, imageUrl, tags, meta, reason, onClickCapture }: FeedCardProps) {
+  const Icon = TYPE_ICON[type]
   return (
     <article
       className="flex gap-3 p-3 border-b border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] transition-colors"
@@ -37,7 +40,7 @@ export function FeedCard({ id, type, title, subtitle, url, imageUrl, tags, meta,
       )}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-sm">{TYPE_ICON[type]}</span>
+          <Icon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
           {tags.map((tag) => (
             <span key={tag} className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
               {tag}

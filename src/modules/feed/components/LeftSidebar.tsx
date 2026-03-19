@@ -1,5 +1,6 @@
 // src/modules/feed/components/LeftSidebar.tsx
 import Link from 'next/link'
+import { Flame, Star } from 'lucide-react'
 import type { TrendingItem } from '../lib/queries'
 
 interface XpData {
@@ -47,7 +48,7 @@ function XpWidget({ xpData }: { xpData: XpData }) {
           style={{ width: `${progress * 100}%` }}
         />
       </div>
-      <p className="text-xs opacity-70 mt-1">{xpData.streakDays} day streak 🔥</p>
+      <p className="text-xs opacity-70 mt-1 flex items-center gap-1">{xpData.streakDays} day streak <Flame className="h-3 w-3" /></p>
     </div>
   )
 }
@@ -78,7 +79,7 @@ function InterestsList({ interests }: { interests: string[] }) {
       <ul className="flex flex-col gap-1">
         {interests.map((interest) => (
           <li key={interest} className="text-sm flex items-center gap-1.5">
-            <span className="text-[var(--color-primary)]">★</span> {interest}
+            <Star className="h-3.5 w-3.5 shrink-0 fill-[var(--color-primary)] text-[var(--color-primary)]" /> {interest}
           </li>
         ))}
       </ul>
