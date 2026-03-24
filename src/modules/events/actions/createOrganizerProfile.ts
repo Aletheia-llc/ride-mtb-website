@@ -5,7 +5,7 @@ import { requireAuth } from '@/lib/auth/guards'
 import { db } from '@/lib/db/client'
 
 const schema = z.object({
-  orgName: z.string().min(1).max(200),
+  name: z.string().min(1).max(200),
   bio: z.string().max(1000).optional(),
   websiteUrl: z.string().url().optional(),
 })

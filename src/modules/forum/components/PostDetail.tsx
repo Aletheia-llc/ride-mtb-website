@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ChevronUp, ChevronDown, Bookmark, Flag, Share2 } from 'lucide-react'
+import { ChevronUp, ChevronDown, Bookmark, Share2, Pencil, Trash2 } from 'lucide-react'
 import { formatRelativeTime } from '@/modules/forum/types'
 // eslint-disable-next-line no-restricted-imports
 import { votePost } from '@/modules/forum/actions/votePost'
@@ -13,6 +14,8 @@ import { votePost } from '@/modules/forum/actions/votePost'
 import { toggleForumBookmark } from '@/modules/forum/actions/bookmarkThread'
 // eslint-disable-next-line no-restricted-imports
 import { LinkPreviewCard } from '@/modules/forum/components/LinkPreviewCard'
+// eslint-disable-next-line no-restricted-imports
+import { ReportButton } from '@/modules/forum/components/ReportButton'
 import type { PostDetail as PostDetailType } from '@/modules/forum/types'
 
 interface PostDetailProps {
@@ -22,9 +25,18 @@ interface PostDetailProps {
 }
 
 export function PostDetail({ post, currentUserId, isBookmarked: initialBookmarked = false }: PostDetailProps) {
+  const router = useRouter()
   const [voteScore, setVoteScore] = useState(post.voteScore)
   const [bookmarked, setBookmarked] = useState(initialBookmarked)
   const [voting, setVoting] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editBody, setEditBody] = useState(post.body)
+  const [currentBody, setCurrentBody] = useState(post.body)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const isAuthor = currentUserId === post.author.id
 
   const author = post.author
   const joinedYear = author.createdAt ? new Date(author.createdAt).getFullYear() : null
@@ -47,6 +59,41 @@ export function PostDetail({ post, currentUserId, isBookmarked: initialBookmarke
   const handleShare = async () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       await navigator.clipboard.writeText(window.location.href)
+    }
+  }
+
+  const handleEditSave = async () => {
+    if (!editBody.trim()) return
+    setEditSaving(true)
+    setEditError(null)
+    const res = await fetch(`/api/forum/threads/${post.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: editBody.trim() }),
+    })
+    setEditSaving(false)
+    if (res.status === 403) {
+      const json = await res.json()
+      setEditError(json.error === 'edit_window_expired' ? 'The 15-minute edit window has expired.' : 'Permission denied.')
+      return
+    }
+    if (!res.ok) {
+      setEditError('Failed to save. Please try again.')
+      return
+    }
+    setCurrentBody(editBody.trim())
+    setEditing(false)
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this thread? This cannot be undone.')) return
+    setDeleting(true)
+    const res = await fetch(`/api/forum/threads/${post.id}`, { method: 'DELETE' })
+    if (res.ok) {
+      const { categorySlug } = await res.json()
+      router.push(`/forum/category/${categorySlug}`)
+    } else {
+      setDeleting(false)
     }
   }
 
@@ -124,9 +171,38 @@ export function PostDetail({ post, currentUserId, isBookmarked: initialBookmarke
       </div>
 
       {/* Body */}
-      <div className="prose prose-sm dark:prose-invert max-w-none mb-4">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.body}</ReactMarkdown>
-      </div>
+      {editing ? (
+        <div className="mb-4 flex flex-col gap-2">
+          <textarea
+            value={editBody}
+            onChange={(e) => setEditBody(e.target.value)}
+            rows={6}
+            maxLength={10000}
+            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 resize-y"
+          />
+          {editError && <p className="text-xs text-red-500">{editError}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={handleEditSave}
+              disabled={editSaving}
+              className="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {editSaving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => { setEditing(false); setEditBody(currentBody); setEditError(null) }}
+              disabled={editSaving}
+              className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-muted)]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="prose prose-sm dark:prose-invert max-w-none mb-4">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentBody}</ReactMarkdown>
+        </div>
+      )}
 
       {/* Link preview */}
       {post.linkPreview && (
@@ -183,11 +259,29 @@ export function PostDetail({ post, currentUserId, isBookmarked: initialBookmarke
           Share
         </button>
 
-        {currentUserId && currentUserId !== post.author.id && (
-          <button className="ml-auto flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-red-500">
-            <Flag className="h-4 w-4" />
-            Report
-          </button>
+        {isAuthor && (
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => { setEditing(true); setEditBody(currentBody) }}
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-red-500 disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
+        )}
+        {currentUserId && !isAuthor && (
+          <div className="ml-auto">
+            <ReportButton targetType="post" targetId={post.id} />
+          </div>
         )}
       </div>
     </article>

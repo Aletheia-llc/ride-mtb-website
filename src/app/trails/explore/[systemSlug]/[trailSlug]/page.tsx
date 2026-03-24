@@ -16,6 +16,7 @@ import {
 } from '@/modules/trails'
 import { ConditionBadge } from '@/modules/trails/components/ConditionBadge'
 import { ConditionReportForm } from '@/modules/trails/components/ConditionReportForm'
+import { GpxUploadForm } from '@/modules/trails/components/GpxUploadForm'
 import { Card } from '@/ui/components'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
@@ -344,6 +345,17 @@ export default async function TrailDetailPage({ params }: Props) {
           )
         )}
       </section>
+
+      {/* GPX upload — signed-in users only */}
+      {session?.user && (
+        <section className="mt-10">
+          <GpxUploadForm
+            trailId={trail.id}
+            trailName={trail.name}
+            hasExistingTrack={trail.hasGpsTrack}
+          />
+        </section>
+      )}
     </div>
   )
 }

@@ -5,20 +5,30 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ChevronUp, ChevronDown } from 'lucide-react'
+import { ChevronUp, ChevronDown, MessageSquare } from 'lucide-react'
 import { formatRelativeTime } from '@/modules/forum/types'
 // eslint-disable-next-line no-restricted-imports
 import { votePost } from '@/modules/forum/actions/votePost'
+// eslint-disable-next-line no-restricted-imports
+import { ReplyForm } from '@/modules/forum/components/ReplyForm'
+// eslint-disable-next-line no-restricted-imports
+import { ReportButton } from '@/modules/forum/components/ReportButton'
 import type { ForumComment } from '@/modules/forum/types'
 
 interface CommentCardProps {
   comment: ForumComment
   currentUserId?: string
+  depth?: number
+  threadId: string
+  isLocked: boolean
 }
 
-export function CommentCard({ comment, currentUserId }: CommentCardProps) {
+const MAX_DEPTH = 3
+
+export function CommentCard({ comment, currentUserId, depth = 0, threadId, isLocked }: CommentCardProps) {
   const [voteScore, setVoteScore] = useState(comment.voteScore)
   const [voting, setVoting] = useState(false)
+  const [showReply, setShowReply] = useState(false)
 
   const author = comment.author
   const joinedYear = author.createdAt ? new Date(author.createdAt).getFullYear() : null
@@ -32,92 +42,141 @@ export function CommentCard({ comment, currentUserId }: CommentCardProps) {
     setVoting(false)
   }
 
+  const replies = comment.replies ?? []
+
   if (comment.deletedAt) {
     return (
-      <div className="py-4">
-        <p className="text-sm italic text-[var(--color-text-muted)]">[deleted]</p>
+      <div>
+        <div className="py-4">
+          <p className="text-sm italic text-[var(--color-text-muted)]">[deleted]</p>
+        </div>
+        {replies.length > 0 && depth < MAX_DEPTH && (
+          <div className="ml-6 border-l-2 border-[var(--color-border)] pl-4">
+            {replies.map((reply) => (
+              <CommentCard key={reply.id} comment={reply} currentUserId={currentUserId} depth={depth + 1} threadId={threadId} isLocked={isLocked} />
+            ))}
+          </div>
+        )}
       </div>
     )
   }
 
   return (
-    <div className="flex gap-4 py-4">
-      {/* Author avatar */}
-      <Link href={`/forum/user/${author.username}`} className="shrink-0">
-        {author.avatarUrl || author.image ? (
-          <Image
-            src={author.avatarUrl ?? author.image ?? ''}
-            alt={author.name ?? 'Author'}
-            width={36}
-            height={36}
-            className="h-9 w-9 rounded-full object-cover"
-          />
-        ) : (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)]/20 text-sm font-bold text-[var(--color-primary)]">
-            {(author.name ?? author.username ?? '?')[0].toUpperCase()}
-          </div>
-        )}
-      </Link>
+    <div>
+      <div className="flex gap-4 py-4">
+        {/* Author avatar */}
+        <Link href={`/forum/user/${author.username}`} className="shrink-0">
+          {author.avatarUrl || author.image ? (
+            <Image
+              src={author.avatarUrl ?? author.image ?? ''}
+              alt={author.name ?? 'Author'}
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)]/20 text-sm font-bold text-[var(--color-primary)]">
+              {(author.name ?? author.username ?? '?')[0].toUpperCase()}
+            </div>
+          )}
+        </Link>
 
-      <div className="min-w-0 flex-1">
-        {/* Author meta */}
-        <div className="mb-2 text-xs">
-          <div className="flex items-center gap-1.5">
-            <Link
-              href={`/forum/user/${author.username}`}
-              className="font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)]"
-            >
-              {author.name ?? author.username}
-            </Link>
-            {author.role && author.role !== 'user' && (
-              <span className="rounded bg-[var(--color-primary)]/10 px-1.5 py-0.5 font-medium text-[var(--color-primary)] capitalize">
-                {author.role}
+        <div className="min-w-0 flex-1">
+          {/* Author meta */}
+          <div className="mb-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Link
+                href={`/forum/user/${author.username}`}
+                className="font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)]"
+              >
+                {author.name ?? author.username}
+              </Link>
+              {author.role && author.role !== 'user' && (
+                <span className="rounded bg-[var(--color-primary)]/10 px-1.5 py-0.5 font-medium text-[var(--color-primary)] capitalize">
+                  {author.role}
+                </span>
+              )}
+              <span className="ml-auto text-[var(--color-text-muted)]">{formatRelativeTime(comment.createdAt)}</span>
+            </div>
+            <div className="mt-0.5 flex items-center gap-2 text-[var(--color-text-muted)]">
+              {joinedYear && <span>Joined {joinedYear}</span>}
+              <span>{postCount} {postCount === 1 ? 'post' : 'posts'}</span>
+              {author.karma !== null && author.karma !== undefined && (
+                <span>{author.karma} karma</span>
+              )}
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{comment.body}</ReactMarkdown>
+          </div>
+
+          {/* Actions */}
+          <div className="mt-2 flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleVote(1)}
+                disabled={!currentUserId || voting}
+                className="rounded p-0.5 hover:bg-[var(--color-primary)]/10 disabled:opacity-40"
+                aria-label="Upvote"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </button>
+              <span className="text-xs font-semibold">{voteScore}</span>
+              <button
+                onClick={() => handleVote(-1)}
+                disabled={!currentUserId || voting}
+                className="rounded p-0.5 hover:bg-red-500/10 disabled:opacity-40"
+                aria-label="Downvote"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
+            {currentUserId && !isLocked && depth < MAX_DEPTH && (
+              <button
+                onClick={() => setShowReply((v) => !v)}
+                className="flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                {showReply ? 'Cancel' : 'Reply'}
+              </button>
+            )}
+            {currentUserId && currentUserId !== comment.authorId && (
+              <ReportButton targetType="comment" targetId={comment.id} />
+            )}
+            {comment.editedAt && (
+              <span className="text-xs text-[var(--color-text-muted)] italic">
+                edited {formatRelativeTime(comment.editedAt)}
               </span>
             )}
-            <span className="ml-auto text-[var(--color-text-muted)]">{formatRelativeTime(comment.createdAt)}</span>
           </div>
-          <div className="mt-0.5 flex items-center gap-2 text-[var(--color-text-muted)]">
-            {joinedYear && <span>Joined {joinedYear}</span>}
-            <span>{postCount} {postCount === 1 ? 'post' : 'posts'}</span>
-            {author.karma !== null && author.karma !== undefined && (
-              <span>{author.karma} karma</span>
-            )}
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{comment.body}</ReactMarkdown>
-        </div>
-
-        {/* Actions */}
-        <div className="mt-2 flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleVote(1)}
-              disabled={!currentUserId || voting}
-              className="rounded p-0.5 hover:bg-[var(--color-primary)]/10 disabled:opacity-40"
-              aria-label="Upvote"
-            >
-              <ChevronUp className="h-4 w-4" />
-            </button>
-            <span className="text-xs font-semibold">{voteScore}</span>
-            <button
-              onClick={() => handleVote(-1)}
-              disabled={!currentUserId || voting}
-              className="rounded p-0.5 hover:bg-red-500/10 disabled:opacity-40"
-              aria-label="Downvote"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </button>
-          </div>
-          {comment.editedAt && (
-            <span className="text-xs text-[var(--color-text-muted)] italic">
-              edited {formatRelativeTime(comment.editedAt)}
-            </span>
+          {showReply && (
+            <div className="mt-3">
+              <ReplyForm
+                threadId={threadId}
+                isLocked={isLocked}
+                parentId={comment.id}
+                onSuccess={() => setShowReply(false)}
+              />
+            </div>
           )}
         </div>
       </div>
+      {replies.length > 0 && depth < MAX_DEPTH && (
+        <div className="ml-6 border-l-2 border-[var(--color-border)] pl-4">
+          {replies.map((reply) => (
+            <CommentCard
+              key={reply.id}
+              comment={reply}
+              currentUserId={currentUserId}
+              depth={depth + 1}
+              threadId={threadId}
+              isLocked={isLocked}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -117,6 +117,7 @@ model User {
   mulliganUses             MulliganUse[]
   manufacturerPicks  ManufacturerPick[]
   manufacturerScores ManufacturerEventScore[]
+  eventPreference    UserEventPreference?
 
   @@map("users")
 }
@@ -886,11 +887,10 @@ model Event {
   maxAttendees Int?
   imageUrl    String?
   eventType   EventType   @default(group_ride)
-  status      CommunityEventStatus @default(published)
+  status               EventStatus    @default(published)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   // New fields from race calendar port
-  eventTypeEnum         EventTypeEnum?
   organizerId           String?
   organizer             OrganizerProfile? @relation(fields: [organizerId], references: [id])
   registrationUrl       String?
@@ -904,8 +904,43 @@ model Event {
   rsvps       EventRsvp[]
   comments    EventComment[]
 
+  // Location structured
+  venueName            String?
+  address              String?
+  city                 String?
+  state                String?
+  zipCode              String?
+  country              String    @default("US")
+
+  // Rich metadata
+  shortDescription     String?
+  coverImageUrl        String?
+  tags                 String[]  @default([])
+  difficulty           String?
+
+  // Virtual events
+  isVirtual            Boolean   @default(false)
+  virtualPlatform      String?
+  virtualUrl           String?
+
+  // Time
+  startTime            String?
+  endTime              String?
+  timezone             String?
+  isAllDay             Boolean   @default(false)
+
+  // Counters (denormalized)
+  viewCount            Int       @default(0)
+  commentCount         Int       @default(0)
+  rsvpCount            Int       @default(0)
+
+  // Import tracking
+  importSource         String?
+  externalId           String?
+
   @@index([startDate])
   @@index([creatorId])
+  @@index([importSource, externalId])
   @@map("events")
 }
 
@@ -927,17 +962,21 @@ model EventComment {
 }
 
 model OrganizerProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  orgName     String
-  bio         String?
-  websiteUrl  String?
-  logoUrl     String?
-  isVerified  Boolean  @default(false)
-  eventCount  Int      @default(0)
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events      Event[]
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  name           String
+  bio            String?
+  websiteUrl     String?
+  logoUrl        String?
+  isVerified     Boolean  @default(false)
+  eventCount     Int      @default(0)
+  description    String?
+  contactEmail   String?
+  socialLinks    String[] @default([])
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events         Event[]
 
   @@map("organizer_profiles")
 }
@@ -953,6 +992,21 @@ model EventRsvp {
 
   @@unique([eventId, userId])
   @@map("event_rsvps")
+}
+
+model UserEventPreference {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  homeLatitude    Decimal?  @db.Decimal(10, 7)
+  homeLongitude   Decimal?  @db.Decimal(10, 7)
+  searchRadius    Int       @default(100)
+  followedTypes   String[]  @default([])
+  newEventAlerts  Boolean   @default(true)
+  reminderDays    Int       @default(3)
+  resultsAlerts   Boolean   @default(true)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_event_preferences")
 }
 
 // ============================================================
@@ -1640,9 +1694,12 @@ model CoachProfile {
   calcomLink   String?
   certifications Json   @default("[]")
   isActive     Boolean  @default(true)
+  latitude     Float?
+  longitude    Float?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id])
+  clinics      CoachingClinic[]
 
   @@map("coach_profiles")
 }
@@ -1707,7 +1764,7 @@ enum ContentStatus {
   archived
 }
 
-enum CommunityEventStatus {
+enum EventStatus {
   draft
   pending_review
   published
@@ -1858,6 +1915,7 @@ enum PoiType {
 }
 
 enum EventType {
+  // Preserved from monolith (existing rows use these)
   group_ride
   race
   skills_clinic
@@ -1865,22 +1923,18 @@ enum EventType {
   social
   demo_day
   other
-}
 
-enum EventTypeEnum {
-  RACE
-  ENDURO
-  DOWNHILL
-  CROSS_COUNTRY
-  TRAIL_RIDE
-  GROUP_RIDE
-  SKILLS_CLINIC
-  KIDS_CAMP
-  BIKEPACKING
-  FUNDRAISER
-  SOCIAL
-  FESTIVAL
-  OTHER
+  // Added from standalone repo
+  race_xc
+  race_enduro
+  race_dh
+  race_marathon
+  race_other
+  clinic
+  camp
+  expo
+  bike_park_day
+  virtual_challenge
 }
 
 enum RsvpStatus {
@@ -2541,7 +2595,7 @@ model FantasyEvent {
   country          String
   raceDate         DateTime
   rosterDeadline   DateTime
-  status           EventStatus       @default(upcoming)
+  status           FantasyEventStatus @default(upcoming)
   scraperUrl       String
   scraperUrlStages String?
   forumThreadId    String?
@@ -2870,7 +2924,7 @@ enum SeriesStatus {
   @@map("SeriesStatus")
 }
 
-enum EventStatus {
+enum FantasyEventStatus {
   upcoming
   roster_open
   locked
@@ -2902,5 +2956,30 @@ enum ResultStatus {
   override_pending
 
   @@map("ResultStatus")
+}
+
+model CoachingClinic {
+  id          String       @id @default(cuid())
+  coachId     String
+  slug        String       @unique
+  title       String
+  description String?      @db.Text
+  startDate   DateTime
+  endDate     DateTime?
+  location    String
+  latitude    Float?
+  longitude   Float?
+  capacity    Int?
+  costCents   Int?
+  isFree      Boolean      @default(false)
+  calcomLink  String?
+  status      EventStatus  @default(published)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  coach       CoachProfile @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@index([startDate, status])
+  @@index([latitude, longitude])
+  @@map("coaching_clinics")
 }
 
