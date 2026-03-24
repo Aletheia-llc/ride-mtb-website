@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react'
 import Link from 'next/link'
 import { Card, Badge } from '@/ui/components'
 import type { UserBikeData, BikeCategory } from '../../types/garage'
@@ -26,13 +27,14 @@ const categoryLabel: Record<BikeCategory, string> = {
 
 interface BikeCardProps {
   bike: UserBikeData
+  onCardClick?: (e: MouseEvent<HTMLAnchorElement>) => void
 }
 
-export function BikeCard({ bike }: BikeCardProps) {
+export function BikeCard({ bike, onCardClick }: BikeCardProps) {
   const yearDisplay = bike.year ? `${bike.year} ` : ''
 
   return (
-    <Link href={`/bikes/garage/${bike.id}`} className="block">
+    <Link href={`/bikes/garage/${bike.id}`} className="block" onClick={onCardClick}>
       <Card className="transition-shadow hover:shadow-md">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">

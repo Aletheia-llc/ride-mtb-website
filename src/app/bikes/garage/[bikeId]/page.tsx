@@ -8,8 +8,13 @@ import { ComponentTable } from '@/modules/bikes/components/ComponentTable'
 import { BuildLogTimeline } from '@/modules/bikes/components/BuildLogTimeline'
 import { MaintenanceList } from '@/modules/bikes/components/MaintenanceList'
 import { BikeTabs } from '@/modules/bikes/components/garage/BikeTabs'
+import { WeightBreakdown } from '@/modules/bikes/components/garage/WeightBreakdown'
+import { CostSummaryCard } from '@/modules/bikes/components/garage/CostSummaryCard'
+import { ShareButton } from '@/modules/bikes/components/garage/ShareButton'
+import { DuplicateBikeButton } from '@/modules/bikes/components/garage/DuplicateBikeButton'
+import { ExportImportSection } from '@/modules/bikes/components/garage/ExportImportSection'
 import { requireAuth } from '@/lib/auth/guards'
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- server component, direct module import is intentional
 import { getBikeWithDetails } from '@/modules/bikes/lib/garage-queries'
 import type { BikeCategory } from '@/modules/bikes'
 
@@ -66,6 +71,43 @@ export default async function BikeDetailPage({ params, searchParams }: Props) {
   }
 
   const yearDisplay = bike.year ? `${bike.year} ` : ''
+
+  // Compute cost and weight data for overview tab
+  const activeComponents = bike.components.filter(c => c.isActive)
+  const componentCostDollars = activeComponents.reduce((sum, c) => sum + (c.priceCents ?? 0), 0) / 100
+  const purchasePriceDollars = bike.purchasePrice ?? 0
+
+  // Group component weights by category
+  const categoryWeightMap = new Map<string, number>()
+  for (const c of activeComponents) {
+    if (c.weightGrams) {
+      categoryWeightMap.set(
+        c.category,
+        (categoryWeightMap.get(c.category) ?? 0) + c.weightGrams,
+      )
+    }
+  }
+  const categoryWeights = Array.from(categoryWeightMap.entries()).map(([category, weightGrams]) => ({
+    category,
+    weightGrams,
+  }))
+  const totalWeightGrams = categoryWeights.reduce((sum, cw) => sum + cw.weightGrams, 0)
+
+  // Category breakdown for cost card
+  const categoryBreakdownMap = new Map<string, number>()
+  for (const c of activeComponents) {
+    if (c.priceCents != null) {
+      categoryBreakdownMap.set(
+        c.category,
+        (categoryBreakdownMap.get(c.category) ?? 0) + c.priceCents / 100,
+      )
+    }
+  }
+  const categoryBreakdown = Array.from(categoryBreakdownMap.entries()).map(([category, totalDollars]) => ({
+    category,
+    totalDollars,
+  }))
+  const costComponentCount = activeComponents.filter(c => c.priceCents != null).length
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -152,6 +194,33 @@ export default async function BikeDetailPage({ params, searchParams }: Props) {
               </Card>
             </div>
 
+            {/* Cost summary */}
+            {purchasePriceDollars + componentCostDollars > 0 && (
+              <div className="mb-6">
+                <CostSummaryCard
+                  purchasePriceDollars={purchasePriceDollars}
+                  componentCostDollars={componentCostDollars}
+                  componentCount={costComponentCount}
+                  categoryBreakdown={categoryBreakdown}
+                />
+              </div>
+            )}
+
+            {/* Weight breakdown */}
+            {categoryWeights.length > 0 && (
+              <div className="mb-6">
+                <WeightBreakdown
+                  categoryWeights={categoryWeights}
+                  totalWeightGrams={totalWeightGrams}
+                />
+              </div>
+            )}
+
+            {/* Export / Import */}
+            <div className="mb-8">
+              <ExportImportSection bikeId={bike.id} />
+            </div>
+
             {/* Notes */}
             {bike.notes && (
               <div className="mb-8">
@@ -184,6 +253,14 @@ export default async function BikeDetailPage({ params, searchParams }: Props) {
               <Card>
                 <BikeForm bike={bike} />
               </Card>
+            </section>
+
+            {/* Actions */}
+            <section className="mb-8">
+              <div className="flex flex-wrap gap-2">
+                <ShareButton />
+                <DuplicateBikeButton bikeId={bike.id} />
+              </div>
             </section>
 
             {/* Danger zone */}
