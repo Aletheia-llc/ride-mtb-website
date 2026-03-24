@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { DM_Sans } from 'next/font/google'
 import { Providers } from './Providers'
 import { TopNav } from '@/ui/components/TopNav'
+import { VerificationBanner } from '@/ui/components/VerificationBanner'
 import { auth } from '@/lib/auth/config'
 import './globals.css'
 
@@ -16,6 +17,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={dmSans.variable}>
       <body>
         <TopNav session={session} />
+        {session?.user && !session.user.emailVerified && <VerificationBanner />}
         <Providers>{children}</Providers>
       </body>
     </html>
