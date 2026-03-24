@@ -5,7 +5,7 @@ vi.mock('@/lib/db/client', () => ({
   db: {
     learnCourse: { findMany: vi.fn() },
     trailSystem: { findMany: vi.fn() },
-    forumThread: { findMany: vi.fn() },
+    post: { findMany: vi.fn() },
     event: { findMany: vi.fn() },
     gearReview: { findMany: vi.fn() },
     listing: { findMany: vi.fn() },
@@ -22,7 +22,7 @@ describe('getFeedCandidates', () => {
       { id: 'c1', title: 'Course 1', slug: 'course-1', difficulty: 'beginner', category: 'riding_skills', thumbnailUrl: null, createdAt: new Date(), _count: { modules: 5 } },
     ] as never)
     vi.mocked(db.trailSystem.findMany).mockResolvedValueOnce([])
-    vi.mocked(db.forumThread.findMany).mockResolvedValueOnce([])
+    vi.mocked(db.post.findMany).mockResolvedValueOnce([])
     vi.mocked(db.event.findMany).mockResolvedValueOnce([])
     vi.mocked(db.gearReview.findMany).mockResolvedValueOnce([])
     vi.mocked(db.listing.findMany).mockResolvedValueOnce([])
@@ -41,7 +41,7 @@ describe('getFeedCandidates', () => {
     }
     vi.mocked(db.learnCourse.findMany).mockResolvedValueOnce([mockCourse] as never)
     vi.mocked(db.trailSystem.findMany).mockResolvedValueOnce([])
-    vi.mocked(db.forumThread.findMany).mockResolvedValueOnce([])
+    vi.mocked(db.post.findMany).mockResolvedValueOnce([])
     vi.mocked(db.event.findMany).mockResolvedValueOnce([])
     vi.mocked(db.gearReview.findMany).mockResolvedValueOnce([])
     vi.mocked(db.listing.findMany).mockResolvedValueOnce([])
@@ -58,7 +58,7 @@ describe('getTrendingItems', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('returns forum threads ordered by post count', async () => {
-    vi.mocked(db.forumThread.findMany).mockResolvedValueOnce([
+    vi.mocked(db.post.findMany).mockResolvedValueOnce([
       { id: 't1', title: 'Hot topic', slug: 'hot-topic', viewCount: 100, category: { name: 'General', slug: 'general-discussion' }, _count: { posts: 42 } },
     ] as never)
 

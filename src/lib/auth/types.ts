@@ -14,6 +14,7 @@ declare module 'next-auth' {
       bannedAt?: Date | null
       onboardingCompletedAt?: Date | null
       onboardingStep?: number
+      emailVerified?: Date | null
     }
   }
 

@@ -38,7 +38,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileData | 
       },
       _count: {
         select: {
-          forumPosts: true,
+          posts: true,
           trailReviews: true,
           rideLogs: true,
           gearReviews: true,
@@ -146,7 +146,7 @@ export async function getUserByUsername(username: string): Promise<UserProfileDa
       },
       _count: {
         select: {
-          forumPosts: true,
+          posts: true,
           trailReviews: true,
           rideLogs: true,
           gearReviews: true,

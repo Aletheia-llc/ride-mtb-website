@@ -24,6 +24,25 @@ const MTB_FEEDS = [
   { name: 'Bike Mag',    url: 'https://www.bikemag.com/feed/',                siteUrl: 'https://www.bikemag.com' },
 ]
 
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&ldquo;/g, '\u201C')
+    .replace(/&rdquo;/g, '\u201D')
+    .replace(/&lsquo;/g, '\u2018')
+    .replace(/&rsquo;/g, '\u2019')
+    .replace(/&mdash;/g, '\u2014')
+    .replace(/&ndash;/g, '\u2013')
+    .replace(/&hellip;/g, '\u2026')
+}
+
 function extractTag(xml: string, tag: string): string {
   const patterns = [
     new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>`, 'i'),
@@ -59,7 +78,7 @@ function extractFullContent(itemXml: string): string | undefined {
   ]
   for (const p of patterns) {
     const m = itemXml.match(p)
-    if (m?.[1]?.trim().length > 200) {
+    if (m != null && m[1] != null && m[1].trim().length > 200) {
       return m[1]
         // Strip dangerous/useless elements
         .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -80,13 +99,9 @@ function extractFullContent(itemXml: string): string | undefined {
 function parseItems(xml: string, sourceName: string, sourceUrl: string): RssItem[] {
   const itemMatches = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) ?? []
   return itemMatches.slice(0, 5).map((item) => ({
-    title: extractTag(item, 'title').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
+    title: decodeEntities(extractTag(item, 'title')),
     link: extractTag(item, 'link') || extractTag(item, 'guid'),
-    description: extractTag(item, 'description')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
+    description: decodeEntities(extractTag(item, 'description').replace(/<[^>]+>/g, ''))
       .trim()
       .slice(0, 160),
     pubDate: extractTag(item, 'pubDate') || extractTag(item, 'dc:date'),

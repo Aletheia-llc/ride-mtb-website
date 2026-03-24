@@ -2,14 +2,13 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import {
   FileText,
   MessageSquare,
   User,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal,
   ArrowUp,
 } from 'lucide-react'
 import { formatRelativeTime } from '@/modules/forum/types'
@@ -20,29 +19,27 @@ type ThreadResult = {
   id: string
   title: string
   slug: string
-  replyCount: number
-  viewCount: number
+  body: string
   createdAt: Date | string
+  viewCount?: number
+  _count?: { comments: number }
   category: { name: string; slug: string; color: string | null }
-  tags: Array<{ tag: { name: string; slug: string; color: string } }>
-  posts: Array<{
-    content: string
-    author: {
-      id: string
-      name: string | null
-      username: string | null
-      image: string | null
-      avatarUrl: string | null
-      role: string
-    }
-  }>
+  tags?: Array<{ tag: { name: string; slug: string; color: string } }>
+  author: {
+    id: string
+    name: string | null
+    username: string | null
+    image: string | null
+    avatarUrl: string | null
+    role: string | null
+  }
 }
 
 type ReplyResult = {
   id: string
-  content: string
+  body: string
   createdAt: Date | string
-  thread: { title: string; slug: string }
+  post: { title: string; slug: string }
   author: {
     id: string
     name: string | null
@@ -58,9 +55,7 @@ type UserResult = {
   username: string | null
   image: string | null
   avatarUrl: string | null
-  bio: string | null
-  karma: number
-  createdAt: Date | string
+  karma: number | null
 }
 
 type TabCounts = { threads: number; replies: number; users: number }
@@ -74,8 +69,6 @@ interface ForumSearchResultsProps {
   total: number
   page: number
   tabCounts: TabCounts
-  categories: Array<{ name: string; slug: string; color: string | null }>
-  filters: { category: string; author: string; dateFrom: string; dateTo: string; sort: string }
 }
 
 const PAGE_SIZE = 20
@@ -97,10 +90,7 @@ export function ForumSearchResults({
   total,
   page,
   tabCounts,
-  categories,
-  filters,
 }: ForumSearchResultsProps) {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
@@ -112,21 +102,6 @@ export function ForumSearchResults({
     }
     if (!('page' in overrides)) params.delete('page')
     return `/forum/search?${params.toString()}`
-  }
-
-  function handleFilterSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    router.push(
-      buildUrl({
-        category: (formData.get('category') as string) ?? '',
-        author: (formData.get('author') as string) ?? '',
-        dateFrom: (formData.get('dateFrom') as string) ?? '',
-        dateTo: (formData.get('dateTo') as string) ?? '',
-        sort: (formData.get('sort') as string) ?? 'date',
-        page: '',
-      }),
-    )
   }
 
   const results = type === 'threads' ? threadResults : type === 'replies' ? replyResults : userResults
@@ -155,157 +130,73 @@ export function ForumSearchResults({
         ))}
       </div>
 
-      <div className="flex gap-6">
-        {/* Filter sidebar */}
-        <aside className="w-48 shrink-0">
-          <form onSubmit={handleFilterSubmit} className="flex flex-col gap-4">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              Filters
+      {/* Results */}
+      <div className="min-w-0">
+        {results.length === 0 ? (
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] py-16 text-center">
+            <p className="text-[var(--color-text-muted)]">No results for &ldquo;{query}&rdquo;</p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">Try different keywords.</p>
+          </div>
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-[var(--color-text-muted)]">
+              {total} result{total !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
+            </p>
+
+            <div className="space-y-3">
+              {type === 'threads' &&
+                (results as ThreadResult[]).map((r) => (
+                  <ThreadResultCard key={r.id} result={r} />
+                ))}
+              {type === 'replies' &&
+                (results as ReplyResult[]).map((r) => (
+                  <ReplyResultCard key={r.id} result={r} />
+                ))}
+              {type === 'users' &&
+                (results as UserResult[]).map((r) => (
+                  <UserResultCard key={r.id} result={r} />
+                ))}
             </div>
 
-            {type === 'threads' && (
-              <div>
-                <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Category</label>
-                <select
-                  name="category"
-                  defaultValue={filters.category}
-                  className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat.slug} value={cat.slug}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {type !== 'users' && (
-              <>
-                <div>
-                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Author</label>
-                  <input
-                    name="author"
-                    type="text"
-                    placeholder="Username"
-                    defaultValue={filters.author}
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">From Date</label>
-                  <input
-                    name="dateFrom"
-                    type="date"
-                    defaultValue={filters.dateFrom}
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">To Date</label>
-                  <input
-                    name="dateTo"
-                    type="date"
-                    defaultValue={filters.dateTo}
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs text-[var(--color-text-muted)]">Sort By</label>
-                  <select
-                    name="sort"
-                    defaultValue={filters.sort}
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                {page > 1 ? (
+                  <Link
+                    href={buildUrl({ page: String(page - 1) })}
+                    className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]"
                   >
-                    <option value="date">Date</option>
-                    <option value="votes">Votes</option>
-                  </select>
-                </div>
-              </>
-            )}
-
-            <button
-              type="submit"
-              className="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-dark)]"
-            >
-              Apply Filters
-            </button>
-          </form>
-        </aside>
-
-        {/* Results */}
-        <div className="min-w-0 flex-1">
-          {results.length === 0 ? (
-            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] py-16 text-center">
-              <p className="text-[var(--color-text-muted)]">No results for &ldquo;{query}&rdquo;</p>
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">Try different keywords or adjust your filters.</p>
-            </div>
-          ) : (
-            <>
-              <p className="mb-4 text-sm text-[var(--color-text-muted)]">
-                {total} result{total !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
-              </p>
-
-              <div className="space-y-3">
-                {type === 'threads' &&
-                  (results as ThreadResult[]).map((r) => (
-                    <ThreadResultCard key={r.id} result={r} />
-                  ))}
-                {type === 'replies' &&
-                  (results as ReplyResult[]).map((r) => (
-                    <ReplyResultCard key={r.id} result={r} />
-                  ))}
-                {type === 'users' &&
-                  (results as UserResult[]).map((r) => (
-                    <UserResultCard key={r.id} result={r} />
-                  ))}
-              </div>
-
-              {totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-center gap-2">
-                  {page > 1 ? (
-                    <Link
-                      href={buildUrl({ page: String(page - 1) })}
-                      className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Link>
-                  ) : (
-                    <span className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm opacity-40">
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </span>
-                  )}
-
-                  <span className="px-4 py-2 text-sm text-[var(--color-text-muted)]">
-                    Page {page} of {totalPages}
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Link>
+                ) : (
+                  <span className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm opacity-40">
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
                   </span>
+                )}
 
-                  {page < totalPages ? (
-                    <Link
-                      href={buildUrl({ page: String(page + 1) })}
-                      className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  ) : (
-                    <span className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm opacity-40">
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </span>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                <span className="px-4 py-2 text-sm text-[var(--color-text-muted)]">
+                  Page {page} of {totalPages}
+                </span>
+
+                {page < totalPages ? (
+                  <Link
+                    href={buildUrl({ page: String(page + 1) })}
+                    className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm transition-colors hover:bg-[var(--color-bg-secondary)]"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                ) : (
+                  <span className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm opacity-40">
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </span>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
@@ -314,8 +205,8 @@ export function ForumSearchResults({
 // ── Result cards ───────────────────────────────────────────────
 
 function ThreadResultCard({ result }: { result: ThreadResult }) {
-  const author = result.posts[0]?.author
-  const bodySnippet = result.posts[0]?.content?.slice(0, 200) ?? ''
+  const author = result.author
+  const bodySnippet = result.body?.slice(0, 200) ?? ''
 
   return (
     <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 transition-all hover:border-[var(--color-text-muted)] hover:shadow-sm">
@@ -327,7 +218,7 @@ function ThreadResultCard({ result }: { result: ThreadResult }) {
         >
           {result.category.name}
         </Link>
-        {result.tags.slice(0, 3).map(({ tag }) => (
+        {(result.tags ?? []).slice(0, 3).map(({ tag }) => (
           <span
             key={tag.slug}
             className="rounded-full px-2 py-0.5 text-xs font-medium"
@@ -364,7 +255,7 @@ function ThreadResultCard({ result }: { result: ThreadResult }) {
         <span>{formatRelativeTime(new Date(result.createdAt))}</span>
         <span className="flex items-center gap-1">
           <MessageSquare className="h-3 w-3" />
-          {result.replyCount}
+          {result._count?.comments ?? 0}
         </span>
       </div>
     </article>
@@ -372,7 +263,7 @@ function ThreadResultCard({ result }: { result: ThreadResult }) {
 }
 
 function ReplyResultCard({ result }: { result: ReplyResult }) {
-  const snippet = result.content.slice(0, 200)
+  const snippet = result.body.slice(0, 200)
 
   return (
     <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 transition-all hover:border-[var(--color-text-muted)] hover:shadow-sm">
@@ -387,8 +278,8 @@ function ReplyResultCard({ result }: { result: ReplyResult }) {
           )}
         </span>
         <span>replied in</span>
-        <Link href={`/forum/thread/${result.thread.slug}`} className="font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">
-          {result.thread.title}
+        <Link href={`/forum/thread/${result.post.slug}`} className="font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">
+          {result.post.title}
         </Link>
         <span>·</span>
         <span>{formatRelativeTime(new Date(result.createdAt))}</span>
@@ -401,7 +292,7 @@ function ReplyResultCard({ result }: { result: ReplyResult }) {
 
       <div className="mt-3">
         <Link
-          href={`/forum/thread/${result.thread.slug}`}
+          href={`/forum/thread/${result.post.slug}`}
           className="text-xs text-[var(--color-primary)] hover:underline"
         >
           View thread →
@@ -449,16 +340,11 @@ function UserResultCard({ result }: { result: UserResult }) {
             )}
           </div>
 
-          {result.bio && (
-            <p className="mt-0.5 line-clamp-1 text-sm text-[var(--color-text-muted)]">{result.bio}</p>
-          )}
-
           <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
             <span className="flex items-center gap-0.5">
               <ArrowUp className="h-3 w-3" />
-              {result.karma} karma
+              {result.karma ?? 0} karma
             </span>
-            <span>Joined {new Date(result.createdAt).toLocaleDateString()}</span>
           </div>
         </div>
       </div>

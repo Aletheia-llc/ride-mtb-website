@@ -41,18 +41,24 @@ model User {
   updatedAt       DateTime  @updatedAt
   emailNotifications Boolean @default(true)
   lastActivityAt  DateTime?
+  isPremium          Boolean  @default(false)
+  isVerifiedCreator  Boolean  @default(false)
+  coverUrl           String?
   accounts        Account[]
   sessions        Session[]
   xpGrants        XpGrant[]
   xpAggregate     XpAggregate?
-  forumPosts              ForumPost[]
-  forumVotes              ForumVote[]
-  forumBookmarks          ForumBookmark[]
-  ownedForumCommunities   ForumCategory[]              @relation("ownedForumCommunities")
-  forumMemberships        ForumCommunityMembership[]
-  forumReports            ForumReport[]                @relation("forumReporter")
-  forumModActions         ForumReport[]                @relation("forumModerator")
-  forumBadges             ForumUserBadge[]
+  posts                      Post[]                   @relation("PostAuthor")
+  comments                   Comment[]                @relation("CommentAuthor")
+  votes                      Vote[]
+  bookmarks                  Bookmark[]
+  forumNotificationsReceived ForumNotification[]      @relation("ForumNotificationRecipient")
+  forumNotificationsGiven    ForumNotification[]      @relation("ForumNotificationActor")
+  ownedCommunities           Category[]               @relation("ownedCommunities")
+  communityMemberships       CommunityMembership[]
+  reports                    Report[]                 @relation("Reporter")
+  modActions                 Report[]                 @relation("Moderator")
+  userBadges                 UserBadge[]
   conversations           ConversationParticipant[]
   sentMessages            DirectMessage[]
   creditTransactions      CreditTransaction[]
@@ -91,6 +97,7 @@ model User {
   shops           Shop[]
   shopReviews     ShopReview[]
   reviewHelpfulVotes ReviewHelpful[]
+  trailReviewHelpful TrailReviewHelpful[]
   coachProfile    CoachProfile?
   creatorProfile  CreatorProfile?
   quizSessions          QuizSession[]
@@ -208,174 +215,240 @@ model XpAggregate {
 // FORUM
 // ============================================================
 
-model ForumCategory {
-  id            String      @id @default(cuid())
+model Category {
+  id            String   @id @default(cuid())
   name          String
-  slug          String      @unique
+  slug          String   @unique
   description   String?
   icon          String?
-  color         String      @default("#6b7280")
-  sortOrder     Int         @default(0)
-  // Community fields
-  isGated       Boolean     @default(false)
+  color         String   @default("#6b7280")
+  sortOrder     Int      @default(0)
+  isGated       Boolean  @default(false)
   ownerId       String?
   coverImageUrl String?
-  memberCount   Int         @default(0)
-  owner         User?       @relation("ownedForumCommunities", fields: [ownerId], references: [id])
-  threads       ForumThread[]
-  memberships   ForumCommunityMembership[]
+  memberCount   Int      @default(0)
 
-  @@map("forum_categories")
+  owner       User?                 @relation("ownedCommunities", fields: [ownerId], references: [id])
+  posts       Post[]
+  memberships CommunityMembership[]
+
+  @@map("categories")
 }
 
-model ForumCommunityMembership {
-  id         String        @id @default(cuid())
-  userId     String
-  categoryId String
-  role       String        @default("member")
-  createdAt  DateTime      @default(now())
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category   ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+model Post {
+  id             String    @id @default(cuid())
+  title          String
+  slug           String    @unique
+  body           String    @db.Text
+  authorId       String
+  categoryId     String
+  voteScore      Int       @default(0)
+  hotScore       Float     @default(0)
+  commentCount   Int       @default(0)
+  viewCount      Int       @default(0)
+  isPinned       Boolean   @default(false)
+  isLocked       Boolean   @default(false)
+  isCreatorPost  Boolean   @default(false)
+  editedAt       DateTime?
+  editedById     String?
+  lastReplyAt    DateTime?
+  lastReplyById  String?
+  linkPreviewUrl String?
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  @@unique([userId, categoryId])
-  @@map("forum_community_memberships")
-}
+  author      User         @relation("PostAuthor", fields: [authorId], references: [id])
+  category    Category     @relation(fields: [categoryId], references: [id])
+  comments    Comment[]
+  votes       Vote[]
+  bookmarks   Bookmark[]
+  tags        PostTag[]
+  linkPreview LinkPreview? @relation(fields: [linkPreviewUrl], references: [url])
+  notifications ForumNotification[]
+  reports     Report[]
 
-model ForumThread {
-  id          String        @id @default(cuid())
-  categoryId  String
-  title       String
-  slug        String        @unique
-  isPinned    Boolean       @default(false)
-  isLocked    Boolean       @default(false)
-  viewCount   Int           @default(0)
-  hotScore    Float         @default(0)
-  lastReplyAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  deletedAt   DateTime?
-  category    ForumCategory @relation(fields: [categoryId], references: [id])
-  posts       ForumPost[]
-  tags        ForumThreadTag[]
-  bookmarks   ForumBookmark[]
-  reports     ForumReport[]
-
-  @@index([categoryId, createdAt])
-  @@index([hotScore])
-  @@index([deletedAt])
-  @@map("forum_threads")
-}
-
-model ForumPost {
-  id        String      @id @default(cuid())
-  threadId  String
-  authorId  String
-  content   String      @db.Text
-  isFirst   Boolean     @default(false)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  editedAt  DateTime?
-  deletedAt DateTime?
-  thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  votes     ForumVote[]
-  reports   ForumReport[]
-
-  @@index([threadId, createdAt])
+  @@index([categoryId])
   @@index([authorId])
-  @@map("forum_posts")
+  @@index([createdAt])
+  @@index([hotScore])
+  @@index([voteScore])
+  @@index([deletedAt])
+  @@index([lastReplyAt])
+  @@map("posts")
 }
 
-model ForumVote {
-  id     String @id @default(cuid())
-  postId String
-  userId String
-  value  Int
-  post   ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Comment {
+  id         String    @id @default(cuid())
+  body       String    @db.Text
+  postId     String
+  authorId   String
+  parentId   String?
+  voteScore  Int       @default(0)
+  editedAt   DateTime?
+  editedById String?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  @@unique([postId, userId])
-  @@map("forum_votes")
+  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User      @relation("CommentAuthor", fields: [authorId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+  votes   Vote[]
+  notifications ForumNotification[]
+  reports Report[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@map("comments")
 }
 
-model ForumTag {
-  id      String          @id @default(cuid())
-  name    String          @unique
-  slug    String          @unique
-  color   String          @default("#6b7280")
-  threads ForumThreadTag[]
-
-  @@map("forum_tags")
-}
-
-model ForumThreadTag {
-  threadId String
-  tagId    String
-  thread   ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  tag      ForumTag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([threadId, tagId])
-  @@map("forum_thread_tags")
-}
-
-model ForumBookmark {
-  id        String      @id @default(cuid())
+model Vote {
+  id        String   @id @default(cuid())
   userId    String
-  threadId  String
-  createdAt DateTime    @default(now())
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  postId    String?
+  commentId String?
+  value     Int
+  createdAt DateTime @default(now())
 
-  @@unique([userId, threadId])
-  @@map("forum_bookmarks")
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  // NOTE: No @@unique here — partial indexes added via raw SQL in migration
+  // (PostgreSQL treats NULL as distinct in unique constraints)
+  @@index([userId])
+  @@map("votes")
 }
 
-model ForumReport {
-  id           String              @id @default(cuid())
-  reporterId   String
-  targetType   ForumReportTarget
-  postId       String?
-  threadId     String?
-  reportedUserId String?
-  reason       String
-  status       ForumReportStatus   @default(OPEN)
-  moderatorId  String?
-  modNote      String?
-  resolvedAt   DateTime?
-  createdAt    DateTime            @default(now())
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
 
-  reporter     User        @relation("forumReporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  moderator    User?       @relation("forumModerator", fields: [moderatorId], references: [id], onDelete: SetNull)
-  post         ForumPost?  @relation(fields: [postId], references: [id], onDelete: Cascade)
-  thread       ForumThread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@index([status])
-  @@map("forum_reports")
+  @@unique([userId, postId])
+  @@map("bookmarks")
 }
 
-model ForumBadge {
-  id          String           @id @default(cuid())
-  slug        String           @unique
-  name        String
+model Tag {
+  id    String    @id @default(cuid())
+  name  String    @unique
+  slug  String    @unique
+  color String    @default("#6b7280")
+  posts PostTag[]
+
+  @@map("tags")
+}
+
+model PostTag {
+  postId String
+  tagId  String
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("post_tags")
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  slug        String      @unique
   description String
   icon        String
   color       String
-  createdAt   DateTime         @default(now())
-  userBadges  ForumUserBadge[]
+  createdAt   DateTime    @default(now())
+  userBadges  UserBadge[]
 
-  @@map("forum_badges")
+  @@map("badges")
 }
 
-model ForumUserBadge {
-  id        String     @id @default(cuid())
+model UserBadge {
+  id        String   @id @default(cuid())
   userId    String
-  badgeSlug String
-  awardedAt DateTime   @default(now())
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge     ForumBadge @relation(fields: [badgeSlug], references: [slug])
+  badgeId   String
+  awardedAt DateTime @default(now())
 
-  @@unique([userId, badgeSlug])
-  @@map("forum_user_badges")
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+model Report {
+  id             String    @id @default(cuid())
+  reporterId     String
+  reportedUserId String?
+  postId         String?
+  commentId      String?
+  reason         String
+  status         String    @default("pending")
+  moderatorId    String?
+  modNote        String?
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  reporter  User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  moderator User?    @relation("Moderator", fields: [moderatorId], references: [id], onDelete: SetNull)
+  post      Post?    @relation(fields: [postId], references: [id])
+  comment   Comment? @relation(fields: [commentId], references: [id])
+
+  @@index([status])
+  @@map("reports")
+}
+
+model CommunityMembership {
+  id         String   @id @default(cuid())
+  userId     String
+  categoryId String
+  role       String   @default("member")
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@map("community_memberships")
+}
+
+model LinkPreview {
+  url         String   @id
+  title       String?
+  description String?
+  imageUrl    String?
+  fetchedAt   DateTime @default(now())
+  posts       Post[]
+
+  @@map("link_previews")
+}
+
+model ForumNotification {
+  id        String                @id @default(cuid())
+  userId    String
+  actorId   String?
+  type      ForumNotificationType
+  postId    String?    // points to Post (was threadId → ForumThread)
+  commentId String?    // points to Comment (was postId → ForumPost)
+  meta      Json?
+  read      Boolean               @default(false)
+  createdAt DateTime              @default(now())
+
+  user    User     @relation("ForumNotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor   User?    @relation("ForumNotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  post    Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@index([actorId, type, commentId])
+  @@map("forum_notifications")
 }
 
 // ============================================================
@@ -536,11 +609,30 @@ model TrailSystem {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   regionId      String?
+  coverImageUrl     String?
+  phone             String?
+  trailheadLat      Float?
+  trailheadLng      Float?
+  trailheadNotes    String?
+  parkingInfo       String?
+  seasonalNotes     String?
+  passRequired      Boolean   @default(false)
+  dogFriendly       Boolean   @default(true)
+  eMtbAllowed       Boolean   @default(true)
+  isFeatured        Boolean   @default(false)
+  totalVertFt       Float     @default(0)
+  averageRating     Float?
+  reviewCount       Int       @default(0)
+  rideCount         Int       @default(0)
+  importSource      String?
+  externalId        String?
+  submittedByUserId String?
   trails        Trail[]
   region        TrailRegion? @relation(fields: [regionId], references: [id])
   pois          PointOfInterest[]
   rideLogs      RideLog[]
   creatorVideos   CreatorVideo[]
+  photos            TrailSystemPhoto[]
 
   @@index([city, state])
   @@index([latitude, longitude])
@@ -567,6 +659,25 @@ model Trail {
   updatedAt         DateTime      @updatedAt
   currentCondition      ConditionType?
   conditionReportedAt   DateTime?
+  difficultyLabel       String?
+  hasGpsTrack           Boolean   @default(false)
+  features              String[]  @default([])
+  surfaceType           String?
+  direction             String?
+  averageRating         Float?
+  avgFlowRating         Float?
+  avgSceneryRating      Float?
+  avgTechnicalRating    Float?
+  avgMaintenanceRating  Float?
+  reviewCount           Int       @default(0)
+  rideCount             Int       @default(0)
+  lastRiddenAt          DateTime?
+  avgRideSpeedMph       Float?
+  avgRideDurationMin    Float?
+  gpsContributionCount  Int       @default(0)
+  importSource          String?
+  externalId            String?
+  submittedByUserId     String?
   system            TrailSystem   @relation(fields: [trailSystemId], references: [id])
   gpsTrack          TrailGpsTrack?
   reviews           TrailReview[]
@@ -574,6 +685,7 @@ model Trail {
   conditionReports  ConditionReport[]
   pois              PointOfInterest[]
   rideLogs          RideLog[]
+  photos            TrailPhoto[]
 
   @@index([trailSystemId, status])
   @@index([trailType])
@@ -589,7 +701,10 @@ model TrailGpsTrack {
   boundsSwLat      Float?
   boundsSwLng      Float?
   pointCount       Int      @default(0)
-  simplifiedTrack  String?  @db.Text
+  trackData        String?  @db.Text
+  elevationProfile String?  @db.Text
+  contributorCount Int      @default(1)
+  boundsJson       String?  @db.Text
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   trail            Trail    @relation(fields: [trailId], references: [id], onDelete: Cascade)
@@ -609,9 +724,15 @@ model TrailReview {
   comment         String?  @db.Text
   rideDate        DateTime?
   bikeType        String?
+  title           String?
+  body            String?  @db.Text
+  helpfulCount    Int      @default(0)
+  isHidden        Boolean  @default(false)
+  reportCount     Int      @default(0)
   createdAt       DateTime @default(now())
-  trail           Trail    @relation(fields: [trailId], references: [id])
+  trail           Trail    @relation(fields: [trailId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  helpfulVotes    TrailReviewHelpful[]
 
   @@unique([trailId, userId])
   @@index([trailId, createdAt])
@@ -671,6 +792,10 @@ model PointOfInterest {
   lat             Float
   lng             Float
   distanceAlongMi Float?
+  photoUrl          String?
+  videoUrl          String?
+  isApproved        Boolean  @default(true)
+  submittedByUserId String?
   createdAt       DateTime @default(now())
   trail           Trail?       @relation(fields: [trailId], references: [id], onDelete: Cascade)
   trailSystem     TrailSystem? @relation(fields: [trailSystemId], references: [id], onDelete: Cascade)
@@ -687,10 +812,62 @@ model TrailRegion {
   country     String        @default("US")
   lat         Float?
   lng         Float?
+  coverImageUrl     String?
+  boundsNeLat       Float?
+  boundsNeLng       Float?
+  boundsSwLat       Float?
+  boundsSwLng       Float?
+  trailSystemCount  Int     @default(0)
+  totalTrailCount   Int     @default(0)
   systems     TrailSystem[]
   createdAt   DateTime      @default(now())
 
   @@map("trail_regions")
+}
+
+model TrailPhoto {
+  id          String   @id @default(cuid())
+  trailId     String
+  url         String
+  filename    String?
+  caption     String?
+  sortOrder   Int      @default(0)
+  isCover     Boolean  @default(false)
+  latitude    Float?
+  longitude   Float?
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+  trail       Trail    @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@index([trailId, sortOrder])
+  @@map("trail_photos")
+}
+
+model TrailSystemPhoto {
+  id            String      @id @default(cuid())
+  trailSystemId String
+  url           String
+  filename      String?
+  caption       String?
+  sortOrder     Int         @default(0)
+  isCover       Boolean     @default(false)
+  uploadedBy    String?
+  createdAt     DateTime    @default(now())
+  trailSystem   TrailSystem @relation(fields: [trailSystemId], references: [id], onDelete: Cascade)
+
+  @@index([trailSystemId, sortOrder])
+  @@map("trail_system_photos")
+}
+
+model TrailReviewHelpful {
+  id       String      @id @default(cuid())
+  reviewId String
+  userId   String
+  review   TrailReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@map("trail_review_helpful")
 }
 
 // ============================================================
@@ -711,7 +888,7 @@ model Event {
   maxAttendees Int?
   imageUrl    String?
   eventType   EventType   @default(group_ride)
-  status      ContentStatus @default(published)
+  status      CommunityEventStatus @default(published)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   // New fields from race calendar port
@@ -1517,6 +1694,17 @@ enum ContentStatus {
   archived
 }
 
+enum CommunityEventStatus {
+  draft
+  pending_review
+  published
+  cancelled
+  postponed
+  completed
+
+  @@map("event_statuses")
+}
+
 enum Tier {
   gold
   silver
@@ -1721,16 +1909,27 @@ enum MediaType {
 }
 
 enum ListingCategory {
-  complete_bikes
-  frames
+  complete_bike
+  frame
+  fork
+  shock
   wheels
-  suspension
+  tires
   drivetrain
   brakes
   cockpit
-  protection
+  saddle_seatpost
+  pedals
+  dropper_post
+  helmet
+  goggles_eyewear
   clothing
-  accessories
+  pack_hydration
+  tools
+  electronics
+  protection
+  rack_transport
+  vehicle
   other
 }
 
@@ -1744,11 +1943,13 @@ enum ItemCondition {
 
 enum ListingStatus {
   draft
+  pending_review
   active
   sold
   reserved
   expired
   removed
+  cancelled
 }
 
 enum MerchCategory {
@@ -1760,17 +1961,11 @@ enum MerchCategory {
   other
 }
 
-enum ForumReportStatus {
-  OPEN
-  REVIEWED
-  RESOLVED
-  DISMISSED
-}
-
-enum ForumReportTarget {
-  POST
-  THREAD
-  USER
+enum ForumNotificationType {
+  REPLY_TO_THREAD
+  REPLY_TO_POST
+  MENTION
+  VOTE_MILESTONE
 }
 
 // ============================================================

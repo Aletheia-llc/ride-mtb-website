@@ -16,7 +16,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     totalListings,
   ] = await Promise.all([
     db.user.count(),
-    db.forumPost.count(),
+    db.post.count(),
     db.trail.count(),
     db.event.count(),
     db.gearReview.count(),

@@ -30,15 +30,15 @@ export async function getFeedCandidates(page: number = 1): Promise<FeedItem[]> {
         trailCount: true, createdAt: true,
       },
     }),
-    db.forumThread.findMany({
-      where: {},
+    db.post.findMany({
+      where: { deletedAt: null },
       take: ITEMS_PER_SOURCE,
       skip,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, title: true, slug: true, viewCount: true, createdAt: true,
         category: { select: { name: true, slug: true } },
-        _count: { select: { posts: true } },
+        _count: { select: { comments: true } },
       },
     }),
     db.event.findMany({
@@ -105,11 +105,11 @@ export async function getFeedCandidates(page: number = 1): Promise<FeedItem[]> {
       type: 'forum' as const,
       title: t.title,
       subtitle: t.category.name,
-      url: `/forum/${t.category.slug}/${t.slug}`,
+      url: `/forum/thread/${t.slug}`,
       tags: [t.category.name],
-      meta: `${t._count.posts} replies`,
+      meta: `${t._count.comments} replies`,
       category: `forum:${t.category.slug}`,
-      engagementScore: t._count.posts,
+      engagementScore: t._count.comments,
       createdAt: t.createdAt,
     })),
     ...events.map((e) => ({
@@ -166,25 +166,25 @@ export interface TrendingItem {
 export async function getTrendingItems(limit: number = 5): Promise<TrendingItem[]> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
-  const threads = await db.forumThread.findMany({
-    where: { createdAt: { gte: since } },
+  const threads = await db.post.findMany({
+    where: { deletedAt: null, createdAt: { gte: since } },
     take: limit,
-    orderBy: { posts: { _count: 'desc' } },
+    orderBy: { comments: { _count: 'desc' } },
     select: {
       id: true,
       title: true,
       slug: true,
       viewCount: true,
       category: { select: { name: true, slug: true } },
-      _count: { select: { posts: true } },
+      _count: { select: { comments: true } },
     },
   })
 
   return threads.map((t) => ({
     id: t.id,
     title: t.title,
-    url: `/forum/${t.category.slug}/${t.slug}`,
-    replyCount: t._count.posts,
+    url: `/forum/thread/${t.slug}`,
+    replyCount: t._count.comments,
     category: t.category.name,
   }))
 }

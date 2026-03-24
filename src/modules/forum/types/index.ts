@@ -1,5 +1,4 @@
-// ── Forum module shared types ───────────────────────────────
-// Aligned with query return shapes from lib/queries.ts
+// ── Forum module shared types ───────────────────────────────────────────────
 
 export interface ForumAuthor {
   id: string
@@ -9,37 +8,16 @@ export interface ForumAuthor {
   avatarUrl?: string | null
   role?: string
   karma?: number | null
-  forumBadges?: ForumBadgeDisplay[]
+  isPremium?: boolean
+  isVerifiedCreator?: boolean
+  userBadges?: BadgeDisplay[]
+  // Extended fields present on PostDetail + CommentCard author blocks
+  bio?: string | null
+  createdAt?: Date
+  _count?: { posts: number }
 }
 
-export interface ForumCategory {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  icon: string | null
-  sortOrder: number
-  _count: { threads: number }
-  threads: Array<{ title: string; slug: string; createdAt: Date }>
-}
-
-export interface ForumThreadSummary {
-  id: string
-  title: string
-  slug: string
-  isPinned: boolean
-  isLocked: boolean
-  viewCount: number
-  createdAt: Date
-  updatedAt: Date
-  posts: Array<{ author: ForumAuthor }>
-  _count: { posts: number }
-  voteScore: number
-}
-
-export interface ForumBadgeDisplay {
-  badgeSlug: string
-  awardedAt: Date
+export interface BadgeDisplay {
   badge: {
     name: string
     description: string
@@ -48,35 +26,63 @@ export interface ForumBadgeDisplay {
   }
 }
 
-export interface ForumPost {
+export interface ForumCategory {
   id: string
-  threadId: string
-  authorId: string
-  content: string
-  isFirst: boolean
-  createdAt: Date
-  updatedAt: Date
-  editedAt: Date | null
-  deletedAt: Date | null
-  author: ForumAuthor
-  voteScore: number
+  name: string
+  slug: string
+  description: string | null
+  icon: string | null
+  color: string
+  sortOrder: number
+  _count: { posts: number }
 }
 
-export interface ForumThread {
+export interface PostSummary {
   id: string
   title: string
   slug: string
+  body: string
   isPinned: boolean
   isLocked: boolean
+  voteScore: number
+  commentCount: number
   viewCount: number
   createdAt: Date
   updatedAt: Date
-  deletedAt: Date | null
-  category: { name: string; slug: string }
-  posts: ForumPost[]
+  linkPreviewUrl: string | null
+  author: ForumAuthor
+  category: { id: string; name: string; slug: string; color: string; icon: string | null }
+  tags: Array<{ tag: { id: string; name: string; slug: string; color: string } }>
+  _count: { comments: number }
 }
 
-// ── Utility ─────────────────────────────────────────────────
+export interface PostDetail extends PostSummary {
+  linkPreview: LinkPreviewData | null
+}
+
+export interface ForumComment {
+  id: string
+  body: string
+  postId: string
+  authorId: string
+  parentId: string | null
+  voteScore: number
+  editedAt: Date | null
+  deletedAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+  author: ForumAuthor
+}
+
+export interface LinkPreviewData {
+  url: string
+  title: string | null
+  description: string | null
+  imageUrl: string | null
+  fetchedAt: Date
+}
+
+// ── Utility ─────────────────────────────────────────────────────────────────
 
 export function formatRelativeTime(date: Date): string {
   const now = new Date()

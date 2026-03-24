@@ -1,67 +1,32 @@
 import 'server-only'
 import { db } from '@/lib/db/client'
 
-type BadgeContext = 'post' | 'thread' | 'vote'
+const BADGES = [
+  { slug: 'first-post',    threshold: 1,  model: 'post'    as const },
+  { slug: 'ten-posts',     threshold: 10, model: 'post'    as const },
+  { slug: 'first-comment', threshold: 1,  model: 'comment' as const },
+] as const
 
-interface BadgeCheck {
-  slug: string
-  condition: (data: {
-    postCount: number
-    threadCount: number
-    karma: number
-    accountAgeDays: number
-  }) => boolean
-}
-
-const BADGE_CHECKS: BadgeCheck[] = [
-  { slug: 'first-post',   condition: ({ postCount })      => postCount >= 1 },
-  { slug: '10-posts',     condition: ({ postCount })      => postCount >= 10 },
-  { slug: '50-posts',     condition: ({ postCount })      => postCount >= 50 },
-  { slug: '100-posts',    condition: ({ postCount })      => postCount >= 100 },
-  { slug: 'first-thread', condition: ({ threadCount })    => threadCount >= 1 },
-  { slug: 'helpful',      condition: ({ karma })          => karma >= 10 },
-  { slug: 'popular',      condition: ({ karma })          => karma >= 50 },
-  { slug: 'month-old',    condition: ({ accountAgeDays }) => accountAgeDays >= 30 },
-]
-
-export async function checkAndGrantBadges(
-  userId: string,
-  _context: BadgeContext,
-): Promise<void> {
-  const [postCount, threadCount, user] = await Promise.all([
-    db.forumPost.count({
-      where: { authorId: userId, deletedAt: null },
-    }),
-    db.forumThread.count({
-      where: {
-        posts: { some: { authorId: userId, isFirst: true } },
-        deletedAt: null,
-      },
-    }),
-    db.user.findUnique({
-      where: { id: userId },
-      select: { karma: true, createdAt: true },
-    }),
+export async function checkAndAwardBadges(userId: string): Promise<void> {
+  const [postCount, commentCount] = await Promise.all([
+    db.post.count({ where: { authorId: userId, deletedAt: null } }),
+    db.comment.count({ where: { authorId: userId, deletedAt: null } }),
   ])
 
-  if (!user) return
+  for (const badge of BADGES) {
+    const count = badge.model === 'post' ? postCount : commentCount
+    if (count < badge.threshold) continue
 
-  const karma = user.karma
-  const accountAgeDays = Math.floor(
-    (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24),
-  )
+    const badgeRecord = await db.badge.findUnique({
+      where: { slug: badge.slug },
+      select: { id: true },
+    })
+    if (!badgeRecord) continue
 
-  const data = { postCount, threadCount, karma, accountAgeDays }
-
-  await Promise.all(
-    BADGE_CHECKS
-      .filter(({ condition }) => condition(data))
-      .map(({ slug }) =>
-        db.forumUserBadge.upsert({
-          where: { userId_badgeSlug: { userId, badgeSlug: slug } },
-          create: { userId, badgeSlug: slug },
-          update: {},
-        }),
-      ),
-  )
+    await db.userBadge.upsert({
+      where: { userId_badgeId: { userId, badgeId: badgeRecord.id } },
+      update: {},
+      create: { userId, badgeId: badgeRecord.id },
+    })
+  }
 }

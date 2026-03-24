@@ -5,9 +5,13 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
 import { grantXP } from '@/modules/xp'
-import { createThread as createThreadQuery } from '../lib/queries'
+import { createPostRecord } from '../lib/queries'
 // eslint-disable-next-line no-restricted-imports
-import { checkAndGrantBadges } from '../lib/badges'
+import { db } from '../../../lib/db/client'
+// eslint-disable-next-line no-restricted-imports
+import { checkAndAwardBadges } from '../lib/badges'
+// eslint-disable-next-line no-restricted-imports
+import { resolveContentLinkPreview } from '../lib/link-preview'
 
 const createThreadSchema = z.object({
   categoryId: z.string().min(1, 'Category is required'),
@@ -73,25 +77,35 @@ export async function createThread(
 
     const slug = generateSlug(title)
 
-    const thread = await createThreadQuery({
+    const post = await createPostRecord({
       categoryId,
       title,
       slug,
       authorId: user.id,
-      content,
+      body: content,
     })
+
+    // Link preview (fire-and-forget)
+    void resolveContentLinkPreview(content).then(async (result) => {
+      if (result) {
+        await db.post.update({
+          where: { id: post.id },
+          data: { linkPreviewUrl: result.url },
+        }).catch(() => {})
+      }
+    }).catch(() => {})
 
     await grantXP({
       userId: user.id,
       event: 'forum_thread_created',
       module: 'forum',
-      refId: thread.id,
+      refId: post.id,
     })
 
-    redirectUrl = `/forum/thread/${thread.slug}`
+    redirectUrl = `/forum/thread/${post.slug}`
 
     // Badge check (fire-and-forget)
-    void checkAndGrantBadges(user.id, 'thread').catch(console.error)
+    void checkAndAwardBadges(user.id).catch(console.error)
   } catch (error) {
     if (error instanceof Error && error.message.includes('Rate limit')) {
       return { errors: { general: error.message } }

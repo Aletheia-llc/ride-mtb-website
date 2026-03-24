@@ -1,16 +1,19 @@
 import { redirect } from 'next/navigation'
 import { signIn, auth } from '@/lib/auth/config'
+import { SignInForm } from './SignInForm'
 
 interface SignInPageProps {
-  searchParams: Promise<{ callbackUrl?: string }>
+  searchParams: Promise<{ callbackUrl?: string; reset?: string }>
 }
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const session = await auth()
   if (session?.user) redirect('/dashboard')
 
-  const rawCallback = (await searchParams).callbackUrl
+  const params = await searchParams
+  const rawCallback = params.callbackUrl
   const callbackUrl = rawCallback?.startsWith('/') ? rawCallback : '/dashboard'
+  const passwordReset = params.reset === 'success'
 
   return (
     <div style={{
@@ -32,10 +35,25 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--color-text)' }}>
           Sign in to Ride MTB
         </h1>
-        <p style={{ color: 'var(--color-text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: passwordReset ? '1rem' : '2rem', fontSize: '0.9rem' }}>
           Learn skills, explore trails, connect with riders.
         </p>
 
+        {passwordReset && (
+          <p style={{
+            background: 'var(--color-primary-muted, #dcfce7)',
+            color: 'var(--color-primary-dark, #166534)',
+            padding: '10px 14px',
+            borderRadius: 8,
+            fontSize: '0.875rem',
+            marginBottom: '1.5rem',
+            textAlign: 'left',
+          }}>
+            Password updated — sign in with your new password.
+          </p>
+        )}
+
+        {/* Google OAuth */}
         <form action={async () => {
           'use server'
           await signIn('google', { redirectTo: callbackUrl })
@@ -50,11 +68,11 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               gap: '0.75rem',
               padding: '0.75rem 1.5rem',
               background: '#fff',
-              border: '1px solid var(--color-border)',
+              border: '1px solid #dadce0',
               borderRadius: '8px',
               fontSize: '0.95rem',
               fontWeight: 600,
-              color: 'var(--color-text)',
+              color: '#1f1f1f',
               cursor: 'pointer',
               boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
             }}
@@ -68,6 +86,16 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             Continue with Google
           </button>
         </form>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.5rem 0' }}>
+          <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+          <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>or sign in with email</span>
+          <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+        </div>
+
+        {/* Email / Password */}
+        <SignInForm callbackUrl={callbackUrl} />
       </div>
     </div>
   )

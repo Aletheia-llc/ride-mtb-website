@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  serverExternalPackages: ['@react-pdf/renderer'],
+  serverExternalPackages: ['@react-pdf/renderer', '@google-cloud/vision'],
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'img.youtube.com' },

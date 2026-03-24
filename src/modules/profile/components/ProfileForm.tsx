@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Input, Button } from '@/ui/components'
 import { updateProfile } from '../actions/updateProfile'
 import type { UserProfileData } from '../types'
+import { AvatarUpload } from './AvatarUpload'
 
 interface ProfileFormProps {
   user: UserProfileData
@@ -28,6 +29,15 @@ export function ProfileForm({ user }: ProfileFormProps) {
           {state.errors.general}
         </div>
       )}
+
+      {/* Avatar upload — independent of form save */}
+      <div className="flex justify-center pb-2">
+        <AvatarUpload
+          currentAvatarUrl={user.avatarUrl}
+          currentImage={user.image}
+          displayName={user.name ?? user.username ?? 'User'}
+        />
+      </div>
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Input
