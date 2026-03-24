@@ -1,370 +1,329 @@
-import 'server-only'
+/**
+ * Shared Prisma query helpers for the marketplace module.
+ *
+ * These are plain async functions (not server actions) — they share a common
+ * `include` shape so every caller receives a consistent `ListingWithPhotos`
+ * object without repeating the relation tree.
+ *
+ * Systematic adaptations from standalone:
+ *   - `prisma` → `db`  (monolith db client)
+ */
+
 import { db } from '@/lib/db/client'
-import { paginate } from '@/lib/db/helpers'
-import { uniqueSlug } from '@/lib/slugify'
+import type { Prisma } from '@/generated/prisma/client'
 import type {
-  ListingSummary,
-  ListingDetailData,
-  ListingCategory,
-  ItemCondition,
-  ListingStatus,
+  BrowseOptions,
+  ListingWithPhotos,
+  PaginatedListings,
 } from '../types'
 
-// ── Types ─────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Shared Prisma `include` for all listing queries
+// ---------------------------------------------------------------------------
 
-interface ListingFilters {
-  category?: ListingCategory
-  condition?: ItemCondition
-  search?: string
-  minPrice?: number
-  maxPrice?: number
-  status?: ListingStatus
-}
-
-interface CreateListingInput {
-  sellerId: string
-  title: string
-  description: string
-  price: number
-  category: ListingCategory
-  condition: ItemCondition
-  location?: string
-  imageUrls: string[]
-}
-
-// ── 1. getListings ────────────────────────────────────────────
-
-export async function getListings(
-  filters: ListingFilters = {},
-  page: number = 1,
-): Promise<{ listings: ListingSummary[]; totalCount: number }> {
-  const where: Record<string, unknown> = {
-    status: filters.status ?? 'active',
-  }
-
-  if (filters.category) {
-    where.category = filters.category
-  }
-
-  if (filters.condition) {
-    where.condition = filters.condition
-  }
-
-  if (filters.search) {
-    where.OR = [
-      { title: { contains: filters.search, mode: 'insensitive' } },
-      { description: { contains: filters.search, mode: 'insensitive' } },
-    ]
-  }
-
-  if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-    const priceFilter: Record<string, number> = {}
-    if (filters.minPrice !== undefined) priceFilter.gte = filters.minPrice
-    if (filters.maxPrice !== undefined) priceFilter.lte = filters.maxPrice
-    where.price = priceFilter
-  }
-
-  const [listings, totalCount] = await Promise.all([
-    db.listing.findMany({
-      where,
-      ...paginate(page),
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        price: true,
-        category: true,
-        condition: true,
-        location: true,
-        imageUrls: true,
-        status: true,
-        createdAt: true,
-        seller: {
-          select: {
-            name: true,
-          },
+export const listingInclude = {
+  photos: {
+    orderBy: { sortOrder: 'asc' as const },
+  },
+  seller: {
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      sellerProfile: {
+        select: {
+          averageRating: true,
+          ratingCount: true,
+          totalSales: true,
+          isVerified: true,
+          isTrusted: true,
         },
       },
+    },
+  },
+} satisfies Prisma.ListingInclude
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+const DEFAULT_LIMIT = 20
+
+export function buildWhereClause(options: BrowseOptions): Prisma.ListingWhereInput {
+  const where: Prisma.ListingWhereInput = {
+    status: 'active',
+  }
+
+  if (options.category) {
+    where.category = options.category
+  }
+
+  if (options.condition && options.condition.length > 0) {
+    where.condition = { in: options.condition }
+  }
+
+  if (options.fulfillment) {
+    where.fulfillment = options.fulfillment
+  }
+
+  if (options.minPrice !== undefined || options.maxPrice !== undefined) {
+    where.price = {}
+    if (options.minPrice !== undefined) {
+      where.price.gte = options.minPrice
+    }
+    if (options.maxPrice !== undefined) {
+      where.price.lte = options.maxPrice
+    }
+  }
+
+  if (options.brand) {
+    where.brand = { equals: options.brand, mode: 'insensitive' }
+  }
+
+  if (options.city) {
+    where.city = { equals: options.city, mode: 'insensitive' }
+  }
+
+  if (options.state) {
+    where.state = { equals: options.state, mode: 'insensitive' }
+  }
+
+  return where
+}
+
+export function buildOrderBy(
+  sort: BrowseOptions['sort'] = 'newest',
+): Prisma.ListingOrderByWithRelationInput | Prisma.ListingOrderByWithRelationInput[] {
+  switch (sort) {
+    case 'price_asc':
+      return { price: 'asc' }
+    case 'price_desc':
+      return { price: 'desc' }
+    case 'most_saved':
+      return { saveCount: 'desc' }
+    case 'newest':
+    default:
+      return { createdAt: 'desc' }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Exported query helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Get a single listing by slug with photos and seller info.
+ * Increments viewCount (fire-and-forget). Returns null for removed listings.
+ */
+export async function getListingBySlug(slug: string): Promise<ListingWithPhotos | null> {
+  const listing = await db.listing.findUnique({
+    where: { slug },
+    include: listingInclude,
+  })
+
+  if (!listing || listing.status === 'removed') {
+    return null
+  }
+
+  // Fire-and-forget view count increment
+  db.listing
+    .update({
+      where: { id: listing.id },
+      data: { viewCount: { increment: 1 } },
+    })
+    .catch(() => {
+      // Silently ignore view count errors
+    })
+
+  return listing as ListingWithPhotos
+}
+
+/**
+ * Get a single listing by ID with photos and seller info.
+ * Does not increment view count — use for internal lookups (actions, admin).
+ */
+export async function getListingById(id: string): Promise<ListingWithPhotos | null> {
+  const listing = await db.listing.findUnique({
+    where: { id },
+    include: listingInclude,
+  })
+
+  if (!listing || listing.status === 'removed') {
+    return null
+  }
+
+  return listing as ListingWithPhotos
+}
+
+/**
+ * Paginated browse with filters and sort. Uses cursor-based pagination.
+ */
+export async function getListings(options: BrowseOptions = {}): Promise<PaginatedListings> {
+  const limit = options.limit ?? DEFAULT_LIMIT
+  const where = buildWhereClause(options)
+  const orderBy = buildOrderBy(options.sort)
+
+  const [listings, total] = await Promise.all([
+    db.listing.findMany({
+      where,
+      include: listingInclude,
+      orderBy,
+      take: limit + 1, // fetch one extra to determine if there is a next page
+      ...(options.cursor
+        ? {
+            cursor: { id: options.cursor },
+            skip: 1,
+          }
+        : {}),
     }),
     db.listing.count({ where }),
   ])
 
-  const summaries: ListingSummary[] = listings.map((listing) => {
-    const urls = listing.imageUrls as string[]
-    return {
-      id: listing.id,
-      title: listing.title,
-      slug: listing.slug,
-      price: listing.price,
-      category: listing.category as ListingCategory,
-      condition: listing.condition as ItemCondition,
-      location: listing.location,
-      firstImageUrl: urls.length > 0 ? urls[0] : null,
-      status: listing.status as ListingStatus,
-      sellerName: listing.seller.name,
-      createdAt: listing.createdAt,
-    }
-  })
-
-  return { listings: summaries, totalCount }
-}
-
-// ── 2. getListingBySlug ───────────────────────────────────────
-
-export async function getListingBySlug(slug: string): Promise<ListingDetailData | null> {
-  const listing = await db.listing.findUnique({
-    where: { slug },
-    include: {
-      seller: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-        },
-      },
-      _count: {
-        select: { favorites: true },
-      },
-    },
-  })
-
-  if (!listing) return null
+  let nextCursor: string | null = null
+  if (listings.length > limit) {
+    const nextItem = listings.pop()!
+    nextCursor = nextItem.id
+  }
 
   return {
-    id: listing.id,
-    sellerId: listing.sellerId,
-    title: listing.title,
-    slug: listing.slug,
-    description: listing.description,
-    price: listing.price,
-    category: listing.category as ListingCategory,
-    condition: listing.condition as ItemCondition,
-    location: listing.location,
-    imageUrls: listing.imageUrls as string[],
-    status: listing.status as ListingStatus,
-    createdAt: listing.createdAt,
-    updatedAt: listing.updatedAt,
-    seller: listing.seller,
-    favoriteCount: listing._count.favorites,
+    listings: listings as ListingWithPhotos[],
+    nextCursor,
+    total,
   }
 }
 
-// ── 3. createListing ──────────────────────────────────────────
+/**
+ * Full-text search across title, description, brand, modelName, and tags.
+ * Returns paginated results with the same filter/sort options as getListings.
+ */
+export async function searchListings(
+  query: string,
+  options: BrowseOptions = {},
+): Promise<PaginatedListings> {
+  const limit = options.limit ?? DEFAULT_LIMIT
+  const baseWhere = buildWhereClause(options)
+  const orderBy = buildOrderBy(options.sort)
 
-export async function createListing(input: CreateListingInput) {
-  const slug = await uniqueSlug(input.title, async (candidate) => {
-    const existing = await db.listing.findUnique({
-      where: { slug: candidate },
-      select: { id: true },
-    })
-    return !!existing
-  })
+  const searchTerms = query
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t.length > 0)
 
-  return db.listing.create({
-    data: {
-      sellerId: input.sellerId,
-      title: input.title,
-      slug,
-      description: input.description,
-      price: input.price,
-      category: input.category,
-      condition: input.condition,
-      location: input.location || null,
-      imageUrls: input.imageUrls,
-    },
-  })
+  if (searchTerms.length === 0) {
+    return { listings: [], nextCursor: null, total: 0 }
+  }
+
+  // Each search term must match at least one of the searchable fields
+  const searchConditions: Prisma.ListingWhereInput[] = searchTerms.map((term) => ({
+    OR: [
+      { title: { contains: term, mode: 'insensitive' as const } },
+      { description: { contains: term, mode: 'insensitive' as const } },
+      { brand: { contains: term, mode: 'insensitive' as const } },
+      { modelName: { contains: term, mode: 'insensitive' as const } },
+      { tags: { has: term.toLowerCase() } },
+    ],
+  }))
+
+  const where: Prisma.ListingWhereInput = {
+    ...baseWhere,
+    AND: searchConditions,
+  }
+
+  const [listings, total] = await Promise.all([
+    db.listing.findMany({
+      where,
+      include: listingInclude,
+      orderBy,
+      take: limit + 1,
+      ...(options.cursor
+        ? {
+            cursor: { id: options.cursor },
+            skip: 1,
+          }
+        : {}),
+    }),
+    db.listing.count({ where }),
+  ])
+
+  let nextCursor: string | null = null
+  if (listings.length > limit) {
+    const nextItem = listings.pop()!
+    nextCursor = nextItem.id
+  }
+
+  return {
+    listings: listings as ListingWithPhotos[],
+    nextCursor,
+    total,
+  }
 }
 
-// ── 4. getSellerListings ──────────────────────────────────────
-
-export async function getSellerListings(sellerId: string) {
-  return db.listing.findMany({
-    where: { sellerId },
+/**
+ * Get up to 8 featured active listings.
+ */
+export async function getFeaturedListings(): Promise<ListingWithPhotos[]> {
+  const listings = await db.listing.findMany({
+    where: {
+      status: 'active',
+      isFeatured: true,
+    },
+    include: listingInclude,
     orderBy: { createdAt: 'desc' },
-    include: {
-      _count: { select: { favorites: true } },
-    },
+    take: 8,
   })
+
+  return listings as ListingWithPhotos[]
 }
 
-// ── 5. updateListingStatus (auth check included) ─────────────
-
-export async function updateListingStatus(
-  listingId: string,
-  sellerId: string,
-  status: ListingStatus,
-) {
-  const listing = await db.listing.findUnique({
-    where: { id: listingId },
-    select: { sellerId: true },
-  })
-
-  if (!listing) {
-    throw new Error('Listing not found')
-  }
-
-  if (listing.sellerId !== sellerId) {
-    throw new Error('Not authorized to update this listing')
-  }
-
-  return db.listing.update({
-    where: { id: listingId },
-    data: { status },
-  })
-}
-
-// ── 5. deleteListing ──────────────────────────────────────────
-
-export async function deleteListing(listingId: string, sellerId: string) {
-  const listing = await db.listing.findUnique({
-    where: { id: listingId },
-    select: { sellerId: true },
-  })
-
-  if (!listing) {
-    throw new Error('Listing not found')
-  }
-
-  if (listing.sellerId !== sellerId) {
-    throw new Error('Not authorized to delete this listing')
-  }
-
-  return db.listing.delete({
-    where: { id: listingId },
-  })
-}
-
-// ── 6. toggleListingFavorite ──────────────────────────────────
-
-export async function toggleListingFavorite(listingId: string, userId: string) {
-  const existing = await db.listingFavorite.findUnique({
-    where: { userId_listingId: { userId, listingId } },
-  })
-
-  if (existing) {
-    await db.listingFavorite.delete({ where: { id: existing.id } })
-    return { favorited: false, sellerId: null as string | null }
-  }
-
-  const favorite = await db.listingFavorite.create({
-    data: { userId, listingId },
-    include: { listing: { select: { sellerId: true } } },
-  })
-  return { favorited: true, sellerId: favorite.listing.sellerId }
-}
-
-// ── 7. getUserFavoriteListings ────────────────────────────────
-
-export async function getUserFavoriteListings(userId: string) {
-  const favorites = await db.listingFavorite.findMany({
-    where: { userId, listing: { status: 'active' } },
+/**
+ * Get recent active listings.
+ */
+export async function getRecentListings(limit = 12): Promise<ListingWithPhotos[]> {
+  const listings = await db.listing.findMany({
+    where: { status: 'active' },
+    include: listingInclude,
     orderBy: { createdAt: 'desc' },
-    include: {
-      listing: {
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          price: true,
-          category: true,
-          condition: true,
-          location: true,
-          imageUrls: true,
-          status: true,
-          createdAt: true,
-          seller: { select: { name: true } },
-          _count: { select: { favorites: true } },
-        },
-      },
-    },
+    take: limit,
   })
-  return favorites.map((f) => f.listing)
+
+  return listings as ListingWithPhotos[]
 }
 
-// ── 8. getListingFavoriteCounts ───────────────────────────────
-
-export async function getListingFavoriteCounts(listingIds: string[]): Promise<Record<string, number>> {
-  if (listingIds.length === 0) return {}
-  const counts = await db.listingFavorite.groupBy({
-    by: ['listingId'],
-    where: { listingId: { in: listingIds } },
+/**
+ * Get count of active listings per category.
+ */
+export async function getCategoryCounts(): Promise<Record<string, number>> {
+  const counts = await db.listing.groupBy({
+    by: ['category'],
+    where: { status: 'active' },
     _count: { _all: true },
   })
-  return Object.fromEntries(counts.map((c) => [c.listingId, c._count._all]))
+
+  const result: Record<string, number> = {}
+  for (const row of counts) {
+    result[row.category] = row._count._all
+  }
+
+  return result
 }
 
-// ── 9. getUserFavoriteIds ─────────────────────────────────────
+/**
+ * Get trending listings — most saved in the last 7 days.
+ */
+export async function getTrendingListings(limit = 8): Promise<ListingWithPhotos[]> {
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-export async function getUserFavoriteIds(userId: string): Promise<string[]> {
-  const favs = await db.listingFavorite.findMany({
-    where: { userId },
-    select: { listingId: true },
-  })
-  return favs.map((f) => f.listingId)
-}
-
-// ── 10. isListingFavorited ────────────────────────────────────
-
-export async function isListingFavorited(listingId: string, userId: string): Promise<boolean> {
-  const fav = await db.listingFavorite.findUnique({
-    where: { userId_listingId: { userId, listingId } },
-    select: { id: true },
-  })
-  return fav !== null
-}
-
-// ── 11. getListingOffers ──────────────────────────────────────
-
-export async function getListingOffers(listingId: string, userId: string) {
-  // Return offers for the listing; user must be the seller or a buyer
-  const listing = await db.listing.findUnique({
-    where: { id: listingId },
-    select: { sellerId: true },
-  })
-  if (!listing) return []
-
-  const isSeller = listing.sellerId === userId
-
-  return db.offer.findMany({
-    where: isSeller ? { listingId } : { listingId, buyerId: userId },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      buyer: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-        },
-      },
+  const listings = await db.listing.findMany({
+    where: {
+      status: 'active',
+      saveCount: { gt: 0 },
+      createdAt: { gte: sevenDaysAgo },
     },
+    include: listingInclude,
+    orderBy: { saveCount: 'desc' },
+    take: limit,
   })
-}
 
-// ── 12. getSellerProfileByUserId ──────────────────────────────
-
-export async function getSellerProfileByUserId(userId: string) {
-  return db.sellerProfile.findUnique({
-    where: { userId },
-    include: {
-      reviews: {
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      },
-    },
-  })
-}
-
-// ── 13. getTrustLevel ─────────────────────────────────────────
-
-export function getTrustLevel(profile: {
-  isVerified: boolean
-  isTrusted: boolean
-  totalSales: number
-  ratingCount: number
-}): 'trusted' | 'established' | 'new' | 'unverified' {
-  if (profile.isVerified && profile.isTrusted && profile.totalSales >= 10) return 'trusted'
-  if (profile.totalSales >= 3 || profile.ratingCount >= 3) return 'established'
-  if (profile.totalSales >= 1) return 'new'
-  return 'unverified'
+  return listings as ListingWithPhotos[]
 }

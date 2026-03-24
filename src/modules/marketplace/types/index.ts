@@ -1,121 +1,280 @@
-// ── Marketplace module shared types ─────────────────────────
-// Aligned with query return shapes from lib/queries.ts
+/**
+ * Marketplace module types
+ *
+ * Re-exports Prisma-generated model types and defines extended / input types
+ * used across the marketplace module.
+ *
+ * Systematic adaptations from standalone:
+ *   - `Conversation`  → `ListingConversation`
+ *   - `Message`       → `ListingMessage`
+ *   - `ListingCondition` → `ItemCondition` (enum name in monolith schema)
+ */
 
-export type ListingCategory =
-  | 'complete_bikes'
-  | 'frames'
-  | 'wheels'
-  | 'suspension'
-  | 'drivetrain'
-  | 'brakes'
-  | 'cockpit'
-  | 'protection'
-  | 'clothing'
-  | 'accessories'
-  | 'other'
+export type {
+  Listing,
+  ListingPhoto,
+  SellerProfile,
+  SellerReview,
+  Offer,
+  Transaction,
+  ListingConversation,
+  ListingMessage,
+  ListingSave,
+  ListingReport,
+  ListingStatus,
+  ListingCategory,
+  ItemCondition,
+  FulfillmentType,
+  OfferStatus,
+  TransactionStatus,
+  User,
+  UserBike,
+} from '@/generated/prisma/client'
 
-export type ItemCondition = 'new' | 'like_new' | 'good' | 'fair' | 'poor'
+import type {
+  Listing,
+  ListingPhoto,
+  ListingCategory,
+  ItemCondition,
+  FulfillmentType,
+  ListingConversation,
+  ListingMessage,
+  Offer,
+  Transaction,
+  User,
+  SellerProfile,
+  ListingReport,
+} from '@/generated/prisma/client'
 
-export type ListingStatus = 'draft' | 'active' | 'sold' | 'reserved' | 'expired' | 'removed'
+// ---------------------------------------------------------------------------
+// Listing extended shapes
+// ---------------------------------------------------------------------------
 
-export interface ListingSummary {
-  id: string
-  title: string
-  slug: string
-  price: number
-  category: ListingCategory
-  condition: ItemCondition
-  location: string | null
-  firstImageUrl: string | null
-  status: ListingStatus
-  sellerName: string | null
-  createdAt: Date
-  favoriteCount?: number
-  isFavorited?: boolean
-}
-
-export interface ListingDetailData {
-  id: string
-  sellerId: string
-  title: string
-  slug: string
-  description: string
-  price: number
-  category: ListingCategory
-  condition: ItemCondition
-  location: string | null
-  imageUrls: string[]
-  status: ListingStatus
-  createdAt: Date
-  updatedAt: Date
-  seller: {
-    id: string
-    name: string | null
-    image: string | null
+export type ListingWithPhotos = Listing & {
+  photos: ListingPhoto[]
+  seller: Pick<User, 'id' | 'name' | 'image'> & {
+    sellerProfile: Pick<
+      SellerProfile,
+      'averageRating' | 'ratingCount' | 'totalSales' | 'isVerified' | 'isTrusted'
+    > | null
   }
-  favoriteCount?: number
-  isFavorited?: boolean
 }
 
-// ── Display helpers ─────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Browse / search
+// ---------------------------------------------------------------------------
 
-export const categoryLabels: Record<ListingCategory, string> = {
-  complete_bikes: 'Complete Bikes',
-  frames: 'Frames',
-  wheels: 'Wheels',
-  suspension: 'Suspension',
-  drivetrain: 'Drivetrain',
-  brakes: 'Brakes',
-  cockpit: 'Cockpit',
-  protection: 'Protection',
-  clothing: 'Clothing',
-  accessories: 'Accessories',
-  other: 'Other',
+export type BrowseOptions = {
+  category?: ListingCategory
+  condition?: ItemCondition[]
+  fulfillment?: FulfillmentType
+  minPrice?: number
+  maxPrice?: number
+  brand?: string
+  city?: string
+  state?: string
+  sort?: 'newest' | 'price_asc' | 'price_desc' | 'most_saved'
+  cursor?: string
+  limit?: number
 }
 
-export const conditionLabels: Record<ItemCondition, string> = {
-  new: 'New',
-  like_new: 'Like New',
-  good: 'Good',
-  fair: 'Fair',
-  poor: 'Poor',
+export type PaginatedListings = {
+  listings: ListingWithPhotos[]
+  nextCursor: string | null
+  total: number
 }
 
-export const conditionBadgeVariant: Record<ItemCondition, 'success' | 'info' | 'default' | 'warning' | 'error'> = {
-  new: 'success',
-  like_new: 'info',
-  good: 'default',
-  fair: 'warning',
-  poor: 'error',
+// ---------------------------------------------------------------------------
+// Listing create / update inputs
+// ---------------------------------------------------------------------------
+
+export type CreateListingInput = {
+  title: string
+  description: string
+  category: ListingCategory
+  condition: ItemCondition
+  brand?: string
+  modelName?: string
+  year?: number
+  tags?: string[]
+  price: number
+  acceptsOffers?: boolean
+  minOfferPercent?: number
+  fulfillment: FulfillmentType
+  shippingCost?: number
+  estimatedWeight?: number
+  packageLength?: number
+  packageWidth?: number
+  packageHeight?: number
+  city?: string
+  state?: string
+  zipCode?: string
+  fromGarageBikeId?: string  // UserBike.id — set when listed via "Sell from Garage"
 }
 
-export const statusLabels: Record<ListingStatus, string> = {
-  draft: 'Draft',
-  active: 'Active',
-  sold: 'Sold',
-  reserved: 'Reserved',
-  expired: 'Expired',
-  removed: 'Removed',
+export type UpdateListingInput = Partial<CreateListingInput>
+
+// ---------------------------------------------------------------------------
+// Messaging
+// ---------------------------------------------------------------------------
+
+export type ConversationWithDetails = ListingConversation & {
+  listing: Pick<Listing, 'id' | 'title' | 'slug' | 'price'> & {
+    photos: Pick<ListingPhoto, 'url' | 'isCover'>[]
+  }
+  otherParty: Pick<User, 'id' | 'name' | 'image'>
+  lastMessage: Pick<ListingMessage, 'body' | 'createdAt' | 'isSystemMessage'> | null
+  unreadCount: number
 }
 
-export function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const seconds = Math.floor((now.getTime() - new Date(date).getTime()) / 1000)
+export type MessageWithSender = ListingMessage & {
+  sender: Pick<User, 'id' | 'name' | 'image'>
+}
 
-  if (seconds < 60) return 'just now'
+export type ConversationFull = ListingConversation & {
+  listing: Pick<Listing, 'id' | 'title' | 'slug' | 'price'> & {
+    photos: Pick<ListingPhoto, 'url' | 'isCover'>[]
+  }
+  messages: MessageWithSender[]
+  otherParty: Pick<User, 'id' | 'name' | 'image'>
+}
 
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
+// ---------------------------------------------------------------------------
+// Offers
+// ---------------------------------------------------------------------------
 
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+export type OfferWithDetails = Offer & {
+  listing: Pick<Listing, 'id' | 'title' | 'slug' | 'price'> & {
+    photos: Pick<ListingPhoto, 'url' | 'isCover'>[]
+  }
+  buyer: Pick<User, 'id' | 'name' | 'image'>
+}
 
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
+export type OfferChainItem = Offer & {
+  sender: Pick<User, 'id' | 'name' | 'image'>
+}
 
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
+// ---------------------------------------------------------------------------
+// Seller trust
+// ---------------------------------------------------------------------------
 
-  const years = Math.floor(months / 12)
-  return `${years}y ago`
+export type TrustLevel = 'new' | 'established' | 'trusted' | 'power'
+
+export type SellerReviewWithBuyer = {
+  id: string
+  rating: number
+  body: string | null
+  tags: string[]
+  createdAt: Date
+  buyer: Pick<User, 'id' | 'name' | 'image'>
+}
+
+export type SellerProfileWithReviews = {
+  id: string
+  userId: string
+  user: Pick<User, 'id' | 'name' | 'image'>
+  isVerified: boolean
+  totalSales: number
+  totalRevenue: number
+  averageRating: number | null
+  ratingCount: number
+  avgResponseTime: number | null
+  isTrusted: boolean
+  stripeOnboarded: boolean
+  trustLevel: TrustLevel
+  createdAt: Date
+  reviews: SellerReviewWithBuyer[]
+  listings: ListingWithPhotos[]
+}
+
+export type SellerDashboardData = {
+  profile: SellerProfileWithReviews
+  stats: {
+    activeListings: number
+    soldListings: number
+    totalRevenue: number
+    thisMonthSales: number
+    pendingOffers: number
+  }
+  recentReviews: SellerReviewWithBuyer[]
+}
+
+// ---------------------------------------------------------------------------
+// Transactions
+// ---------------------------------------------------------------------------
+
+export type TransactionWithDetails = Transaction & {
+  listing: Pick<Listing, 'id' | 'title' | 'slug' | 'price'> & {
+    photos: Pick<ListingPhoto, 'url' | 'isCover'>[]
+  }
+  otherParty: Pick<User, 'id' | 'name' | 'image'>
+}
+
+export type CheckoutData = {
+  listing: ListingWithPhotos
+  salePrice: number
+  shippingCost: number
+  platformFee: number
+  sellerPayout: number
+  totalCharged: number
+}
+
+// ---------------------------------------------------------------------------
+// Shipping
+// ---------------------------------------------------------------------------
+
+export type ShippingRate = {
+  carrier: string      // "USPS", "UPS", "FedEx", "Seller"
+  service: string      // "Priority Mail", "Ground", etc.
+  rate: number         // dollar amount
+  estimatedDays: number
+  id: string           // unique identifier for selection
+}
+
+export type ShippingEstimateRequest = {
+  fromZip: string
+  toZip: string
+  weight: number       // lbs
+  length: number       // inches
+  width: number        // inches
+  height: number       // inches
+}
+
+// ---------------------------------------------------------------------------
+// Admin / reports
+// ---------------------------------------------------------------------------
+
+export type ReportWithDetails = ListingReport & {
+  listing: Pick<Listing, 'id' | 'title' | 'slug' | 'status'> & {
+    photos: Pick<ListingPhoto, 'url' | 'isCover'>[]
+    seller: Pick<User, 'id' | 'name' | 'email'>
+  }
+  reporter: Pick<User, 'id' | 'name' | 'email'>
+}
+
+export type AdminListingWithDetails = Listing & {
+  photos: ListingPhoto[]
+  seller: Pick<User, 'id' | 'name' | 'email' | 'image'>
+  _count: { reports: number; offers: number }
+}
+
+export type AdminTransactionWithDetails = Transaction & {
+  listing: Pick<Listing, 'id' | 'title' | 'slug'> & {
+    photos: Pick<ListingPhoto, 'url' | 'isCover'>[]
+  }
+  buyer: Pick<User, 'id' | 'name' | 'email'>
+  seller: Pick<User, 'id' | 'name' | 'email'>
+}
+
+export type AdminSellerWithDetails = {
+  id: string
+  userId: string
+  user: Pick<User, 'id' | 'name' | 'email' | 'image'>
+  isVerified: boolean
+  isTrusted: boolean
+  totalSales: number
+  averageRating: number | null
+  ratingCount: number
+  createdAt: Date
+  _count: { listings: number }
 }

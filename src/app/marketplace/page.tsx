@@ -1,118 +1,96 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
 import { Suspense } from 'react'
-import { ShoppingBag, Plus } from 'lucide-react'
-import { auth } from '@/lib/auth/config'
-import { ListingGrid, ListingFilters } from '@/modules/marketplace'
-import type { ListingCategory, ItemCondition } from '@/modules/marketplace'
-// eslint-disable-next-line no-restricted-imports
-import { getListings, getListingFavoriteCounts, getUserFavoriteIds } from '@/modules/marketplace/lib/queries'
+import { browseListings } from '@/modules/marketplace/actions/listings'
+import { BrowseGrid } from '@/modules/marketplace/components/browse/BrowseGrid'
+import { BrowseFilterSidebar } from '@/modules/marketplace/components/browse/BrowseFilterSidebar'
+import { ListingCardSkeleton } from '@/modules/marketplace/components/ui/ListingCardSkeleton'
+import type { BrowseOptions, ListingCategory, ItemCondition, FulfillmentType } from '@/modules/marketplace/types'
+import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Marketplace | Ride MTB',
+  title: 'Buy & Sell MTB Gear | Ride MTB Marketplace',
   description:
-    'Buy and sell mountain bike gear. Browse bikes, parts, and accessories from the Ride MTB community.',
+    'Browse used mountain bikes, frames, components, and gear from riders in your community.',
 }
 
 interface MarketplacePageProps {
-  searchParams: Promise<{
-    category?: string
-    condition?: string
-    minPrice?: string
-    maxPrice?: string
-    search?: string
-    page?: string
-  }>
+  searchParams: Promise<Record<string, string | string[]>>
+}
+
+function BrowseGridFallback() {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <ListingCardSkeleton key={i} />
+      ))}
+    </div>
+  )
 }
 
 export default async function MarketplacePage({ searchParams }: MarketplacePageProps) {
   const params = await searchParams
-  const session = await auth()
 
-  const filters = {
-    category: params.category as ListingCategory | undefined,
-    condition: params.condition as ItemCondition | undefined,
-    search: params.search || undefined,
-    minPrice: params.minPrice ? parseFloat(params.minPrice) : undefined,
-    maxPrice: params.maxPrice ? parseFloat(params.maxPrice) : undefined,
+  const getString = (key: string): string | undefined => {
+    const val = params[key]
+    return typeof val === 'string' ? val : Array.isArray(val) ? val[0] : undefined
   }
 
-  const page = params.page ? parseInt(params.page, 10) : 1
-  const { listings, totalCount } = await getListings(filters, page)
+  const filters: BrowseOptions = {}
 
-  const [favoriteCounts, userFavIds] = await Promise.all([
-    getListingFavoriteCounts(listings.map((l) => l.id)),
-    session?.user?.id ? getUserFavoriteIds(session.user.id) : Promise.resolve([]),
-  ])
+  const category = getString('category')
+  if (category) filters.category = category as ListingCategory
 
-  const enrichedListings = listings.map((l) => ({
-    ...l,
-    favoriteCount: favoriteCounts[l.id] ?? 0,
-    isFavorited: userFavIds.includes(l.id),
-  }))
+  const condition = params['condition']
+  if (condition) {
+    const raw = Array.isArray(condition) ? condition : [condition]
+    filters.condition = raw as ItemCondition[]
+  }
+
+  const fulfillment = getString('fulfillment')
+  if (fulfillment) filters.fulfillment = fulfillment as FulfillmentType
+
+  const minPrice = getString('minPrice')
+  if (minPrice) filters.minPrice = Number(minPrice)
+
+  const maxPrice = getString('maxPrice')
+  if (maxPrice) filters.maxPrice = Number(maxPrice)
+
+  const brand = getString('brand')
+  if (brand) filters.brand = brand
+
+  const city = getString('city')
+  if (city) filters.city = city
+
+  const state = getString('state')
+  if (state) filters.state = state
+
+  const sort = getString('sort')
+  if (sort) filters.sort = sort as BrowseOptions['sort']
+
+  const cursor = getString('cursor')
+  if (cursor) filters.cursor = cursor
+
+  const { listings } = await browseListings(filters)
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      {/* Hero */}
-      <section className="mb-12 text-center">
-        <div className="mb-4 flex justify-center">
-          <ShoppingBag className="h-12 w-12 text-[var(--color-primary)]" />
-        </div>
-        <h1 className="mb-3 text-4xl font-bold text-[var(--color-text)] sm:text-5xl">
-          Marketplace
-        </h1>
-        <p className="mx-auto max-w-2xl text-lg text-[var(--color-text-muted)]">
-          Buy and sell mountain bike gear with the Ride MTB community.
+    <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">Browse Listings</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          Find used mountain bikes and gear from riders in your community.
         </p>
-        {session?.user && (
-          <div className="mt-6">
-            <Link
-              href="/marketplace/create"
-              className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-6 py-3 font-medium text-white transition-colors hover:bg-[var(--color-primary-dark)]"
-            >
-              <Plus className="h-5 w-5" />
-              Create Listing
-            </Link>
-          </div>
-        )}
-      </section>
-
-      {/* Filters */}
-      <section className="mb-8">
-        <Suspense>
-          <ListingFilters />
-        </Suspense>
-      </section>
-
-      {/* Results count */}
-      <div className="mb-4 text-sm text-[var(--color-text-muted)]">
-        {totalCount} {totalCount === 1 ? 'listing' : 'listings'} found
       </div>
 
-      {/* Grid */}
-      <ListingGrid listings={enrichedListings} isLoggedIn={!!session?.user} />
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <Suspense fallback={null}>
+          <BrowseFilterSidebar />
+        </Suspense>
 
-      {/* Pagination */}
-      {totalCount > 25 && (
-        <nav className="mt-8 flex justify-center gap-2">
-          {page > 1 && (
-            <Link
-              href={`/marketplace?${new URLSearchParams({ ...params, page: String(page - 1) }).toString()}`}
-              className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-secondary)]"
-            >
-              Previous
-            </Link>
-          )}
-          {page * 25 < totalCount && (
-            <Link
-              href={`/marketplace?${new URLSearchParams({ ...params, page: String(page + 1) }).toString()}`}
-              className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-secondary)]"
-            >
-              Next
-            </Link>
-          )}
-        </nav>
-      )}
+        <div className="min-w-0 flex-1">
+          <Suspense fallback={<BrowseGridFallback />}>
+            <BrowseGrid listings={listings} />
+          </Suspense>
+        </div>
+      </div>
     </div>
   )
 }
