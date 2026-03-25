@@ -6,12 +6,18 @@ const LAYER_COLORS: Record<LayerName, string> = {
   trails: '#16a34a',
   events: '#ef4444',
   coaching: '#3b82f6',
+  skateparks: '#F97316',
+  pumptracks: '#14B8A6',
+  bikeparks: '#8B5CF6',
 }
 
 const LAYER_LABELS: Record<LayerName, string> = {
   trails: 'Trails',
   events: 'Events',
   coaching: 'Coaching',
+  skateparks: 'Skateparks',
+  pumptracks: 'Pump Tracks',
+  bikeparks: 'Bike Parks',
 }
 
 interface LayerToggleProps {

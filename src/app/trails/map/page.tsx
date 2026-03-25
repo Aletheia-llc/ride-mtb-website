@@ -12,7 +12,7 @@ export default function TrailMapPage() {
       <Suspense fallback={<div className="h-full bg-[var(--color-bg-secondary)]" />}>
         <UnifiedMapDynamic
           defaultLayers={['trails']}
-          availableLayers={['trails', 'events', 'coaching']}
+          availableLayers={['trails', 'events', 'coaching', 'skateparks', 'pumptracks', 'bikeparks']}
           className="h-full"
         />
       </Suspense>
