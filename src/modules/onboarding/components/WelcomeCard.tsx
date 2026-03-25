@@ -44,60 +44,79 @@ export default function WelcomeCard() {
     recommendations?.course || recommendations?.community || recommendations?.trail
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 py-12 text-center">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-3" style={{ color: 'var(--color-text)' }}>
-          You&apos;re all set!
-        </h1>
-        <p style={{ color: 'var(--color-text-muted)' }}>
-          Here&apos;s what we recommend to get you started.
-        </p>
+    <div className="w-full max-w-md mx-auto px-4 py-10 sm:py-16">
+      {/* Dot indicators — all filled on complete */}
+      <div className="flex items-center justify-center gap-1.5 mb-5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <span
+            key={i}
+            className="rounded-full"
+            style={{ width: '6px', height: '6px', backgroundColor: 'var(--color-primary)' }}
+          />
+        ))}
       </div>
 
-      {loading ? (
-        <div className="mb-10 py-8" style={{ color: 'var(--color-dim)' }}>
-          Loading your recommendations&hellip;
-        </div>
-      ) : hasAny ? (
-        <div className="space-y-3 mb-10 text-left">
-          {recommendations?.course && (
-            <RecommendationCard
-              label="Start learning"
-              title={recommendations.course.title}
-              href={`/learn/courses/${recommendations.course.slug}`}
-            />
-          )}
-          {recommendations?.community && (
-            <RecommendationCard
-              label="Join the conversation"
-              title={recommendations.community.name}
-              href="/forum"
-            />
-          )}
-          {recommendations?.trail && (
-            <RecommendationCard
-              label="Find trails near you"
-              title={recommendations.trail.name}
-              href="/trails"
-            />
-          )}
-        </div>
-      ) : (
-        <div className="mb-10 py-8" style={{ color: 'var(--color-dim)' }}>
-          Head to your dashboard to explore everything Ride MTB has to offer.
-        </div>
-      )}
-
-      <button
-        onClick={() => router.push('/dashboard')}
-        className="px-8 py-3 rounded-lg font-semibold transition-opacity hover:opacity-90"
+      <div
+        className="rounded-2xl border p-6 sm:p-8 text-center"
         style={{
-          backgroundColor: 'var(--color-primary)',
-          color: '#ffffff',
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-border)',
         }}
       >
-        Go to dashboard
-      </button>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
+            You&apos;re all set!
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            Here&apos;s what we recommend to get you started.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="py-8 text-sm" style={{ color: 'var(--color-dim)' }}>
+            Loading your recommendations&hellip;
+          </div>
+        ) : hasAny ? (
+          <div className="space-y-2 mb-6 text-left">
+            {recommendations?.course && (
+              <RecommendationCard
+                label="Start learning"
+                title={recommendations.course.title}
+                href={`/learn/courses/${recommendations.course.slug}`}
+              />
+            )}
+            {recommendations?.community && (
+              <RecommendationCard
+                label="Join the conversation"
+                title={recommendations.community.name}
+                href="/forum"
+              />
+            )}
+            {recommendations?.trail && (
+              <RecommendationCard
+                label="Find trails near you"
+                title={recommendations.trail.name}
+                href="/trails"
+              />
+            )}
+          </div>
+        ) : (
+          <div className="py-6 text-sm" style={{ color: 'var(--color-dim)' }}>
+            Head to your dashboard to explore everything Ride MTB has to offer.
+          </div>
+        )}
+
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity hover:opacity-90"
+          style={{
+            backgroundColor: 'var(--color-primary)',
+            color: '#ffffff',
+          }}
+        >
+          Go to dashboard
+        </button>
+      </div>
     </div>
   )
 }

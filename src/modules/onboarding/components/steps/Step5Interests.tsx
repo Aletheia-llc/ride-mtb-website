@@ -52,32 +52,35 @@ export default function Step5Interests({ defaultValues }: Step5InterestsProps) {
       totalSteps={TOTAL_STEPS}
       onSkip={handleSkip}
       onSkipSetup={handleSkipSetup}
+      onBack={() => router.push('/onboarding/4')}
     >
-      <form action={action}>
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">What are you into?</h1>
+      <form action={action} className="flex flex-col gap-5">
+        <div>
+          <h1 className="text-xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
+            What are you into?
+          </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             Select the parts of Ride MTB you&apos;re most excited about. Pick as many as you like.
           </p>
         </div>
 
-        <div className="mb-6 flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {INTEREST_OPTIONS.map(({ value, label, description }) => (
             <label
               key={value}
-              className="flex items-start gap-3 px-4 py-3 rounded-lg border cursor-pointer"
-              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+              className="flex items-start gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-colors"
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg)' }}
             >
               <input
                 type="checkbox"
                 name="interests"
                 value={value}
                 defaultChecked={defaultValues.interests.includes(value)}
-                className="mt-0.5"
+                className="mt-0.5 shrink-0"
                 style={{ accentColor: 'var(--color-primary)' }}
               />
               <div>
-                <p className="text-sm font-medium">{label}</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{label}</p>
                 <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   {description}
                 </p>
@@ -87,7 +90,7 @@ export default function Step5Interests({ defaultValues }: Step5InterestsProps) {
         </div>
 
         {state.errors.interests && (
-          <p className="mb-4 text-sm" style={{ color: 'var(--color-error, #ef4444)' }}>
+          <p className="text-sm" style={{ color: 'var(--color-danger, #ef4444)' }}>
             {state.errors.interests}
           </p>
         )}
@@ -95,14 +98,14 @@ export default function Step5Interests({ defaultValues }: Step5InterestsProps) {
         <button
           type="submit"
           disabled={isPending}
-          className="w-full py-2.5 rounded-lg font-medium text-sm transition-opacity"
+          className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity"
           style={{
             backgroundColor: 'var(--color-primary)',
             color: '#fff',
             opacity: isPending ? 0.7 : 1,
           }}
         >
-          {isPending ? 'Saving...' : 'Finish setup'}
+          {isPending ? 'Saving…' : 'Finish setup'}
         </button>
       </form>
     </OnboardingShell>

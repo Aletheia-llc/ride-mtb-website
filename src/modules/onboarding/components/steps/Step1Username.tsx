@@ -28,9 +28,7 @@ export default function Step1Username({ defaultValues }: Step1UsernameProps) {
   const handleSkip = () => action(new FormData())
 
   const handleSkipSetup = async () => {
-    try {
-      await completeOnboarding()
-    } catch {}
+    try { await completeOnboarding() } catch {}
     router.push('/onboarding/complete')
   }
 
@@ -40,19 +38,23 @@ export default function Step1Username({ defaultValues }: Step1UsernameProps) {
       totalSteps={TOTAL_STEPS}
       onSkip={handleSkip}
       onSkipSetup={handleSkipSetup}
+      // No back button on step 1
     >
-      <form action={action}>
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">Choose a username</h1>
+      <form action={action} className="flex flex-col gap-5">
+        <div>
+          <h1 className="text-xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
+            Choose a username
+          </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             This is how other riders will know you on Ride MTB.
           </p>
         </div>
 
-        <div className="mb-4">
+        <div>
           <label
             htmlFor="username"
-            className="block text-sm font-medium mb-1"
+            className="block text-sm font-medium mb-1.5"
+            style={{ color: 'var(--color-text)' }}
           >
             Username
           </label>
@@ -63,17 +65,18 @@ export default function Step1Username({ defaultValues }: Step1UsernameProps) {
             defaultValue={defaultValues.username}
             placeholder="e.g. shredder42"
             autoComplete="username"
-            className="w-full px-3 py-2 rounded-lg border text-sm"
+            autoFocus
+            className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors"
             style={{
-              backgroundColor: 'var(--color-surface)',
+              backgroundColor: 'var(--color-bg)',
               borderColor: state.errors.username
-                ? 'var(--color-error, #ef4444)'
+                ? 'var(--color-danger, #ef4444)'
                 : 'var(--color-border)',
               color: 'var(--color-text)',
             }}
           />
           {state.errors.username && (
-            <p className="mt-1 text-sm" style={{ color: 'var(--color-error, #ef4444)' }}>
+            <p className="mt-1.5 text-sm" style={{ color: 'var(--color-danger, #ef4444)' }}>
               {state.errors.username}
             </p>
           )}
@@ -82,14 +85,14 @@ export default function Step1Username({ defaultValues }: Step1UsernameProps) {
         <button
           type="submit"
           disabled={isPending}
-          className="w-full py-2.5 rounded-lg font-medium text-sm transition-opacity"
+          className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity"
           style={{
             backgroundColor: 'var(--color-primary)',
             color: '#fff',
             opacity: isPending ? 0.7 : 1,
           }}
         >
-          {isPending ? 'Saving...' : 'Continue'}
+          {isPending ? 'Saving…' : 'Continue'}
         </button>
       </form>
     </OnboardingShell>

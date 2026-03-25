@@ -4,11 +4,11 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import {
   BookOpen, Map, MessageSquare,
-  ShoppingBag, User, LogIn, Mail, Wallet, Bike, LayoutDashboard,
+  ShoppingBag, LogIn, Bike,
   ChevronDown, Search, Heart, Trophy,
 } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
-import { NotificationBell } from './NotificationBell'
+import { UserMenu } from './UserMenu'
 import { MegaNavPanel } from './MegaNav/MegaNavPanel'
 import { MEGA_NAV_CONFIG } from './MegaNav/megaNavConfig'
 import { SearchModal } from './SearchModal'
@@ -131,42 +131,12 @@ export function TopNavClient({ session, features }: TopNavClientProps) {
               <Heart size={11} />
               Support
             </Link>
-            {session?.user?.id && (
-              <>
-                <Link
-                  href="/wallet"
-                  aria-label="Wallet"
-                  className="flex h-8 w-8 items-center justify-center rounded text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]"
-                >
-                  <Wallet size={16} />
-                </Link>
-                <Link
-                  href="/messages"
-                  aria-label="Messages"
-                  className="flex h-8 w-8 items-center justify-center rounded text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]"
-                >
-                  <Mail size={16} />
-                </Link>
-                <NotificationBell userId={session.user.id} />
-              </>
-            )}
             {session?.user ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-1.5 rounded px-3 py-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]"
-                >
-                  <LayoutDashboard size={14} />
-                  <span className="hidden sm:inline">Dashboard</span>
-                </Link>
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-1.5 rounded px-3 py-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]"
-                >
-                  <User size={14} />
-                  <span className="hidden sm:inline">{session.user.name ?? 'Profile'}</span>
-                </Link>
-              </>
+              <UserMenu
+                name={session.user.name}
+                image={session.user.image}
+                userId={session.user.id}
+              />
             ) : (
               <Link
                 href="/signin"
