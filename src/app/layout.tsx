@@ -4,6 +4,7 @@ import { DM_Sans } from 'next/font/google'
 import { Providers } from './Providers'
 import { TopNav } from '@/ui/components/TopNav'
 import { VerificationBanner } from '@/ui/components/VerificationBanner'
+import { SiteFooter } from '@/ui/components/SiteFooter'
 import { auth } from '@/lib/auth/config'
 import './globals.css'
 
@@ -19,6 +20,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <TopNav session={session} />
         {session?.user && !session.user.emailVerified && <VerificationBanner />}
         <Providers>{children}</Providers>
+        <SiteFooter />
       </body>
     </html>
   )
