@@ -1,6 +1,0 @@
-export { FeedCard } from './components/FeedCard'
-export { FeedClient } from './components/FeedClient'
-export { HeroSection, FeedBanner } from './components/HeroSection'
-export { LeftSidebar } from './components/LeftSidebar'
-export { RightSidebar } from './components/RightSidebar'
-export type { FeedItem, FeedResponse, FeedTab } from './types'
