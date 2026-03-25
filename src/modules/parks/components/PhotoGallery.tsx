@@ -23,6 +23,7 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
               src={photo.url}
               alt={photo.caption ?? 'Facility photo'}
               className="h-full w-full object-cover"
+              loading="lazy"
             />
             {photo.caption && (
               <div className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1 opacity-0 transition-opacity group-hover:opacity-100">

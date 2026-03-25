@@ -4,8 +4,9 @@ import { requireAuth } from '@/lib/auth/guards'
 import { requireAdmin } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
-import { FacilityPhotoStatus } from '@/generated/prisma/client'
+import { FacilityPhotoStatus, UserRole } from '@/generated/prisma/client'
 import { createClient } from '@supabase/supabase-js'
+import { randomUUID } from 'crypto'
 import { stripExifFromJpeg } from '../lib/exif'
 import { screenImage } from '../lib/moderation'
 import { revalidatePath } from 'next/cache'
@@ -36,9 +37,11 @@ export async function uploadFacilityPhoto(
   facilityId: string,
   formData: FormData,
 ): Promise<{ success: boolean; error?: string }> {
+  // 1. Auth check
   const user = await requireAuth()
   const file = formData.get('photo')
 
+  // 2. File instance + size check
   if (!(file instanceof File)) {
     return { success: false, error: 'No file provided' }
   }
@@ -46,6 +49,7 @@ export async function uploadFacilityPhoto(
     return { success: false, error: 'File too large (max 10MB)' }
   }
 
+  // 3. Read buffer + detect MIME type
   const arrayBuffer = await file.arrayBuffer()
   // Use Uint8Array to get Buffer<ArrayBuffer> (avoids SharedArrayBuffer union type)
   let buffer: Buffer = Buffer.from(new Uint8Array(arrayBuffer))
@@ -55,7 +59,13 @@ export async function uploadFacilityPhoto(
     return { success: false, error: 'Unsupported file type. Use JPEG, PNG, or WebP.' }
   }
 
-  // Check rate limits
+  // 4. Caption extraction + server-side length validation
+  const rawCaption = formData.get('caption')
+  const caption = typeof rawCaption === 'string' && rawCaption.trim().length > 0
+    ? rawCaption.trim().slice(0, 120)
+    : null
+
+  // 5. Rate limit checks (after MIME validation to avoid unnecessary DB queries)
   const [facilityCount, dailyCount] = await Promise.all([
     db.facilityPhoto.count({
       where: { facilityId, userId: user.id, status: { not: FacilityPhotoStatus.REJECTED } },
@@ -75,16 +85,23 @@ export async function uploadFacilityPhoto(
     return { success: false, error: 'You have reached your daily upload limit (20 photos).' }
   }
 
-  // Strip EXIF from JPEG
+  // 6. Strip EXIF from JPEG
   if (mimeType === 'image/jpeg') {
     buffer = stripExifFromJpeg(buffer)
   }
 
-  // Upload to Supabase Storage
+  // 7. Run moderation BEFORE uploading to storage
+  const base64 = buffer.toString('base64')
+  const aiVerdict = await screenImage(base64, mimeType)
+
+  if (aiVerdict === 'REJECTED') {
+    return { success: false, error: 'Photo was rejected for violating community guidelines.' }
+  }
+
+  // 8. Upload to Supabase Storage (only after moderation clears)
   const supabase = getAdminSupabase()
-  const caption = typeof formData.get('caption') === 'string' ? formData.get('caption') as string : null
   const ext = mimeType === 'image/jpeg' ? 'jpg' : mimeType === 'image/png' ? 'png' : 'webp'
-  const storageKey = `${facilityId}/${user.id}/${Date.now()}.${ext}`
+  const storageKey = `${facilityId}/${user.id}/${Date.now()}-${randomUUID()}.${ext}`
 
   const { error: uploadError } = await supabase.storage
     .from(BUCKET)
@@ -94,22 +111,13 @@ export async function uploadFacilityPhoto(
     return { success: false, error: 'Upload failed. Please try again.' }
   }
 
-  // Screen with Claude Vision
-  const base64 = buffer.toString('base64')
-  const aiVerdict = await screenImage(base64, mimeType)
-
-  if (aiVerdict === 'REJECTED') {
-    // Delete the uploaded file and don't create a DB record
-    await supabase.storage.from(BUCKET).remove([storageKey])
-    return { success: false, error: 'Photo was rejected for violating community guidelines.' }
-  }
-
+  // 9. Create DB record after successful upload
   await db.facilityPhoto.create({
     data: {
       facilityId,
       userId: user.id,
       storageKey,
-      caption: caption || null,
+      caption,
       status: FacilityPhotoStatus.PENDING,
       aiVerdict,
     },
@@ -169,7 +177,7 @@ export async function deleteFacilityPhoto(photoId: string) {
     include: { facility: { select: { stateSlug: true, slug: true } } },
   })
   if (!photo) return
-  if (photo.userId !== user.id && user.role !== 'admin') throw new Error('Not authorized')
+  if (photo.userId !== user.id && user.role !== UserRole.admin) throw new Error('Not authorized')
 
   const supabase = getAdminSupabase()
   await supabase.storage.from(BUCKET).remove([photo.storageKey])
