@@ -67,6 +67,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           Fantasy
         </Link>
+        <a
+          href="/admin/parks"
+          className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
+        >
+          Parks
+        </a>
+        <a
+          href="/forum/admin/reports"
+          className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
+        >
+          Forum Reports
+        </a>
       </nav>
       {children}
     </div>
