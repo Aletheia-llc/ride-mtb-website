@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DATABASE_URL: postgresql://test:test@localhost:5432/ridemtb_test
+  DATABASE_POOLED_URL: postgresql://test:test@localhost:5432/ridemtb_test
+  AUTH_SECRET: ci-test-secret-at-least-32-characters-long
+  AUTH_URL: http://localhost:3000
+  CRON_SECRET: ci-test-cron-secret
+  GOOGLE_CLIENT_ID: ci-mock-google-client-id
+  GOOGLE_CLIENT_SECRET: ci-mock-google-client-secret
+  NEXT_PUBLIC_MAPBOX_TOKEN: pk.ci-mock-mapbox-token
+  ANTHROPIC_API_KEY: sk-ant-ci-mock-key-placeholder-value
+  UPSTASH_REDIS_REST_URL: https://mock-upstash.upstash.io
+  UPSTASH_REDIS_REST_TOKEN: ci-mock-upstash-token
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+      - run: npx eslint . --max-warnings=0
+
+  test-unit:
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx vitest run

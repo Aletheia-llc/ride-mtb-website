@@ -115,9 +115,10 @@ describe('createTransaction', () => {
     vi.mocked(db.listing.findUniqueOrThrow).mockResolvedValue(mockListing as any)
 
     let capturedData: any
-    vi.mocked(db.transaction.create).mockImplementation(async (args: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(db.transaction.create as any).mockImplementation(async (args: any) => {
       capturedData = args.data
-      return mockTransaction as any
+      return mockTransaction
     })
 
     await createTransaction('listing-1', 'buyer-1', 100, 'pi_test_123', 'ship_only')
@@ -131,9 +132,10 @@ describe('createTransaction', () => {
     vi.mocked(db.listing.findUniqueOrThrow).mockResolvedValue(mockListing as any)
 
     let capturedData: any
-    vi.mocked(db.transaction.create).mockImplementation(async (args: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(db.transaction.create as any).mockImplementation(async (args: any) => {
       capturedData = args.data
-      return mockTransaction as any
+      return mockTransaction
     })
 
     await createTransaction('listing-1', 'buyer-1', 100, 'pi_test_123', 'ship_only')

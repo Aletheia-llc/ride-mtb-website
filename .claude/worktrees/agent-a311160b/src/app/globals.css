@@ -1,0 +1,36 @@
+@import '../ui/styles/tokens.css';
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+.homepage-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr 200px;
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .homepage-grid {
+    grid-template-columns: 1fr;
+  }
+  .homepage-grid > aside:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .homepage-grid > aside:first-child {
+    display: none;
+  }
+}

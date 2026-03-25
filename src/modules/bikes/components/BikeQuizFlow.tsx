@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Bike } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Bike, RotateCcw } from 'lucide-react'
 import { Button } from '@/ui/components'
 import { ProgressBar } from '@/ui/components'
 import { useQuizStore } from '../hooks/useQuizStore'
@@ -17,7 +17,10 @@ export function BikeQuizFlow() {
   const { currentStep, answers, isSubmitting, sessionToken, setAnswer, nextStep, prevStep, setSubmitting, reset } =
     useQuizStore()
   const [result, setResult] = useState<SpectrumResult | null>(null)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  useEffect(() => { setMounted(true) }, [])
 
   const stepConfig = QUIZ_STEPS[currentStep - 1]
 
@@ -153,6 +156,17 @@ export function BikeQuizFlow() {
           )}
         </Button>
       </div>
+
+      {/* Reset */}
+      {mounted && <div className="flex justify-center">
+        <button
+          onClick={handleRetake}
+          className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+        >
+          <RotateCcw className="h-3 w-3" />
+          Start over
+        </button>
+      </div>}
     </div>
   )
 }

@@ -104,7 +104,7 @@ describe('makeOffer', () => {
     vi.mocked(requireAuth).mockResolvedValue(mockBuyer as any)
     vi.mocked(db.listing.findUniqueOrThrow).mockResolvedValue(mockListing as any)
     vi.mocked(db.offer.findFirst).mockResolvedValue(null)
-    vi.mocked(db.offer.create).mockResolvedValue({ id: 'offer-new', ...mockOffer } as any)
+    vi.mocked(db.offer.create).mockResolvedValue({ ...mockOffer, id: 'offer-new' } as any)
 
     const result = await makeOffer('listing-1', 800, 'I love this bike')
 

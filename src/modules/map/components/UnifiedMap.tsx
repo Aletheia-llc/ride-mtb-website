@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 import { MapStyleSelector, MAPBOX_STYLES } from './MapStyleSelector'
 import type { MapStyle } from './MapStyleSelector'
 import { LayerToggle } from './LayerToggle'
@@ -47,8 +48,12 @@ export function UnifiedMap({
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')
     map.on('load', () => {
+      map.resize()
       setMapLoaded(true)
     })
+
+    // Resize on next frame to handle CSS height resolving after mount
+    requestAnimationFrame(() => { map.resize() })
 
     mapRef.current = map
     return () => { map.remove() }

@@ -1,0 +1,106 @@
+:root {
+  --color-primary: #3b82f6;
+  --color-primary-light: #60a5fa;
+  --color-primary-dark: #2563eb;
+
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-text: #212529;
+  --color-text-muted: #6c757d;
+  --color-border: #dee2e6;
+
+  --color-surface: #ffffff;
+  --color-surface-raised: #f8f9fa;
+  --color-border-subtle: #f0f1f3;
+  --color-muted: #6c757d;
+  --color-dim: #9ca3af;
+  --color-primary-hover: var(--color-primary-dark);
+  --color-primary-muted: rgba(59, 130, 246, 0.08);
+  --color-accent: #3b82f6;
+  --color-danger: #ef4444;
+  --color-warning: #d97706;
+  --color-success: #22c55e;
+  --color-hero-from: rgba(59, 130, 246, 0.12);
+  --color-hero-glow: rgba(59, 130, 246, 0.07);
+  --color-badge-success: #15803d;
+  --color-badge-warning: #a16207;
+  --color-badge-danger: #dc2626;
+  --color-badge-gold: #a16207;
+  --color-badge-silver: #6b7280;
+  --color-badge-bronze: #c2410c;
+  --color-badge-info: #2563eb;
+
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+
+  --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --sidebar-width: 240px;
+  --max-content-width: 1200px;
+  --nav-height: 64px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: #1a1a2e;
+    --color-bg-secondary: #16213e;
+    --color-text: #e8e8e8;
+    --color-text-muted: #a0a0a0;
+    --color-border: #2a2a3e;
+
+    --color-surface: #1a1a2e;
+    --color-surface-raised: #16213e;
+    --color-border-subtle: #1e2130;
+    --color-muted: #a0a0a0;
+    --color-dim: #6c757d;
+    --color-primary-hover: #60a5fa;
+    --color-primary-muted: rgba(96, 165, 250, 0.12);
+    --color-accent: #60a5fa;
+    --color-danger: #f87171;
+    --color-warning: #f59e0b;
+    --color-success: #4ade80;
+    --color-hero-from: rgba(37, 99, 235, 0.35);
+    --color-hero-glow: rgba(96, 165, 250, 0.12);
+    --color-badge-success: #4ade80;
+    --color-badge-warning: #fbbf24;
+    --color-badge-danger: #f87171;
+    --color-badge-gold: #fbbf24;
+    --color-badge-silver: #d1d5db;
+    --color-badge-bronze: #fb923c;
+    --color-badge-info: #5b8af5;
+  }
+}
+
+[data-theme='dark'] {
+  --color-bg: #1a1a2e;
+  --color-bg-secondary: #16213e;
+  --color-text: #e8e8e8;
+  --color-text-muted: #a0a0a0;
+  --color-border: #2a2a3e;
+
+  --color-surface: #1a1a2e;
+  --color-surface-raised: #16213e;
+  --color-border-subtle: #1e2130;
+  --color-muted: #a0a0a0;
+  --color-dim: #6c757d;
+  --color-primary-hover: #40916c;
+  --color-primary-muted: rgba(64, 145, 108, 0.12);
+  --color-accent: #5b8af5;
+  --color-danger: #f87171;
+  --color-warning: #f59e0b;
+  --color-success: #4ade80;
+  --color-hero-from: rgba(27, 67, 50, 0.4);
+  --color-hero-glow: rgba(64, 145, 108, 0.15);
+  --color-badge-success: #4ade80;
+  --color-badge-warning: #fbbf24;
+  --color-badge-danger: #f87171;
+  --color-badge-gold: #fbbf24;
+  --color-badge-silver: #d1d5db;
+  --color-badge-bronze: #fb923c;
+  --color-badge-info: #5b8af5;
+}

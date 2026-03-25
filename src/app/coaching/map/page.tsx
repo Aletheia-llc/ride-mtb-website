@@ -7,7 +7,7 @@ export const metadata = { title: 'Coaching Map | Ride MTB' }
 
 export default function CoachingMapPage() {
   return (
-    <div className="h-[calc(100vh_-_var(--nav-height))]">
+    <div style={{ height: 'calc(100dvh - 64px)' }}>
       <Suspense fallback={<div className="h-full bg-[var(--color-bg-secondary)]" />}>
         <UnifiedMapDynamic
           defaultLayers={['coaching']}

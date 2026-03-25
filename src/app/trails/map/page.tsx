@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function TrailMapPage() {
   return (
-    <div className="h-[calc(100vh_-_var(--nav-height))]">
+    <div style={{ height: 'calc(100dvh - 64px)' }}>
       <Suspense fallback={<div className="h-full bg-[var(--color-bg-secondary)]" />}>
         <UnifiedMapDynamic
           defaultLayers={['trails']}
