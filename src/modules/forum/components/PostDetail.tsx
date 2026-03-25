@@ -7,6 +7,8 @@ import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ChevronUp, ChevronDown, Bookmark, Share2, Pencil, Trash2 } from 'lucide-react'
+// eslint-disable-next-line no-restricted-imports
+import { TipButton } from '@/modules/forum/components/TipButton'
 import { formatRelativeTime } from '@/modules/forum/types'
 // eslint-disable-next-line no-restricted-imports
 import { votePost } from '@/modules/forum/actions/votePost'
@@ -258,6 +260,14 @@ export function PostDetail({ post, currentUserId, isBookmarked: initialBookmarke
           <Share2 className="h-4 w-4" />
           Share
         </button>
+
+        <div className="rounded-md px-3 py-1.5">
+          <TipButton
+            postId={post.id}
+            currentUserId={currentUserId}
+            isOwnContent={isAuthor}
+          />
+        </div>
 
         {isAuthor && (
           <div className="ml-auto flex items-center gap-1">

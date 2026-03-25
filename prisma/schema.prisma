@@ -35,7 +35,7 @@ model User {
   skillLevel      SkillLevel?
   favoriteBike    String?
   favoriteTrail   String?
-  yearsRiding     Int?
+  yearStartedRiding Int?
   websiteUrl      String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -266,6 +266,7 @@ model Post {
   linkPreview LinkPreview? @relation(fields: [linkPreviewUrl], references: [url])
   notifications ForumNotification[]
   reports     Report[]
+  tips        CreditTip[]
 
   @@index([categoryId])
   @@index([authorId])
@@ -297,6 +298,7 @@ model Comment {
   votes   Vote[]
   notifications ForumNotification[]
   reports Report[]
+  tips    CreditTip[]
 
   @@index([postId])
   @@index([authorId])
@@ -2108,13 +2110,19 @@ model CreditTip {
   fromUserId String
   toUserId   String
   amount     Int
+  postId     String?
+  commentId  String?
   createdAt  DateTime @default(now())
 
-  fromUser User @relation("TipsSent", fields: [fromUserId], references: [id])
-  toUser   User @relation("TipsReceived", fields: [toUserId], references: [id])
+  fromUser User     @relation("TipsSent", fields: [fromUserId], references: [id])
+  toUser   User     @relation("TipsReceived", fields: [toUserId], references: [id])
+  post     Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  comment  Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
 
   @@index([fromUserId])
   @@index([toUserId])
+  @@index([postId])
+  @@index([commentId])
   @@map("credit_tips")
 }
 

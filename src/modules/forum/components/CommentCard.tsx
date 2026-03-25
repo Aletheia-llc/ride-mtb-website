@@ -6,6 +6,8 @@ import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ChevronUp, ChevronDown, MessageSquare } from 'lucide-react'
+// eslint-disable-next-line no-restricted-imports
+import { TipButton } from '@/modules/forum/components/TipButton'
 import { formatRelativeTime } from '@/modules/forum/types'
 // eslint-disable-next-line no-restricted-imports
 import { votePost } from '@/modules/forum/actions/votePost'
@@ -142,6 +144,12 @@ export function CommentCard({ comment, currentUserId, depth = 0, threadId, isLoc
                 {showReply ? 'Cancel' : 'Reply'}
               </button>
             )}
+            <TipButton
+              postId={comment.postId}
+              commentId={comment.id}
+              currentUserId={currentUserId}
+              isOwnContent={currentUserId === comment.authorId}
+            />
             {currentUserId && currentUserId !== comment.authorId && (
               <ReportButton targetType="comment" targetId={comment.id} />
             )}
