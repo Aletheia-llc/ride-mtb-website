@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function CreateListingPage() {
-  redirect('/marketplace/sell')
+  redirect('/buy-sell/sell')
 }

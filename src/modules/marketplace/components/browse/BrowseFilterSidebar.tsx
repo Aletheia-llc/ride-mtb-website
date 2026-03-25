@@ -65,13 +65,13 @@ export function BrowseFilterSidebar() {
         params.delete(key)
       }
       const qs = params.toString()
-      router.push(qs ? `/marketplace?${qs}` : '/marketplace')
+      router.push(qs ? `/buy-sell?${qs}` : '/buy-sell')
     },
     [router, searchParams],
   )
 
   const clearAll = useCallback(() => {
-    router.push('/marketplace')
+    router.push('/buy-sell')
   }, [router])
 
   return (

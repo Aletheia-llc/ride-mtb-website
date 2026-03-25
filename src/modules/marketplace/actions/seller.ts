@@ -144,7 +144,7 @@ export async function createSellerProfile(): Promise<SellerProfileWithReviews> {
     console.error('[seller/createSellerProfile] stripe account creation failed', err),
   )
 
-  revalidatePath('/marketplace/my/seller')
+  revalidatePath('/buy-sell/my/seller')
 
   return buildSellerProfileWithReviews(profile.id)
 }
@@ -157,7 +157,7 @@ export async function updateSellerProfile(_input: Record<string, never>): Promis
   // The SellerProfile schema has no editable text fields (bio/location are not present).
   // This action is a no-op placeholder for future schema additions.
   await requireAuth()
-  revalidatePath('/marketplace/my/seller')
+  revalidatePath('/buy-sell/my/seller')
 }
 
 // ---------------------------------------------------------------------------
@@ -261,6 +261,6 @@ export async function submitSellerReview(
     },
   })
 
-  revalidatePath(`/marketplace/seller/${sellerProfile.userId}`)
-  revalidatePath('/marketplace/my/purchases')
+  revalidatePath(`/buy-sell/seller/${sellerProfile.userId}`)
+  revalidatePath('/buy-sell/my/purchases')
 }

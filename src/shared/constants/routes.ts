@@ -38,9 +38,9 @@ export const Routes = {
     review: (id: string) => `/reviews/${id}`,
   },
   marketplace: {
-    index: '/marketplace',
-    listing: (id: string) => `/marketplace/${id}`,
-    create: '/marketplace/create',
+    index: '/buy-sell',
+    listing: (id: string) => `/buy-sell/${id}`,
+    create: '/buy-sell/create',
   },
   merch: {
     index: '/merch',

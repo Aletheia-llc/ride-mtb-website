@@ -66,7 +66,7 @@ export function CheckoutForm({ checkoutData }: CheckoutFormProps) {
         // const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
         // const { error } = await stripe.confirmPayment({ clientSecret, ... })
 
-        router.push(`/marketplace/checkout/success?transactionId=${transactionId}`)
+        router.push(`/buy-sell/checkout/success?transactionId=${transactionId}`)
       } catch (err) {
         setError(
           err instanceof Error ? err.message : 'Payment failed. Please try again.',

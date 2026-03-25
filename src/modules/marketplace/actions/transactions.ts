@@ -63,8 +63,8 @@ export async function createTransaction(
     },
   })
 
-  revalidatePath('/marketplace')
-  revalidatePath(`/marketplace/my`)
+  revalidatePath('/buy-sell')
+  revalidatePath(`/buy-sell/my`)
 
   return transaction
 }
@@ -107,7 +107,7 @@ export async function updateTransactionStatus(
     },
   })
 
-  revalidatePath('/marketplace/my')
+  revalidatePath('/buy-sell/my')
 
   return updated
 }
@@ -150,7 +150,7 @@ export async function addTracking(
     },
   })
 
-  revalidatePath('/marketplace/my')
+  revalidatePath('/buy-sell/my')
 
   return updated
 }

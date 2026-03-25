@@ -119,7 +119,7 @@ export function ReportsList({ initialReports }: ReportsListProps) {
 
             <div className="flex-1 min-w-0">
               <Link
-                href={`/marketplace/${group.listing.slug}`}
+                href={`/buy-sell/${group.listing.slug}`}
                 className="block truncate font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)]"
               >
                 {group.listing.title}

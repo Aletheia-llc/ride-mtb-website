@@ -6,7 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = [
     '', '/forum', '/trails', '/trails/explore', '/trails/map',
     '/bikes/selector', '/events', '/reviews', '/shops',
-    '/media', '/coaching', '/marketplace', '/merch',
+    '/media', '/coaching', '/buy-sell', '/merch',
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),

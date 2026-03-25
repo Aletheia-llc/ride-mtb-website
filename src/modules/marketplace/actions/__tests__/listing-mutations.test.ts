@@ -83,7 +83,7 @@ describe('createListing', () => {
       }),
     )
     expect(result.status).toBe('pending_review')
-    expect(revalidatePath).toHaveBeenCalledWith('/marketplace')
+    expect(revalidatePath).toHaveBeenCalledWith('/buy-sell')
   })
 
   it('creates listing with pending_review status even for trusted seller (monolith policy)', async () => {
@@ -142,7 +142,7 @@ describe('updateListing', () => {
       }),
     )
     expect(result).toBeDefined()
-    expect(revalidatePath).toHaveBeenCalledWith('/marketplace')
+    expect(revalidatePath).toHaveBeenCalledWith('/buy-sell')
   })
 
   it('throws Unauthorized when caller does not own the listing', async () => {
@@ -180,7 +180,7 @@ describe('deleteListing', () => {
         data: expect.objectContaining({ status: 'removed' }),
       }),
     )
-    expect(revalidatePath).toHaveBeenCalledWith('/marketplace')
+    expect(revalidatePath).toHaveBeenCalledWith('/buy-sell')
   })
 
   it('throws when caller does not own the listing', async () => {
@@ -221,7 +221,7 @@ describe('bumpListing', () => {
         }),
       }),
     )
-    expect(revalidatePath).toHaveBeenCalledWith('/marketplace')
+    expect(revalidatePath).toHaveBeenCalledWith('/buy-sell')
   })
 
   it('throws when caller does not own the listing', async () => {
@@ -259,7 +259,7 @@ describe('featureListing', () => {
         data: expect.objectContaining({ isFeatured: true }),
       }),
     )
-    expect(revalidatePath).toHaveBeenCalledWith('/marketplace')
+    expect(revalidatePath).toHaveBeenCalledWith('/buy-sell')
   })
 
   it('sets isFeatured when caller is admin', async () => {

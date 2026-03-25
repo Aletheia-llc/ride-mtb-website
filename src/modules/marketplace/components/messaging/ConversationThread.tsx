@@ -35,7 +35,7 @@ export function ConversationThread({
       <header className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
         {/* Back arrow */}
         <Link
-          href="/marketplace/my/messages"
+          href="/buy-sell/my/messages"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -43,7 +43,7 @@ export function ConversationThread({
 
         {/* Listing thumbnail */}
         <Link
-          href={`/marketplace/${listing.slug}`}
+          href={`/buy-sell/${listing.slug}`}
           className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-[var(--color-surface)]"
         >
           <Image
@@ -58,7 +58,7 @@ export function ConversationThread({
         {/* Listing title + other party name */}
         <div className="min-w-0 flex-1">
           <Link
-            href={`/marketplace/${listing.slug}`}
+            href={`/buy-sell/${listing.slug}`}
             className="block truncate text-sm font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)]"
           >
             {listing.title}
@@ -70,7 +70,7 @@ export function ConversationThread({
 
         {/* View Listing link */}
         <Link
-          href={`/marketplace/${listing.slug}`}
+          href={`/buy-sell/${listing.slug}`}
           className="flex shrink-0 items-center gap-1 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-hover,var(--color-border))] hover:text-[var(--color-text)]"
         >
           View Listing

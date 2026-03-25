@@ -7,12 +7,12 @@ const protectedPaths = [
   '/coaching',
   '/bikes/garage',
   '/messages',
-  '/marketplace/sell',
-  '/marketplace/my',
-  '/marketplace/seller/dashboard',
-  '/marketplace/seller/onboarding',
-  '/marketplace/admin',
-  '/marketplace/checkout',
+  '/buy-sell/sell',
+  '/buy-sell/my',
+  '/buy-sell/seller/dashboard',
+  '/buy-sell/seller/onboarding',
+  '/buy-sell/admin',
+  '/buy-sell/checkout',
 ]
 
 // Cookie names NextAuth v5 (Auth.js) uses (plain HTTP + Secure prefix for HTTPS)

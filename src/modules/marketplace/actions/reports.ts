@@ -120,8 +120,8 @@ export async function resolveReport(reportId: string, action: string): Promise<v
     })
 
     if (listing) {
-      revalidatePath(`/marketplace/${listing.slug}`)
-      revalidatePath('/marketplace')
+      revalidatePath(`/buy-sell/${listing.slug}`)
+      revalidatePath('/buy-sell')
     }
   }
 

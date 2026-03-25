@@ -122,7 +122,7 @@ export function TransactionManager({
                       )}
                     </div>
                     <Link
-                      href={`/marketplace/${tx.listing.slug}`}
+                      href={`/buy-sell/${tx.listing.slug}`}
                       className="truncate text-[var(--color-text)] hover:text-[var(--color-primary)] max-w-[140px]"
                     >
                       {tx.listing.title}

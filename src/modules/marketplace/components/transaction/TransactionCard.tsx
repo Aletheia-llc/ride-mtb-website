@@ -116,7 +116,7 @@ export function TransactionCard({ transaction, role }: TransactionCardProps) {
       <div className="flex gap-4">
         {/* Thumbnail */}
         <Link
-          href={`/marketplace/${transaction.listing.slug}`}
+          href={`/buy-sell/${transaction.listing.slug}`}
           className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg"
         >
           {coverPhoto ? (
@@ -138,7 +138,7 @@ export function TransactionCard({ transaction, role }: TransactionCardProps) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <Link
-                href={`/marketplace/${transaction.listing.slug}`}
+                href={`/buy-sell/${transaction.listing.slug}`}
                 className="block truncate font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
               >
                 {transaction.listing.title}

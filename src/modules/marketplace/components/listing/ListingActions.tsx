@@ -41,7 +41,7 @@ export function ListingActions({
     startMessageTransition(async () => {
       try {
         const result = await startConversation(listingId, 'Hi, is this still available?')
-        router.push(`/marketplace/messages/${result.conversationId}`)
+        router.push(`/buy-sell/messages/${result.conversationId}`)
       } catch (error) {
         console.error('Failed to start conversation:', error)
       }
@@ -71,7 +71,7 @@ export function ListingActions({
     startDeleteTransition(async () => {
       try {
         await deleteListing(listingId)
-        router.push('/marketplace/my')
+        router.push('/buy-sell/my')
       } catch (error) {
         console.error('Failed to delete listing:', error)
       }
@@ -87,7 +87,7 @@ export function ListingActions({
         <div className="flex gap-2">
           {listingSlug && (
             <Link
-              href={`/marketplace/sell/${listingId}/edit`}
+              href={`/buy-sell/sell/${listingId}/edit`}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-text)]"
             >
               <Pencil className="h-4 w-4" />

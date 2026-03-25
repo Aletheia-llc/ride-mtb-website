@@ -55,13 +55,13 @@ export function StripeOnboarding({ isOnboarded, userId }: StripeOnboardingProps)
         </p>
         <div className="flex justify-center gap-3">
           <button
-            onClick={() => router.push('/marketplace/sell')}
+            onClick={() => router.push('/buy-sell/sell')}
             className="cursor-pointer rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
           >
             List an Item
           </button>
           <button
-            onClick={() => router.push('/marketplace/my/sales')}
+            onClick={() => router.push('/buy-sell/my/sales')}
             className="cursor-pointer rounded-lg border border-[var(--color-border)] px-5 py-2.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
           >
             View Sales

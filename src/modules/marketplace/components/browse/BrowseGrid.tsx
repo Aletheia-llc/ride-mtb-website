@@ -30,7 +30,7 @@ export function BrowseGrid({ listings, isLoading = false }: BrowseGridProps) {
           new arrivals.
         </p>
         <Link
-          href="/marketplace"
+          href="/buy-sell"
           className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
         >
           Clear Filters

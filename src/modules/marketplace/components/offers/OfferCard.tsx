@@ -97,7 +97,7 @@ export function OfferCard({ offer, role }: OfferCardProps) {
     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-colors hover:border-[var(--color-border-hover,var(--color-border))]">
       <div className="flex gap-4">
         {/* Listing thumbnail */}
-        <Link href={`/marketplace/${offer.listing.slug}`} className="shrink-0">
+        <Link href={`/buy-sell/${offer.listing.slug}`} className="shrink-0">
           {coverPhoto ? (
             <Image
               src={coverPhoto.url}
@@ -121,7 +121,7 @@ export function OfferCard({ offer, role }: OfferCardProps) {
           {/* Top row: listing title + status */}
           <div className="flex items-start justify-between gap-2">
             <Link
-              href={`/marketplace/${offer.listing.slug}`}
+              href={`/buy-sell/${offer.listing.slug}`}
               className="truncate text-sm font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
             >
               {offer.listing.title}

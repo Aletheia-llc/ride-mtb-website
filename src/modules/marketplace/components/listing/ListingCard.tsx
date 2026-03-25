@@ -61,7 +61,7 @@ export function ListingCard({ listing }: ListingCardProps) {
 
   return (
     <Link
-      href={`/marketplace/${listing.slug}`}
+      href={`/buy-sell/${listing.slug}`}
       className="group block overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-bg-secondary)]"
     >
       {/* Cover photo */}

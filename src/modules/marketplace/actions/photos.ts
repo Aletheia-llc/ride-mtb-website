@@ -100,7 +100,7 @@ export async function uploadListingPhoto(
     },
   })
 
-  revalidatePath(`/marketplace/${slug}`)
+  revalidatePath(`/buy-sell/${slug}`)
 
   return photo
 }
@@ -148,7 +148,7 @@ export async function deleteListingPhoto(photoId: string): Promise<void> {
     }
   }
 
-  revalidatePath(`/marketplace/${photo.listing.slug}`)
+  revalidatePath(`/buy-sell/${photo.listing.slug}`)
 }
 
 /**
@@ -186,7 +186,7 @@ export async function reorderListingPhotos(
     ),
   )
 
-  revalidatePath(`/marketplace/${slug}`)
+  revalidatePath(`/buy-sell/${slug}`)
 }
 
 /**
@@ -222,7 +222,7 @@ export async function setPhotoCover(photoId: string): Promise<void> {
     }),
   ])
 
-  revalidatePath(`/marketplace/${photo.listing.slug}`)
+  revalidatePath(`/buy-sell/${photo.listing.slug}`)
 }
 
 /**

@@ -62,11 +62,11 @@ export default async function MarketplaceAdminPage() {
       {/* Quick links */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { href: '/marketplace/admin/review-queue', icon: AlertTriangle, label: 'Review Queue', desc: 'Approve or remove pending listings' },
-          { href: '/marketplace/admin/listings', icon: List, label: 'All Listings', desc: 'Browse and manage all listings' },
-          { href: '/marketplace/admin/reports', icon: Flag, label: 'Reports', desc: 'Review flagged content' },
-          { href: '/marketplace/admin/sellers', icon: Users, label: 'Sellers', desc: 'Manage seller profiles and trust' },
-          { href: '/marketplace/admin/transactions', icon: CreditCard, label: 'Transactions', desc: 'View all payment transactions' },
+          { href: '/buy-sell/admin/review-queue', icon: AlertTriangle, label: 'Review Queue', desc: 'Approve or remove pending listings' },
+          { href: '/buy-sell/admin/listings', icon: List, label: 'All Listings', desc: 'Browse and manage all listings' },
+          { href: '/buy-sell/admin/reports', icon: Flag, label: 'Reports', desc: 'Review flagged content' },
+          { href: '/buy-sell/admin/sellers', icon: Users, label: 'Sellers', desc: 'Manage seller profiles and trust' },
+          { href: '/buy-sell/admin/transactions', icon: CreditCard, label: 'Transactions', desc: 'View all payment transactions' },
         ].map(({ href, icon: Icon, label, desc }) => (
           <Link
             key={href}

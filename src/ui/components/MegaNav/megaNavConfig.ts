@@ -143,7 +143,7 @@ export const MEGA_NAV_CONFIG: Record<string, MegaNavEntry> = {
       icon: ShoppingBag,
       title: 'Buy & Sell Gear',
       description: 'Find used bikes, parts, and gear from the Ride MTB community.',
-      href: '/marketplace',
+      href: '/buy-sell',
       ctaLabel: 'Browse Listings',
       bgClass: 'bg-yellow-500/10',
     },
@@ -151,15 +151,15 @@ export const MEGA_NAV_CONFIG: Record<string, MegaNavEntry> = {
       {
         label: 'Buy & Sell',
         links: [
-          { icon: Tag, label: 'Browse Listings', href: '/marketplace' },
-          { icon: PlusCircle, label: 'Sell Something', href: '/marketplace/sell' },
+          { icon: Tag, label: 'Browse Listings', href: '/buy-sell' },
+          { icon: PlusCircle, label: 'Sell Something', href: '/buy-sell/sell' },
         ],
       },
       {
         label: 'My Stuff',
         links: [
-          { icon: Heart, label: 'Saved Listings', href: '/marketplace/favorites' },
-          { icon: LayoutList, label: 'My Listings', href: '/marketplace/my' },
+          { icon: Heart, label: 'Saved Listings', href: '/buy-sell/favorites' },
+          { icon: LayoutList, label: 'My Listings', href: '/buy-sell/my' },
         ],
       },
     ],

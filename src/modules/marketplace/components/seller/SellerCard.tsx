@@ -56,7 +56,7 @@ export function SellerCard({ seller }: { seller: SellerInfo }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <Link
-              href={`/marketplace/seller/${seller.id}`}
+              href={`/buy-sell/seller/${seller.id}`}
               className="truncate font-semibold text-[var(--color-text)] transition-colors hover:text-[var(--color-primary)]"
             >
               {displayName}

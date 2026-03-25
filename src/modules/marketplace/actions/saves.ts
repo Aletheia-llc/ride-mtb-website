@@ -36,8 +36,8 @@ export async function saveListing(listingId: string): Promise<void> {
     data: { saveCount: { increment: 1 } },
   })
 
-  revalidatePath(`/marketplace/${listing.slug}`)
-  revalidatePath('/marketplace/saved')
+  revalidatePath(`/buy-sell/${listing.slug}`)
+  revalidatePath('/buy-sell/saved')
 }
 
 // ---------------------------------------------------------------------------
@@ -74,8 +74,8 @@ export async function unsaveListing(listingId: string): Promise<void> {
     data: { saveCount: { decrement: 1 } },
   })
 
-  revalidatePath(`/marketplace/${listing.slug}`)
-  revalidatePath('/marketplace/saved')
+  revalidatePath(`/buy-sell/${listing.slug}`)
+  revalidatePath('/buy-sell/saved')
 }
 
 // ---------------------------------------------------------------------------

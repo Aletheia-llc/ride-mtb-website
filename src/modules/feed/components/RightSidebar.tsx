@@ -11,7 +11,7 @@ const MODULE_LINKS: { label: string; href: string; Icon: LucideIcon }[] = [
   { label: 'Forum', href: '/forum', Icon: MessageSquare },
   { label: 'Events', href: '/events', Icon: CalendarDays },
   { label: 'Reviews', href: '/reviews', Icon: Star },
-  { label: 'Buy / Sell', href: '/marketplace', Icon: ShoppingBag },
+  { label: 'Buy / Sell', href: '/buy-sell', Icon: ShoppingBag },
 ]
 
 interface RightSidebarProps {

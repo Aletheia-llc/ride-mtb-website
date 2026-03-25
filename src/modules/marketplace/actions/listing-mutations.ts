@@ -169,7 +169,7 @@ export async function createListing(data: CreateListingInput): Promise<ListingWi
     include: listingInclude,
   })
 
-  revalidatePath('/marketplace')
+  revalidatePath('/buy-sell')
 
   return listing as ListingWithPhotos
 }
@@ -239,11 +239,11 @@ export async function updateListing(
     include: listingInclude,
   })
 
-  revalidatePath(`/marketplace/${existing.slug}`)
+  revalidatePath(`/buy-sell/${existing.slug}`)
   if ((updated as { slug: string }).slug !== existing.slug) {
-    revalidatePath(`/marketplace/${(updated as { slug: string }).slug}`)
+    revalidatePath(`/buy-sell/${(updated as { slug: string }).slug}`)
   }
-  revalidatePath('/marketplace')
+  revalidatePath('/buy-sell')
 
   return updated as ListingWithPhotos
 }
@@ -273,8 +273,8 @@ export async function deleteListing(id: string): Promise<void> {
     data: { status: 'removed' },
   })
 
-  revalidatePath(`/marketplace/${existing.slug}`)
-  revalidatePath('/marketplace')
+  revalidatePath(`/buy-sell/${existing.slug}`)
+  revalidatePath('/buy-sell')
 }
 
 /**
@@ -306,8 +306,8 @@ export async function bumpListing(id: string): Promise<void> {
     },
   })
 
-  revalidatePath(`/marketplace/${existing.slug}`)
-  revalidatePath('/marketplace')
+  revalidatePath(`/buy-sell/${existing.slug}`)
+  revalidatePath('/buy-sell')
 }
 
 /**
@@ -335,9 +335,9 @@ export async function markAsSold(id: string): Promise<void> {
     data: { status: 'sold' },
   })
 
-  revalidatePath(`/marketplace/${existing.slug}`)
-  revalidatePath('/marketplace')
-  revalidatePath('/marketplace/my')
+  revalidatePath(`/buy-sell/${existing.slug}`)
+  revalidatePath('/buy-sell')
+  revalidatePath('/buy-sell/my')
 }
 
 /**
@@ -365,9 +365,9 @@ export async function cancelListing(id: string): Promise<void> {
     data: { status: 'cancelled' },
   })
 
-  revalidatePath(`/marketplace/${existing.slug}`)
-  revalidatePath('/marketplace')
-  revalidatePath('/marketplace/my')
+  revalidatePath(`/buy-sell/${existing.slug}`)
+  revalidatePath('/buy-sell')
+  revalidatePath('/buy-sell/my')
 }
 
 /**
@@ -397,6 +397,6 @@ export async function featureListing(id: string): Promise<void> {
     data: { isFeatured: true },
   })
 
-  revalidatePath(`/marketplace/${existing.slug}`)
-  revalidatePath('/marketplace')
+  revalidatePath(`/buy-sell/${existing.slug}`)
+  revalidatePath('/buy-sell')
 }

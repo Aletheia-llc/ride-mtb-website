@@ -143,7 +143,7 @@ export async function getFeedCandidates(page: number = 1): Promise<FeedItem[]> {
       type: 'buysell' as const,
       title: l.title,
       subtitle: `$${l.price.toFixed(0)}${l.location ? ` · ${l.location}` : ''}`,
-      url: `/marketplace/${l.slug}`,
+      url: `/buy-sell/${l.slug}`,
       tags: [l.category.replace(/_/g, ' ')],
       meta: `$${l.price.toFixed(0)}`,
       category: 'buysell',

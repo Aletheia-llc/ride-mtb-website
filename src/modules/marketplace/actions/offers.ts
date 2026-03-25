@@ -185,9 +185,9 @@ export async function makeOffer(
   )
   await sendSystemMessage(conversationId, `Buyer made an offer of ${formatAmount(amount)}`)
 
-  revalidatePath('/marketplace/my/offers')
-  revalidatePath('/marketplace/my/messages')
-  revalidatePath(`/marketplace/${listing.slug}`)
+  revalidatePath('/buy-sell/my/offers')
+  revalidatePath('/buy-sell/my/messages')
+  revalidatePath(`/buy-sell/${listing.slug}`)
 
   return offer
 }
@@ -256,11 +256,11 @@ export async function acceptOffer(offerId: string) {
   )
   await sendSystemMessage(conversationId, `Seller accepted offer of ${formatAmount(offer.amount)}`)
 
-  revalidatePath('/marketplace/my/offers')
-  revalidatePath('/marketplace/my/messages')
-  revalidatePath(`/marketplace/${offer.listing.slug}`)
-  revalidatePath('/marketplace/my/listings')
-  revalidatePath('/marketplace')
+  revalidatePath('/buy-sell/my/offers')
+  revalidatePath('/buy-sell/my/messages')
+  revalidatePath(`/buy-sell/${offer.listing.slug}`)
+  revalidatePath('/buy-sell/my/listings')
+  revalidatePath('/buy-sell')
 
   return offer
 }
@@ -314,9 +314,9 @@ export async function declineOffer(offerId: string, message?: string) {
 
   await sendSystemMessage(conversationId, systemMsg)
 
-  revalidatePath('/marketplace/my/offers')
-  revalidatePath('/marketplace/my/messages')
-  revalidatePath(`/marketplace/${offer.listing.slug}`)
+  revalidatePath('/buy-sell/my/offers')
+  revalidatePath('/buy-sell/my/messages')
+  revalidatePath(`/buy-sell/${offer.listing.slug}`)
 
   return offer
 }
@@ -391,9 +391,9 @@ export async function counterOffer(
   )
   await sendSystemMessage(conversationId, `Seller countered at ${formatAmount(amount)}`)
 
-  revalidatePath('/marketplace/my/offers')
-  revalidatePath('/marketplace/my/messages')
-  revalidatePath(`/marketplace/${offer.listing.slug}`)
+  revalidatePath('/buy-sell/my/offers')
+  revalidatePath('/buy-sell/my/messages')
+  revalidatePath(`/buy-sell/${offer.listing.slug}`)
 
   return newOffer
 }
@@ -441,8 +441,8 @@ export async function withdrawOffer(offerId: string) {
   )
   await sendSystemMessage(conversationId, `Buyer withdrew offer of ${formatAmount(offer.amount)}`)
 
-  revalidatePath('/marketplace/my/offers')
-  revalidatePath('/marketplace/my/messages')
+  revalidatePath('/buy-sell/my/offers')
+  revalidatePath('/buy-sell/my/messages')
 
   return offer
 }

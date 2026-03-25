@@ -273,7 +273,7 @@ export default async function BikeDetailPage({ params, searchParams }: Props) {
                   Create a marketplace listing pre-filled with this bike&apos;s details.
                 </p>
                 <Link
-                  href={`/marketplace/sell?fromBike=${bike.id}`}
+                  href={`/buy-sell/sell?fromBike=${bike.id}`}
                   className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-dark)]"
                 >
                   Sell This Bike

@@ -50,7 +50,7 @@ function EmptyState() {
         Browse listings to find something you like!
       </p>
       <Link
-        href="/marketplace"
+        href="/buy-sell"
         className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
       >
         <Search className="h-4 w-4" />
@@ -78,7 +78,7 @@ function ConversationRow({
 
   return (
     <Link
-      href={`/marketplace/my/messages/${conversation.id}`}
+      href={`/buy-sell/my/messages/${conversation.id}`}
       className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 transition-colors hover:border-[var(--color-border-hover,var(--color-border))] hover:bg-[var(--color-surface-hover)]"
     >
       {/* Listing thumbnail */}

@@ -76,14 +76,14 @@ export function AdminListingTable({
     const params = new URLSearchParams()
     if (newStatus !== 'all') params.set('status', newStatus)
     params.set('page', '1')
-    window.location.href = `/marketplace/admin/listings?${params.toString()}`
+    window.location.href = `/buy-sell/admin/listings?${params.toString()}`
   }
 
   function handlePageChange(newPage: number) {
     const params = new URLSearchParams()
     if (statusFilter !== 'all') params.set('status', statusFilter)
     params.set('page', String(newPage))
-    window.location.href = `/marketplace/admin/listings?${params.toString()}`
+    window.location.href = `/buy-sell/admin/listings?${params.toString()}`
   }
 
   function handleApprove(listingId: string) {
@@ -182,7 +182,7 @@ export function AdminListingTable({
                       </div>
                       <div className="min-w-0">
                         <Link
-                          href={`/marketplace/${listing.slug}`}
+                          href={`/buy-sell/${listing.slug}`}
                           className="block truncate font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
                         >
                           {listing.title}

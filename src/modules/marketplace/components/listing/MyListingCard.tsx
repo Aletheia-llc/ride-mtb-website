@@ -100,7 +100,7 @@ export function MyListingCard({ listing }: MyListingCardProps) {
   const showMarkSold = status === 'active'
   const showCancel =
     status === 'active' || status === 'pending_review' || status === 'draft'
-  const editHref = `/marketplace/sell/${listing.id}/edit`
+  const editHref = `/buy-sell/sell/${listing.id}/edit`
 
   return (
     <div className="flex items-start gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-colors hover:bg-[var(--color-bg-secondary)]">
@@ -119,7 +119,7 @@ export function MyListingCard({ listing }: MyListingCardProps) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Link
-            href={`/marketplace/${listing.slug}`}
+            href={`/buy-sell/${listing.slug}`}
             className="truncate text-sm font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)]"
           >
             {listing.title}

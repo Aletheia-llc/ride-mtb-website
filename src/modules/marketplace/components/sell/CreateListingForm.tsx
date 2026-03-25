@@ -189,7 +189,7 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
       if (isEditMode && initialData?.id) {
         // Edit mode
         const updated = await updateListing(initialData.id, data)
-        router.push(`/marketplace/${updated.slug}`)
+        router.push(`/buy-sell/${updated.slug}`)
       } else {
         // Create mode — first create the listing, then upload photos
         const listing = await createListing(data)
@@ -202,7 +202,7 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
           }
         }
 
-        router.push(`/marketplace/${listing.slug}`)
+        router.push(`/buy-sell/${listing.slug}`)
       }
     } catch (err) {
       setError(

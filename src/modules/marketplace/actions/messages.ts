@@ -62,8 +62,8 @@ export async function startConversation(
     },
   })
 
-  revalidatePath(`/marketplace/${listing.slug}`)
-  revalidatePath('/marketplace/messages')
+  revalidatePath(`/buy-sell/${listing.slug}`)
+  revalidatePath('/buy-sell/messages')
 
   return { conversationId: conversation.id }
 }
@@ -118,8 +118,8 @@ export async function sendMessage(
     },
   })
 
-  revalidatePath('/marketplace/messages')
-  revalidatePath(`/marketplace/messages/${conversationId}`)
+  revalidatePath('/buy-sell/messages')
+  revalidatePath(`/buy-sell/messages/${conversationId}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -252,6 +252,6 @@ export async function markConversationRead(conversationId: string): Promise<void
     },
   })
 
-  revalidatePath(`/marketplace/messages/${conversationId}`)
-  revalidatePath('/marketplace/messages')
+  revalidatePath(`/buy-sell/messages/${conversationId}`)
+  revalidatePath('/buy-sell/messages')
 }

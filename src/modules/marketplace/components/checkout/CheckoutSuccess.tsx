@@ -77,14 +77,14 @@ export function CheckoutSuccess({ transaction }: CheckoutSuccessProps) {
       {/* Actions */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Link
-          href="/marketplace/my/messages"
+          href="/buy-sell/my/messages"
           className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] px-5 py-2.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
         >
           <MessageSquare className="h-4 w-4" />
           Message Seller
         </Link>
         <Link
-          href="/marketplace/my/purchases"
+          href="/buy-sell/my/purchases"
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
         >
           <ShoppingBag className="h-4 w-4" />

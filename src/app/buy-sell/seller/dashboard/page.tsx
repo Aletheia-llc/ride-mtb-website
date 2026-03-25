@@ -16,7 +16,7 @@ export default async function SellerDashboardPage() {
   const profile = await getMySellerProfile()
 
   if (!profile) {
-    redirect('/marketplace/seller/onboarding')
+    redirect('/buy-sell/seller/onboarding')
   }
 
   // Gather stats in parallel

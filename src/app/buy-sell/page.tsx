@@ -90,7 +90,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
         {/* New Listing button — only for signed-in users */}
         {session?.user ? (
           <Link
-            href="/marketplace/sell"
+            href="/buy-sell/sell"
             className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
           >
             <Plus className="h-4 w-4" />
@@ -121,7 +121,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
           {listings.length > 0 && total > listings.length && (
             <div className="mt-8 flex justify-center">
               <Link
-                href={`/marketplace?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])), cursor: listings[listings.length - 1].id }).toString()}`}
+                href={`/buy-sell?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])), cursor: listings[listings.length - 1].id }).toString()}`}
                 className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-2.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-text)]"
               >
                 Load more ({total - listings.length} remaining)

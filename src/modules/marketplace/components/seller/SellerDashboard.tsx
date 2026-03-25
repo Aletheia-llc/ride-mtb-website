@@ -111,7 +111,7 @@ export function SellerDashboard({ data }: { data: SellerDashboardData }) {
           </p>
         </div>
         <Link
-          href="/marketplace/sell"
+          href="/buy-sell/sell"
           className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
@@ -221,7 +221,7 @@ export function SellerDashboard({ data }: { data: SellerDashboardData }) {
           <h2 className="text-lg font-bold text-[var(--color-text)]">Recent Reviews</h2>
           {profile.reviews.length > 5 && (
             <Link
-              href={`/marketplace/seller/${profile.userId}`}
+              href={`/buy-sell/seller/${profile.userId}`}
               className="inline-flex items-center gap-1 text-sm text-[var(--color-primary)] hover:opacity-80"
             >
               View All
@@ -243,14 +243,14 @@ export function SellerDashboard({ data }: { data: SellerDashboardData }) {
       {/* Quick actions */}
       <div className="flex flex-wrap gap-3">
         <Link
-          href="/marketplace/sell"
+          href="/buy-sell/sell"
           className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg-secondary)]"
         >
           <Plus className="h-4 w-4" />
           Create Listing
         </Link>
         <Link
-          href={`/marketplace/seller/${profile.userId}`}
+          href={`/buy-sell/seller/${profile.userId}`}
           className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg-secondary)]"
         >
           <Star className="h-4 w-4" />

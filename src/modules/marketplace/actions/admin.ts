@@ -51,8 +51,8 @@ export async function approveListings(listingId: string) {
     },
   })
 
-  revalidatePath('/marketplace')
-  revalidatePath(`/marketplace/${listing.slug}`)
+  revalidatePath('/buy-sell')
+  revalidatePath(`/buy-sell/${listing.slug}`)
   revalidatePath('/admin/marketplace')
 
   return listing
@@ -82,8 +82,8 @@ export async function removeListings(listingId: string, reason: string) {
     },
   })
 
-  revalidatePath('/marketplace')
-  revalidatePath(`/marketplace/${listing.slug}`)
+  revalidatePath('/buy-sell')
+  revalidatePath(`/buy-sell/${listing.slug}`)
   revalidatePath('/admin/marketplace')
 
   return { listing, reason }
@@ -147,7 +147,7 @@ export async function updateSellerTrust(
     data: { isTrusted },
   })
 
-  revalidatePath('/marketplace/admin/sellers')
+  revalidatePath('/buy-sell/admin/sellers')
 }
 
 // ---------------------------------------------------------------------------

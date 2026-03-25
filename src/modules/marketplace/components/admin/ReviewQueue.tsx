@@ -71,7 +71,7 @@ export function ReviewQueue({ initialListings }: ReviewQueueProps) {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <Link
-                href={`/marketplace/${listing.slug}`}
+                href={`/buy-sell/${listing.slug}`}
                 className="block text-base font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
               >
                 {listing.title}
