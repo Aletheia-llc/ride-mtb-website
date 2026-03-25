@@ -7,6 +7,7 @@ import { db } from '@/lib/db/client'
 import { FACILITY_QUERIES, runOverpassQuery, parseOsmElement } from '../lib/overpass'
 
 export async function getSyncState() {
+  await requireAdmin()
   return db.syncState.upsert({
     where: { id: 'parks-sync' },
     create: { id: 'parks-sync' },
@@ -44,6 +45,11 @@ export async function syncFacilitiesFromOSM(): Promise<{
   let updated = 0
 
   try {
+    // Fetch all existing osmIds in one query to avoid N+1 lookups in the loop
+    const existingOsmIds = new Set(
+      (await db.facility.findMany({ select: { osmId: true } })).map((f) => f.osmId)
+    )
+
     for (let i = 0; i < FACILITY_QUERIES.length; i++) {
       if (i > 0) await sleep(2000)
 
@@ -54,8 +60,6 @@ export async function syncFacilitiesFromOSM(): Promise<{
       for (const element of elements) {
         const facility = parseOsmElement(element as Record<string, unknown>, type)
         if (!facility) continue
-
-        const existing = await db.facility.findUnique({ where: { osmId: facility.osmId } })
 
         await db.facility.upsert({
           where: { osmId: facility.osmId },
@@ -100,7 +104,7 @@ export async function syncFacilitiesFromOSM(): Promise<{
           },
         })
 
-        if (existing) {
+        if (existingOsmIds.has(facility.osmId)) {
           updated++
         } else {
           added++

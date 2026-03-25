@@ -54,7 +54,7 @@ export default function AdminParksPage() {
 
         <button
           onClick={handleSync}
-          disabled={!!isRunning}
+          disabled={!!isRunning || syncState === null}
           className="flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
         >
           {isRunning && <Loader2 className="h-4 w-4 animate-spin" />}

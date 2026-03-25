@@ -2,17 +2,9 @@ import { requireAdmin } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
 import { FacilityPhotoStatus } from '@/generated/prisma/client'
-import { createClient } from '@supabase/supabase-js'
-import { approveFacilityPhoto, rejectFacilityPhoto } from '@/modules/parks/actions/photos'
+import { approveFacilityPhoto, rejectFacilityPhoto, getAdminSupabase } from '@/modules/parks/actions/photos'
 
 export const metadata = { title: 'Photo Queue | Admin' }
-
-function getAdminSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
 
 export default async function AdminParksPhotosPage() {
   await requireAdmin()

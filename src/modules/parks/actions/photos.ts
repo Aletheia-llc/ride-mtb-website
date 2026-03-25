@@ -16,7 +16,7 @@ const MAX_PHOTOS_PER_FACILITY = 5
 const MAX_PHOTOS_PER_DAY = 20
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
-function getAdminSupabase() {
+export function getAdminSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Supabase env vars not configured')
@@ -164,9 +164,17 @@ export async function rejectFacilityPhoto(photoId: string) {
   })
   if (!photo) return
 
-  const supabase = getAdminSupabase()
-  await supabase.storage.from(BUCKET).remove([photo.storageKey])
+  // Delete DB record first — if this fails, storage object is still intact (recoverable)
   await db.facilityPhoto.delete({ where: { id: photoId } })
+
+  // Delete from storage after DB succeeds — log but don't rethrow (orphaned blob is recoverable)
+  try {
+    const supabase = getAdminSupabase()
+    await supabase.storage.from(BUCKET).remove([photo.storageKey])
+  } catch (err) {
+    console.error('[parks/photos] Failed to delete storage object after DB delete:', err)
+  }
+
   revalidatePath(`/parks/${photo.facility.stateSlug}/${photo.facility.slug}`)
 }
 
