@@ -3048,6 +3048,7 @@ model Facility {
 
   @@index([type, stateSlug])
   @@index([stateSlug])
+  @@map("facilities")
 }
 
 model FacilityReview {
@@ -3064,6 +3065,7 @@ model FacilityReview {
 
   @@unique([facilityId, userId])
   @@index([facilityId])
+  @@map("facility_reviews")
 }
 
 model FacilityPhoto {
@@ -3081,6 +3083,7 @@ model FacilityPhoto {
 
   @@index([facilityId, status])
   @@index([status, createdAt])
+  @@map("facility_photos")
 }
 
 model SyncState {
@@ -3088,5 +3091,7 @@ model SyncState {
   syncInProgress Boolean   @default(false)
   lastSyncedAt   DateTime?
   lastSyncResult Json?
+
+  @@map("sync_state")
 }
 
