@@ -20,7 +20,7 @@ const NAV_LINKS: { label: string; href: string; Icon: React.ComponentType<{ size
   { label: 'Forum', href: '/forum', Icon: MessageSquare, megaKey: 'forum' },
   { label: 'Bikes', href: '/bikes', Icon: Bike, megaKey: 'bikes' },
   { label: 'Fantasy', href: '/fantasy', Icon: Trophy, megaKey: null },
-  { label: 'Marketplace', href: '/marketplace', Icon: ShoppingBag, megaKey: 'marketplace' },
+  { label: 'Buy/Sell', href: '/marketplace', Icon: ShoppingBag, megaKey: 'marketplace' },
 ]
 
 interface TopNavClientProps {

@@ -149,17 +149,17 @@ export const MEGA_NAV_CONFIG: Record<string, MegaNavEntry> = {
     },
     groups: [
       {
-        label: 'Shop',
+        label: 'Buy & Sell',
         links: [
           { icon: Tag, label: 'Browse Listings', href: '/marketplace' },
-          { icon: PlusCircle, label: 'Create Listing', href: '/marketplace/create' },
+          { icon: PlusCircle, label: 'Sell Something', href: '/marketplace/sell' },
         ],
       },
       {
         label: 'My Stuff',
         links: [
           { icon: Heart, label: 'Saved Listings', href: '/marketplace/favorites' },
-          { icon: LayoutList, label: 'My Listings', href: '/marketplace/dashboard' },
+          { icon: LayoutList, label: 'My Listings', href: '/marketplace/my' },
         ],
       },
     ],
