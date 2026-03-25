@@ -24,16 +24,21 @@ export async function syncFacilitiesFromOSM(): Promise<{
 }> {
   await requireAdmin()
 
-  const syncState = await db.syncState.findUnique({ where: { id: 'parks-sync' } })
-  if (syncState?.syncInProgress) {
-    throw new Error('Sync already in progress')
-  }
-
+  // Ensure the singleton row exists first
   await db.syncState.upsert({
     where: { id: 'parks-sync' },
-    create: { id: 'parks-sync', syncInProgress: true },
-    update: { syncInProgress: true },
+    create: { id: 'parks-sync' },
+    update: {},
   })
+
+  // Atomically claim the lock — only succeeds if syncInProgress is currently false
+  const claimed = await db.syncState.updateMany({
+    where: { id: 'parks-sync', syncInProgress: false },
+    data: { syncInProgress: true },
+  })
+  if (claimed.count === 0) {
+    throw new Error('Sync already in progress')
+  }
 
   let added = 0
   let updated = 0
@@ -114,13 +119,17 @@ export async function syncFacilitiesFromOSM(): Promise<{
     })
     return result
   } catch (err) {
-    await db.syncState.update({
-      where: { id: 'parks-sync' },
-      data: {
-        syncInProgress: false,
-        lastSyncResult: { error: err instanceof Error ? err.message : 'Unknown error' },
-      },
-    })
+    try {
+      await db.syncState.update({
+        where: { id: 'parks-sync' },
+        data: {
+          syncInProgress: false,
+          lastSyncResult: { error: err instanceof Error ? err.message : 'Unknown error' },
+        },
+      })
+    } catch (updateErr) {
+      console.error('[parks/sync] Failed to clear syncInProgress after error:', updateErr)
+    }
     throw err
   }
 }
