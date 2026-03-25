@@ -2,12 +2,19 @@
 
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
-import type { FacilityType, FacilityPin, FacilityWithStats, StateStats } from '../types'
+import { FacilityType } from '@/generated/prisma/client'
+import type { FacilityPin, FacilityWithStats, StateStats } from '../types'
 
 const TYPE_MAP: Record<string, FacilityType> = {
   skateparks: 'SKATEPARK',
   pumptracks: 'PUMPTRACK',
   bikeparks: 'BIKEPARK',
+}
+
+function computeAvgRating(reviews: { rating: number }[]): number | null {
+  if (reviews.length === 0) return null
+  const sum = reviews.reduce((a, b) => a + b.rating, 0)
+  return Math.round((sum / reviews.length) * 10) / 10
 }
 
 export async function getFacilitiesByType(typeParam: string): Promise<FacilityPin[]> {
@@ -35,14 +42,11 @@ export async function getFacilitiesByType(typeParam: string): Promise<FacilityPi
   })
 
   return facilities.map((f) => {
-    const ratings = f.reviews.map((r) => r.rating)
-    const avgRating = ratings.length > 0
-      ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
-      : null
+    const avgRating = computeAvgRating(f.reviews)
     return {
       id: f.id,
       osmId: f.osmId,
-      type: f.type as FacilityType,
+      type: f.type,
       name: f.name,
       slug: f.slug,
       latitude: f.latitude,
@@ -84,14 +88,11 @@ export async function getFacilitiesByState(
   })
 
   return facilities.map((f) => {
-    const ratings = f.reviews.map((r) => r.rating)
-    const avgRating = ratings.length > 0
-      ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
-      : null
+    const avgRating = computeAvgRating(f.reviews)
     return {
       id: f.id,
       osmId: f.osmId,
-      type: f.type as FacilityType,
+      type: f.type,
       name: f.name,
       slug: f.slug,
       latitude: f.latitude,
@@ -117,15 +118,12 @@ export async function getFacilityBySlug(slug: string): Promise<FacilityWithStats
   })
   if (!facility) return null
 
-  const ratings = facility.reviews.map((r) => r.rating)
-  const avgRating = ratings.length > 0
-    ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
-    : null
+  const avgRating = computeAvgRating(facility.reviews)
 
   return {
     id: facility.id,
     osmId: facility.osmId,
-    type: facility.type as FacilityType,
+    type: facility.type,
     name: facility.name,
     slug: facility.slug,
     latitude: facility.latitude,
