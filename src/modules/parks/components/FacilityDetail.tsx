@@ -1,6 +1,15 @@
 import { FacilityType } from '@/generated/prisma/client'
 import type { FacilityWithStats } from '../types'
 
+function safeHref(url: string): string | null {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? url : null
+  } catch {
+    return null
+  }
+}
+
 const TYPE_LABELS: Record<FacilityType, string> = {
   SKATEPARK: 'Skatepark',
   PUMPTRACK: 'Pump Track',
@@ -23,6 +32,8 @@ function DetailRow({ label, value }: { label: string; value: string | null | boo
 }
 
 export function FacilityDetail({ facility }: FacilityDetailProps) {
+  const safeWebsite = facility.website ? safeHref(facility.website) : null
+
   return (
     <div>
       <div className="mb-6">
@@ -55,11 +66,11 @@ export function FacilityDetail({ facility }: FacilityDetailProps) {
         <DetailRow label="Operator" value={facility.operator} />
         <DetailRow label="Fee" value={facility.fee} />
         <DetailRow label="Lit" value={facility.lit} />
-        {facility.website && (
+        {safeWebsite && (
           <div className="flex gap-4 py-2 border-b border-[var(--color-border)]">
             <dt className="w-32 shrink-0 text-sm text-[var(--color-text-muted)]">Website</dt>
             <dd className="text-sm">
-              <a href={facility.website} target="_blank" rel="noopener noreferrer"
+              <a href={safeWebsite} target="_blank" rel="noopener noreferrer"
                 className="text-[var(--color-primary)] hover:underline">
                 {facility.website}
               </a>

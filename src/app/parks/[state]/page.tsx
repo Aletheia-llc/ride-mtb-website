@@ -14,6 +14,13 @@ const FILTER_LABELS: Record<FacilityType, string> = {
   BIKEPARK: 'Bike Parks',
 }
 
+export async function generateMetadata({ params }: StatePageProps) {
+  const { state: stateSlug } = await params
+  return {
+    title: `${stateSlug.charAt(0).toUpperCase() + stateSlug.slice(1).replace(/-/g, ' ')} Parks | Ride MTB`,
+  }
+}
+
 export default async function StatePage({ params, searchParams }: StatePageProps) {
   const { state: stateSlug } = await params
   const { type: typeFilter } = await searchParams
@@ -28,7 +35,10 @@ export default async function StatePage({ params, searchParams }: StatePageProps
     notFound()
   }
 
-  const stateName = facilities[0]?.state ?? stateSlug
+  // Get stateName independently of the type filter so it stays correct when
+  // a filter returns 0 results.
+  const allFacilities = validType ? await getFacilitiesByState(stateSlug) : facilities
+  const stateName = allFacilities[0]?.state ?? stateSlug
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">

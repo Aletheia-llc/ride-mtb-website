@@ -19,6 +19,8 @@ interface FacilityCardProps {
 }
 
 export function FacilityCard({ facility }: FacilityCardProps) {
+  if (!facility.stateSlug) return null
+
   return (
     <Link
       href={`/parks/${facility.stateSlug}/${facility.slug}`}
