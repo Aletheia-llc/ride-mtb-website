@@ -5,6 +5,13 @@ import { db } from '@/lib/db/client'
 import { FacilityType } from '@/generated/prisma/client'
 import type { FacilityPin, FacilityWithStats, StateStats } from '../types'
 
+function mapAgg(agg: { _avg: { rating: number | null }; _count: { id: number } } | undefined) {
+  return {
+    avgRating: agg?._avg.rating != null ? Math.round(agg._avg.rating * 10) / 10 : null,
+    reviewCount: agg?._count.id ?? 0,
+  }
+}
+
 const TYPE_MAP: Record<string, FacilityType> = {
   skateparks: 'SKATEPARK',
   pumptracks: 'PUMPTRACK',
@@ -47,17 +54,10 @@ export async function getFacilitiesByType(typeParam: string): Promise<FacilityPi
 
   const aggMap = new Map(aggs.map((a) => [a.facilityId, a]))
 
-  return facilities.map((f) => {
-    const agg = aggMap.get(f.id)
-    return {
-      ...f,
-      avgRating:
-        agg?._avg.rating !== null && agg?._avg.rating !== undefined
-          ? Math.round(agg._avg.rating * 10) / 10
-          : null,
-      reviewCount: agg?._count.id ?? 0,
-    }
-  })
+  return facilities.map((f) => ({
+    ...f,
+    ...mapAgg(aggMap.get(f.id)),
+  }))
 }
 
 export async function getFacilitiesByState(
@@ -97,17 +97,10 @@ export async function getFacilitiesByState(
 
   const aggMap = new Map(aggs.map((a) => [a.facilityId, a]))
 
-  return facilities.map((f) => {
-    const agg = aggMap.get(f.id)
-    return {
-      ...f,
-      avgRating:
-        agg?._avg.rating !== null && agg?._avg.rating !== undefined
-          ? Math.round(agg._avg.rating * 10) / 10
-          : null,
-      reviewCount: agg?._count.id ?? 0,
-    }
-  })
+  return facilities.map((f) => ({
+    ...f,
+    ...mapAgg(aggMap.get(f.id)),
+  }))
 }
 
 export async function getFacilityBySlug(slug: string): Promise<FacilityWithStats | null> {
@@ -124,8 +117,7 @@ export async function getFacilityBySlug(slug: string): Promise<FacilityWithStats
 
   return {
     ...facility,
-    avgRating: agg._avg.rating !== null ? Math.round(agg._avg.rating * 10) / 10 : null,
-    reviewCount: agg._count.id,
+    ...mapAgg(agg),
   }
 }
 

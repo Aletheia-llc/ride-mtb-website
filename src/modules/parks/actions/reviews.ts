@@ -17,16 +17,21 @@ export async function submitFacilityReview(
     return { success: false, error: 'Rating must be between 1 and 5' }
   }
 
-  // Screen text if provided
+  if (body && body.trim().length > 2000) {
+    return { success: false, error: 'Review must be 2000 characters or fewer' }
+  }
+
+  // Check facility exists BEFORE calling Claude (fail fast, avoid wasting API calls)
+  const facility = await db.facility.findUnique({ where: { id: facilityId }, select: { stateSlug: true, slug: true } })
+  if (!facility) return { success: false, error: 'Facility not found' }
+
+  // Now screen text
   if (body && body.trim().length > 0) {
     const verdict = await screenText(body.trim())
     if (verdict === 'REJECTED') {
       return { success: false, error: 'Review contains content that violates our community guidelines.' }
     }
   }
-
-  const facility = await db.facility.findUnique({ where: { id: facilityId }, select: { stateSlug: true, slug: true } })
-  if (!facility) return { success: false, error: 'Facility not found' }
 
   await db.facilityReview.upsert({
     where: { facilityId_userId: { facilityId, userId: user.id } },
@@ -42,6 +47,7 @@ export async function getFacilityReviews(facilityId: string) {
   return db.facilityReview.findMany({
     where: { facilityId },
     orderBy: { createdAt: 'desc' },
+    take: 50,
     include: {
       user: { select: { name: true, image: true } },
     },

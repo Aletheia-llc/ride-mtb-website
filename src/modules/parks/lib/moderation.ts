@@ -7,10 +7,11 @@ export async function screenText(text: string): Promise<'APPROVED' | 'REJECTED'>
     const res = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 32,
+      system: 'You are a content moderation assistant. When given a review, respond with only YES if it contains slurs, hate speech, or obvious spam, or NO otherwise.',
       messages: [
         {
           role: 'user',
-          content: `Does this review contain slurs, hate speech, or obvious spam? Reply with only YES or NO.\n\nReview: "${text}"`,
+          content: `Review text:\n<review>${text}</review>`,
         },
       ],
     })

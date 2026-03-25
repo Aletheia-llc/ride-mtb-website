@@ -1,4 +1,3 @@
-import Image from 'next/image'
 
 interface Review {
   id: string
@@ -27,12 +26,13 @@ export function ReviewList({ reviews }: ReviewListProps) {
         <div key={review.id} className="rounded-lg border border-[var(--color-border)] p-4">
           <div className="mb-2 flex items-center gap-3">
             {review.user.image && (
-              <Image
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={review.user.image}
                 alt={review.user.name ?? 'User'}
                 width={32}
                 height={32}
-                className="rounded-full"
+                className="h-8 w-8 rounded-full object-cover"
               />
             )}
             <div>
@@ -40,7 +40,7 @@ export function ReviewList({ reviews }: ReviewListProps) {
                 {review.user.name ?? 'Anonymous'}
               </p>
               <p className="text-xs text-[var(--color-text-muted)]">
-                {new Date(review.createdAt).toLocaleDateString()}
+                {new Date(review.createdAt).toLocaleDateString('en-US')}
               </p>
             </div>
             <div className="ml-auto text-sm">

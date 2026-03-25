@@ -51,6 +51,7 @@ export function ReviewForm({ facilityId }: ReviewFormProps) {
             <button
               key={star}
               type="button"
+              aria-label={`Rate ${star} out of 5`}
               onClick={() => setRating(star)}
               onMouseEnter={() => setHoveredRating(star)}
               onMouseLeave={() => setHoveredRating(0)}
@@ -70,6 +71,7 @@ export function ReviewForm({ facilityId }: ReviewFormProps) {
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={3}
+          maxLength={2000}
           className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
           placeholder="Share your experience..."
         />
