@@ -5,23 +5,16 @@ import { requireAdmin } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
 import { FacilityPhotoStatus, UserRole } from '@/generated/prisma/client'
-import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'crypto'
 import { stripExifFromJpeg } from '../lib/exif'
 import { screenImage } from '../lib/moderation'
+import { getAdminSupabase } from '../lib/supabase'
 import { revalidatePath } from 'next/cache'
 
 const BUCKET = 'facility-photos'
 const MAX_PHOTOS_PER_FACILITY = 5
 const MAX_PHOTOS_PER_DAY = 20
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-
-export function getAdminSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Supabase env vars not configured')
-  return createClient(url, key)
-}
 
 function detectMimeType(buffer: Buffer): 'image/jpeg' | 'image/png' | 'image/webp' | null {
   if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'image/jpeg'

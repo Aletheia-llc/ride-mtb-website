@@ -133,7 +133,7 @@ export function EventPreferencesForm({ initialPrefs }: EventPreferencesFormProps
         </div>
         {followedTypes.length === 0 && (
           <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-            No types selected — you'll see all event types.
+            No types selected — you&apos;ll see all event types.
           </p>
         )}
       </section>

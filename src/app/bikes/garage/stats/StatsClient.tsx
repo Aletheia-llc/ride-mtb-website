@@ -2,6 +2,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Card } from '@/ui/components'
 import type { BikeStats } from '@/modules/bikes/lib/garage-queries'
 
@@ -101,7 +102,7 @@ export function StatsClient({ stats }: { stats: BikeStats }) {
           {stats.bikeCount === 0 && (
             <p className="text-sm text-[var(--color-text-muted)]">
               No bikes in your garage yet.{' '}
-              <a href="/bikes/garage/new" className="text-[var(--color-primary)]">Add your first bike</a>
+              <Link href="/bikes/garage/new" className="text-[var(--color-primary)]">Add your first bike</Link>
             </p>
           )}
         </div>

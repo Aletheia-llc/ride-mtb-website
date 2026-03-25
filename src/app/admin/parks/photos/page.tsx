@@ -2,7 +2,8 @@ import { requireAdmin } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
 import { FacilityPhotoStatus } from '@/generated/prisma/client'
-import { approveFacilityPhoto, rejectFacilityPhoto, getAdminSupabase } from '@/modules/parks/actions/photos'
+import { approveFacilityPhoto, rejectFacilityPhoto } from '@/modules/parks/actions/photos'
+import { getAdminSupabase } from '@/modules/parks/lib/supabase'
 
 export const metadata = { title: 'Photo Queue | Admin' }
 

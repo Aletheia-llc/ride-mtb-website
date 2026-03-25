@@ -16,7 +16,7 @@ export default async function EventPreferencesPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-2 text-2xl font-bold text-[var(--color-text)]">Event Preferences</h1>
       <p className="mb-8 text-sm text-[var(--color-text-muted)]">
-        Customize which events you see and how you're notified.
+        Customize which events you see and how you&apos;re notified.
       </p>
       <EventPreferencesForm
         initialPrefs={

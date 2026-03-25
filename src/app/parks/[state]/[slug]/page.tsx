@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { getFacilityBySlug } from '@/modules/parks/actions/facilities'
 import { FacilityDetail } from '@/modules/parks/components/FacilityDetail'
 import { ReviewForm } from '@/modules/parks/components/ReviewForm'
@@ -37,9 +38,9 @@ export default async function FacilityDetailPage({ params }: DetailPageProps) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <nav className="mb-6 text-sm text-[var(--color-text-muted)]">
-        <a href="/parks" className="hover:text-[var(--color-text)]">Parks</a>
+        <Link href="/parks" className="hover:text-[var(--color-text)]">Parks</Link>
         <span className="mx-2">/</span>
-        <a href={`/parks/${stateSlug}`} className="hover:text-[var(--color-text)]">{facility.state}</a>
+        <Link href={`/parks/${stateSlug}`} className="hover:text-[var(--color-text)]">{facility.state}</Link>
         <span className="mx-2">/</span>
         <span>{facility.name}</span>
       </nav>

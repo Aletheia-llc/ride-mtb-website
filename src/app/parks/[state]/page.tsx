@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { getFacilitiesByState } from '@/modules/parks/actions/facilities'
 import { FacilityCard } from '@/modules/parks/components/FacilityCard'
 import { FacilityType } from '@/generated/prisma/client'
@@ -43,7 +44,7 @@ export default async function StatePage({ params, searchParams }: StatePageProps
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
       <nav className="mb-4 text-sm text-[var(--color-text-muted)]">
-        <a href="/parks" className="hover:text-[var(--color-text)]">Parks</a>
+        <Link href="/parks" className="hover:text-[var(--color-text)]">Parks</Link>
         <span className="mx-2">/</span>
         <span>{stateName}</span>
       </nav>
