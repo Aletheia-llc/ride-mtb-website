@@ -1,4 +1,7 @@
 import { Suspense } from 'react'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
+import { auth } from '@/lib/auth/config'
 import { browseListings } from '@/modules/marketplace/actions/listings'
 import { BrowseGrid } from '@/modules/marketplace/components/browse/BrowseGrid'
 import { BrowseFilterSidebar } from '@/modules/marketplace/components/browse/BrowseFilterSidebar'
@@ -27,7 +30,7 @@ function BrowseGridFallback() {
 }
 
 export default async function MarketplacePage({ searchParams }: MarketplacePageProps) {
-  const params = await searchParams
+  const [params, session] = await Promise.all([searchParams, auth()])
 
   const getString = (key: string): string | undefined => {
     const val = params[key]
@@ -69,15 +72,39 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
   const cursor = getString('cursor')
   if (cursor) filters.cursor = cursor
 
-  const { listings } = await browseListings(filters)
+  const { listings, total } = await browseListings(filters)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">Browse Listings</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          Find used mountain bikes and gear from riders in your community.
-        </p>
+      {/* Header row */}
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">Browse Listings</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            {total > 0
+              ? `${total.toLocaleString()} listing${total === 1 ? '' : 's'} — find used mountain bikes and gear.`
+              : 'Find used mountain bikes and gear from riders in your community.'}
+          </p>
+        </div>
+
+        {/* New Listing button — only for signed-in users */}
+        {session?.user ? (
+          <Link
+            href="/marketplace/sell"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
+          >
+            <Plus className="h-4 w-4" />
+            New Listing
+          </Link>
+        ) : (
+          <Link
+            href="/api/auth/signin"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-text)]"
+          >
+            <Plus className="h-4 w-4" />
+            Sell Something
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
@@ -89,6 +116,18 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
           <Suspense fallback={<BrowseGridFallback />}>
             <BrowseGrid listings={listings} />
           </Suspense>
+
+          {/* Load More / pagination hint */}
+          {listings.length > 0 && total > listings.length && (
+            <div className="mt-8 flex justify-center">
+              <Link
+                href={`/marketplace?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])), cursor: listings[listings.length - 1].id }).toString()}`}
+                className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-2.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-text)]"
+              >
+                Load more ({total - listings.length} remaining)
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

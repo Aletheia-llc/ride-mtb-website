@@ -71,15 +71,24 @@ export function ListingCard({ listing }: ListingCardProps) {
           alt={listing.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          className={`object-cover transition-transform duration-300 group-hover:scale-105 ${listing.status === 'sold' ? 'opacity-50 grayscale' : ''}`}
         />
+
+        {/* SOLD overlay */}
+        {listing.status === 'sold' && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="rotate-[-15deg] rounded-lg border-4 border-red-500 px-4 py-1 text-2xl font-black uppercase tracking-widest text-red-500 opacity-90">
+              SOLD
+            </span>
+          </div>
+        )}
 
         {/* Price overlay */}
         <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
           <span className="rounded-lg bg-black/70 px-2.5 py-1 text-sm font-bold text-white backdrop-blur-sm">
             {formatPrice(listing.price)}
           </span>
-          {listing.acceptsOffers && (
+          {listing.acceptsOffers && listing.status !== 'sold' && (
             <span className="rounded-lg bg-[var(--color-primary)]/80 px-2 py-1 text-xs font-semibold text-white backdrop-blur-sm">
               OBO
             </span>
