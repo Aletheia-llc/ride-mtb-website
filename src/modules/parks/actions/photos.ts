@@ -169,7 +169,7 @@ export async function deleteFacilityPhoto(photoId: string) {
     include: { facility: { select: { stateSlug: true, slug: true } } },
   })
   if (!photo) return
-  if (photo.userId !== user.id) throw new Error('Not authorized')
+  if (photo.userId !== user.id && user.role !== 'admin') throw new Error('Not authorized')
 
   const supabase = getAdminSupabase()
   await supabase.storage.from(BUCKET).remove([photo.storageKey])
