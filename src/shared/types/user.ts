@@ -14,7 +14,7 @@ export interface UserProfile {
   skillLevel: string | null
   favoriteBike: string | null
   favoriteTrail: string | null
-  yearsRiding: number | null
+  yearStartedRiding: number | null
   websiteUrl: string | null
   createdAt: Date
 }

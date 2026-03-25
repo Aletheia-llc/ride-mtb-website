@@ -17,7 +17,7 @@ export interface UserProfileData {
   skillLevel: SkillLevel | null
   favoriteBike: string | null
   favoriteTrail: string | null
-  yearsRiding: number | null
+  yearStartedRiding: number | null
   websiteUrl: string | null
   createdAt: Date
   lastActivityAt: Date | null
@@ -55,7 +55,7 @@ export interface ProfileUpdateInput {
   skillLevel?: SkillLevel | null
   favoriteBike?: string
   favoriteTrail?: string
-  yearsRiding?: number | null
+  yearStartedRiding?: number | null
   websiteUrl?: string
   emailNotifications?: boolean
 }

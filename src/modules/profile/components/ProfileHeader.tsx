@@ -81,9 +81,12 @@ export function ProfileHeader({ user, isOwnProfile = false }: ProfileHeaderProps
         {user.ridingStyle && (
           <p className="mt-2 text-xs text-[var(--color-text-muted)]">
             <span className="font-medium">Riding style:</span> {user.ridingStyle}
-            {user.yearsRiding != null && (
-              <> &middot; {user.yearsRiding} {user.yearsRiding === 1 ? 'year' : 'years'} riding</>
-            )}
+            {user.yearStartedRiding != null && (() => {
+              const yrs = new Date().getFullYear() - user.yearStartedRiding
+              return yrs > 0 ? (
+                <> &middot; {yrs} {yrs === 1 ? 'year' : 'years'} riding</>
+              ) : null
+            })()}
           </p>
         )}
 

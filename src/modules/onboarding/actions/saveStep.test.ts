@@ -122,17 +122,17 @@ describe('saveStep', () => {
 
   // ── Step 3: Bio + Location ───────────────────────────────────────────────
 
-  it('step 3: saves bio and location, advances to step 4', async () => {
+  it('step 3: saves bio and zip code location, advances to step 4', async () => {
     const formData = new FormData()
     formData.append('bio', 'I love shredding trails')
-    formData.append('location', 'Bellingham, WA')
+    formData.append('location', '98225')
 
     const result = await saveStep(3, { errors: {} }, formData)
 
     expect(result.success).toBe(true)
     expect(db.user.update).toHaveBeenCalledWith({
       where: { id: 'user-123' },
-      data: { bio: 'I love shredding trails', location: 'Bellingham, WA', onboardingStep: 4 },
+      data: { bio: 'I love shredding trails', location: '98225', onboardingStep: 4 },
     })
   })
 
@@ -146,11 +146,11 @@ describe('saveStep', () => {
     })
   })
 
-  // ── Step 4: Years Riding + Favorite Bike + Favorite Trail ───────────────
+  // ── Step 4: Year Started Riding + Favorite Bike + Favorite Trail ────────
 
-  it('step 4: saves yearsRiding, favoriteBike, favoriteTrail, advances to step 5', async () => {
+  it('step 4: saves yearStartedRiding, favoriteBike, favoriteTrail, advances to step 5', async () => {
     const formData = new FormData()
-    formData.append('yearsRiding', '7')
+    formData.append('yearStartedRiding', '2015')
     formData.append('favoriteBike', 'Trek Slash')
     formData.append('favoriteTrail', 'Holy Roller')
 
@@ -159,7 +159,7 @@ describe('saveStep', () => {
     expect(result.success).toBe(true)
     expect(db.user.update).toHaveBeenCalledWith({
       where: { id: 'user-123' },
-      data: { yearsRiding: 7, favoriteBike: 'Trek Slash', favoriteTrail: 'Holy Roller', onboardingStep: 5 },
+      data: { yearStartedRiding: 2015, favoriteBike: 'Trek Slash', favoriteTrail: 'Holy Roller', onboardingStep: 5 },
     })
   })
 

@@ -40,7 +40,7 @@ export default async function OnboardingStepPage({ params }: StepPageProps) {
       skillLevel: true,
       bio: true,
       location: true,
-      yearsRiding: true,
+      yearStartedRiding: true,
       favoriteBike: true,
       favoriteTrail: true,
       interests: true,
@@ -51,7 +51,7 @@ export default async function OnboardingStepPage({ params }: StepPageProps) {
     1: <Step1Username defaultValues={{ username: profile.username ?? '' }} />,
     2: <Step2YourRide defaultValues={{ ridingStyle: profile.ridingStyle ?? null, skillLevel: profile.skillLevel ?? null }} />,
     3: <Step3AboutYou defaultValues={{ bio: profile.bio ?? '', location: profile.location ?? '' }} />,
-    4: <Step4Experience defaultValues={{ yearsRiding: profile.yearsRiding ?? null, favoriteBike: profile.favoriteBike ?? '', favoriteTrail: profile.favoriteTrail ?? '' }} />,
+    4: <Step4Experience defaultValues={{ yearStartedRiding: profile.yearStartedRiding ?? null, favoriteBike: profile.favoriteBike ?? '', favoriteTrail: profile.favoriteTrail ?? '' }} />,
     5: <Step5Interests defaultValues={{ interests: profile.interests }} />,
   }
 

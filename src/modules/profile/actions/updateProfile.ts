@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
 import { updateProfile as updateProfileQuery } from '../lib/queries'
+import { isUsernameProfane } from '@/lib/username-filter'
 
 const updateProfileSchema = z.object({
   name: z
@@ -16,6 +17,7 @@ const updateProfileSchema = z.object({
     .string()
     .max(50, 'Username must be at most 50 characters')
     .regex(/^[a-zA-Z0-9_-]*$/, 'Username can only contain letters, numbers, hyphens, and underscores')
+    .refine((val) => !val || !isUsernameProfane(val), 'Username contains inappropriate content')
     .optional()
     .transform((v) => v || undefined),
   bio: z
@@ -23,10 +25,12 @@ const updateProfileSchema = z.object({
     .max(500, 'Bio must be at most 500 characters')
     .optional()
     .transform((v) => v || undefined),
+  // location stores a US zip code (5 digits)
   location: z
     .string()
-    .max(100, 'Location must be at most 100 characters')
+    .regex(/^\d{5}$/, 'Please enter a valid US zip code')
     .optional()
+    .or(z.literal(''))
     .transform((v) => v || undefined),
   ridingStyle: z
     .string()
@@ -47,7 +51,7 @@ const updateProfileSchema = z.object({
     .max(100, 'Favorite trail must be at most 100 characters')
     .optional()
     .transform((v) => v || undefined),
-  yearsRiding: z
+  yearStartedRiding: z
     .string()
     .optional()
     .transform((v) => {
@@ -55,7 +59,7 @@ const updateProfileSchema = z.object({
       const n = parseInt(v, 10)
       return isNaN(n) ? null : n
     })
-    .pipe(z.number().int().min(0).max(99).nullable()),
+    .pipe(z.number().int().min(1970).max(2026).nullable()),
   websiteUrl: z
     .string()
     .max(200, 'URL must be at most 200 characters')
@@ -87,7 +91,7 @@ export async function updateProfile(
       skillLevel: formData.get('skillLevel') as string,
       favoriteBike: formData.get('favoriteBike') as string,
       favoriteTrail: formData.get('favoriteTrail') as string,
-      yearsRiding: formData.get('yearsRiding') as string,
+      yearStartedRiding: formData.get('yearStartedRiding') as string,
       websiteUrl: formData.get('websiteUrl') as string,
       emailNotifications: formData.get('emailNotifications') !== null,
     }
