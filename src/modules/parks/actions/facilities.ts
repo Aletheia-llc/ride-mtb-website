@@ -11,12 +11,6 @@ const TYPE_MAP: Record<string, FacilityType> = {
   bikeparks: 'BIKEPARK',
 }
 
-function computeAvgRating(reviews: { rating: number }[]): number | null {
-  if (reviews.length === 0) return null
-  const sum = reviews.reduce((a, b) => a + b.rating, 0)
-  return Math.round((sum / reviews.length) * 10) / 10
-}
-
 export async function getFacilitiesByType(typeParam: string): Promise<FacilityPin[]> {
   const type = TYPE_MAP[typeParam]
   if (!type) return []
@@ -36,28 +30,32 @@ export async function getFacilitiesByType(typeParam: string): Promise<FacilityPi
       stateSlug: true,
       surface: true,
       lit: true,
-      _count: { select: { reviews: true } },
-      reviews: { select: { rating: true } },
     },
   })
 
+  const facilityIds = facilities.map((f) => f.id)
+
+  const aggs =
+    facilityIds.length > 0
+      ? await db.facilityReview.groupBy({
+          by: ['facilityId'],
+          where: { facilityId: { in: facilityIds } },
+          _avg: { rating: true },
+          _count: { id: true },
+        })
+      : []
+
+  const aggMap = new Map(aggs.map((a) => [a.facilityId, a]))
+
   return facilities.map((f) => {
-    const avgRating = computeAvgRating(f.reviews)
+    const agg = aggMap.get(f.id)
     return {
-      id: f.id,
-      osmId: f.osmId,
-      type: f.type,
-      name: f.name,
-      slug: f.slug,
-      latitude: f.latitude,
-      longitude: f.longitude,
-      city: f.city,
-      state: f.state,
-      stateSlug: f.stateSlug,
-      surface: f.surface,
-      lit: f.lit,
-      avgRating,
-      reviewCount: f._count.reviews,
+      ...f,
+      avgRating:
+        agg?._avg.rating !== null && agg?._avg.rating !== undefined
+          ? Math.round(agg._avg.rating * 10) / 10
+          : null,
+      reviewCount: agg?._count.id ?? 0,
     }
   })
 }
@@ -82,28 +80,32 @@ export async function getFacilitiesByState(
       stateSlug: true,
       surface: true,
       lit: true,
-      _count: { select: { reviews: true } },
-      reviews: { select: { rating: true } },
     },
   })
 
+  const facilityIds = facilities.map((f) => f.id)
+
+  const aggs =
+    facilityIds.length > 0
+      ? await db.facilityReview.groupBy({
+          by: ['facilityId'],
+          where: { facilityId: { in: facilityIds } },
+          _avg: { rating: true },
+          _count: { id: true },
+        })
+      : []
+
+  const aggMap = new Map(aggs.map((a) => [a.facilityId, a]))
+
   return facilities.map((f) => {
-    const avgRating = computeAvgRating(f.reviews)
+    const agg = aggMap.get(f.id)
     return {
-      id: f.id,
-      osmId: f.osmId,
-      type: f.type,
-      name: f.name,
-      slug: f.slug,
-      latitude: f.latitude,
-      longitude: f.longitude,
-      city: f.city,
-      state: f.state,
-      stateSlug: f.stateSlug,
-      surface: f.surface,
-      lit: f.lit,
-      avgRating,
-      reviewCount: f._count.reviews,
+      ...f,
+      avgRating:
+        agg?._avg.rating !== null && agg?._avg.rating !== undefined
+          ? Math.round(agg._avg.rating * 10) / 10
+          : null,
+      reviewCount: agg?._count.id ?? 0,
     }
   })
 }
@@ -111,38 +113,19 @@ export async function getFacilitiesByState(
 export async function getFacilityBySlug(slug: string): Promise<FacilityWithStats | null> {
   const facility = await db.facility.findUnique({
     where: { slug },
-    include: {
-      _count: { select: { reviews: true } },
-      reviews: { select: { rating: true } },
-    },
   })
   if (!facility) return null
 
-  const avgRating = computeAvgRating(facility.reviews)
+  const agg = await db.facilityReview.aggregate({
+    where: { facilityId: facility.id },
+    _avg: { rating: true },
+    _count: { id: true },
+  })
 
   return {
-    id: facility.id,
-    osmId: facility.osmId,
-    type: facility.type,
-    name: facility.name,
-    slug: facility.slug,
-    latitude: facility.latitude,
-    longitude: facility.longitude,
-    address: facility.address,
-    city: facility.city,
-    state: facility.state,
-    stateSlug: facility.stateSlug,
-    operator: facility.operator,
-    openingHours: facility.openingHours,
-    surface: facility.surface,
-    website: facility.website,
-    phone: facility.phone,
-    lit: facility.lit,
-    fee: facility.fee,
-    description: facility.description,
-    lastSyncedAt: facility.lastSyncedAt,
-    avgRating,
-    reviewCount: facility._count.reviews,
+    ...facility,
+    avgRating: agg._avg.rating !== null ? Math.round(agg._avg.rating * 10) / 10 : null,
+    reviewCount: agg._count.id,
   }
 }
 
