@@ -1237,6 +1237,15 @@ model Listing {
   soldAt           DateTime?
   fromGarageBikeId String?
   forumCrossPostId String?
+  // MTB-specific specs
+  frameSize        String?
+  wheelSize        String?
+  forkTravel       Int?
+  rearTravel       Int?
+  frameMaterial    String?
+  // Seller info
+  sellerType       String   @default("individual")
+  acceptsTrades    Boolean  @default(false)
   seller      User          @relation(fields: [sellerId], references: [id])
   photos      ListingPhoto[]
   offers      Offer[]

@@ -88,6 +88,13 @@ export async function ListingDetail({ listing }: ListingDetailProps) {
     ...(listing.brand ? [{ label: 'Brand', value: listing.brand }] : []),
     ...(listing.modelName ? [{ label: 'Model', value: listing.modelName }] : []),
     ...(listing.year ? [{ label: 'Year', value: String(listing.year) }] : []),
+    ...(listing.frameSize ? [{ label: 'Frame Size', value: listing.frameSize }] : []),
+    ...(listing.wheelSize ? [{ label: 'Wheel Size', value: listing.wheelSize }] : []),
+    ...(listing.frameMaterial ? [{ label: 'Material', value: listing.frameMaterial }] : []),
+    ...(listing.forkTravel ? [{ label: 'Fork Travel', value: `${listing.forkTravel}mm` }] : []),
+    ...(listing.rearTravel ? [{ label: 'Rear Travel', value: `${listing.rearTravel}mm` }] : []),
+    ...(listing.sellerType === 'shop' ? [{ label: 'Seller', value: 'Shop / Dealer' }] : []),
+    ...(listing.acceptsTrades ? [{ label: 'Trades', value: 'Open to trades' }] : []),
   ]
 
   // Check if current user has saved this listing
@@ -243,6 +250,11 @@ export async function ListingDetail({ listing }: ListingDetailProps) {
             {listing.acceptsOffers && !isSold && (
               <span className="rounded-full bg-[var(--color-primary-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]">
                 OBO
+              </span>
+            )}
+            {listing.acceptsTrades && !isSold && (
+              <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-text-muted)]">
+                Trades OK
               </span>
             )}
           </div>

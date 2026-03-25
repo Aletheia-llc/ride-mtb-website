@@ -96,6 +96,15 @@ const createListingSchema = z.object({
     .regex(/^\d{5}$/, 'ZIP code must be 5 digits')
     .optional(),
   fromGarageBikeId: z.string().optional(),
+  // MTB-specific specs
+  frameSize: z.string().max(20).optional(),
+  wheelSize: z.string().max(20).optional(),
+  forkTravel: z.number().int().min(50).max(250).optional(),
+  rearTravel: z.number().int().min(50).max(250).optional(),
+  frameMaterial: z.string().max(50).optional(),
+  // Seller info
+  sellerType: z.enum(['individual', 'shop']).optional().default('individual'),
+  acceptsTrades: z.boolean().optional().default(false),
 })
 
 const updateListingSchema = createListingSchema.partial()
@@ -163,6 +172,13 @@ export async function createListing(data: CreateListingInput): Promise<ListingWi
       state: validated.state,
       zipCode: validated.zipCode,
       fromGarageBikeId: verifiedFromGarageBikeId,
+      frameSize: validated.frameSize,
+      wheelSize: validated.wheelSize,
+      forkTravel: validated.forkTravel,
+      rearTravel: validated.rearTravel,
+      frameMaterial: validated.frameMaterial,
+      sellerType: validated.sellerType ?? 'individual',
+      acceptsTrades: validated.acceptsTrades ?? false,
       sellerId: userId,
       status: listingStatus,
     },
@@ -227,6 +243,13 @@ export async function updateListing(
   if (validated.city !== undefined) updateData.city = validated.city
   if (validated.state !== undefined) updateData.state = validated.state
   if (validated.zipCode !== undefined) updateData.zipCode = validated.zipCode
+  if (validated.frameSize !== undefined) updateData.frameSize = validated.frameSize
+  if (validated.wheelSize !== undefined) updateData.wheelSize = validated.wheelSize
+  if (validated.forkTravel !== undefined) updateData.forkTravel = validated.forkTravel
+  if (validated.rearTravel !== undefined) updateData.rearTravel = validated.rearTravel
+  if (validated.frameMaterial !== undefined) updateData.frameMaterial = validated.frameMaterial
+  if (validated.sellerType !== undefined) updateData.sellerType = validated.sellerType
+  if (validated.acceptsTrades !== undefined) updateData.acceptsTrades = validated.acceptsTrades
 
   // Regenerate slug if title changed
   if (validated.title !== undefined) {

@@ -45,6 +45,14 @@ export default async function EditListingPage({ params }: EditListingPageProps) 
         state: listing.state ?? undefined,
         zipCode: listing.zipCode ?? undefined,
         photos,
+        // MTB specs
+        frameSize: listing.frameSize ?? undefined,
+        wheelSize: listing.wheelSize ?? undefined,
+        forkTravel: listing.forkTravel ?? undefined,
+        rearTravel: listing.rearTravel ?? undefined,
+        frameMaterial: listing.frameMaterial ?? undefined,
+        sellerType: listing.sellerType ?? 'individual',
+        acceptsTrades: listing.acceptsTrades ?? false,
       }}
     />
   )

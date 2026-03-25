@@ -99,6 +99,7 @@ export type CreateListingInput = {
   tags?: string[]
   price: number
   acceptsOffers?: boolean
+  acceptsTrades?: boolean
   minOfferPercent?: number
   fulfillment: FulfillmentType
   shippingCost?: number
@@ -110,6 +111,14 @@ export type CreateListingInput = {
   state?: string
   zipCode?: string
   fromGarageBikeId?: string  // UserBike.id — set when listed via "Sell from Garage"
+  // MTB-specific specs
+  frameSize?: string
+  wheelSize?: string
+  forkTravel?: number
+  rearTravel?: number
+  frameMaterial?: string
+  // Seller info
+  sellerType?: string
 }
 
 export type UpdateListingInput = Partial<CreateListingInput>
