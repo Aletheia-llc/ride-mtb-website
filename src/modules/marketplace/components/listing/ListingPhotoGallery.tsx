@@ -37,6 +37,12 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
           className="object-contain"
           priority
         />
+        {/* Photo count indicator */}
+        {photos.length > 1 && (
+          <div className="absolute bottom-3 right-3 rounded-lg bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+            {selectedIndex + 1} / {photos.length}
+          </div>
+        )}
       </div>
 
       {/* Thumbnail strip */}

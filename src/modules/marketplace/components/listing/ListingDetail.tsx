@@ -1,8 +1,17 @@
-import { MapPin, Eye, Tag, Package, Truck } from 'lucide-react'
+import { MapPin, Eye, Tag, Package, Truck, Bookmark, Calendar } from 'lucide-react'
 import type { ListingWithPhotos, ListingCategory, FulfillmentType } from '@/modules/marketplace/types'
+import { auth } from '@/lib/auth/config'
+import { db } from '@/lib/db/client'
+import { listingInclude } from '@/modules/marketplace/lib/queries'
+import type { ListingWithPhotos as LWP } from '@/modules/marketplace/types'
 import { ListingPhotoGallery } from './ListingPhotoGallery'
 import { ConditionBadge } from './ConditionBadge'
 import { ListingActions } from './ListingActions'
+import { ShareButton } from './ShareButton'
+import { SellerCard } from '../seller/SellerCard'
+import { SaveButton } from '../ui/SaveButton'
+import { ReportButton } from '../ui/ReportButton'
+import { ListingCard } from './ListingCard'
 
 /* ---------- helpers ---------- */
 
@@ -14,6 +23,14 @@ function formatPrice(price: number | string | { toString(): string }): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(num)
+}
+
+function formatDate(date: Date | string): string {
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
 const categoryLabels: Record<ListingCategory, string> = {
@@ -57,38 +74,101 @@ const fulfillmentIcons: Record<FulfillmentType, React.ReactNode> = {
 
 interface ListingDetailProps {
   listing: ListingWithPhotos
-  initialSaved?: boolean
 }
 
-export function ListingDetail({ listing }: ListingDetailProps) {
+export async function ListingDetail({ listing }: ListingDetailProps) {
   const location = [listing.city, listing.state].filter(Boolean).join(', ')
 
-  const specs: { label: string; value: string }[] = []
-  if (listing.brand) specs.push({ label: 'Brand', value: listing.brand })
-  if (listing.modelName) specs.push({ label: 'Model', value: listing.modelName })
-  if (listing.year) specs.push({ label: 'Year', value: String(listing.year) })
+  // Item specifics grid data
+  const specs: { label: string; value: string }[] = [
+    { label: 'Category', value: categoryLabels[listing.category] },
+    ...(['new', 'like_new', 'good', 'fair', 'poor'].includes(listing.condition)
+      ? [{ label: 'Condition', value: listing.condition.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()) }]
+      : []),
+    ...(listing.brand ? [{ label: 'Brand', value: listing.brand }] : []),
+    ...(listing.modelName ? [{ label: 'Model', value: listing.modelName }] : []),
+    ...(listing.year ? [{ label: 'Year', value: String(listing.year) }] : []),
+  ]
+
+  // Check if current user has saved this listing
+  const session = await auth()
+  const userId = session?.user?.id
+  let initialSaved = false
+  if (userId) {
+    const save = await db.listingSave.findUnique({
+      where: { userId_listingId: { userId, listingId: listing.id } },
+      select: { id: true },
+    })
+    initialSaved = save !== null
+  }
+
+  // Related listings (same category, excluding this one)
+  const relatedRaw = await db.listing.findMany({
+    where: {
+      status: 'active',
+      category: listing.category,
+      NOT: { id: listing.id },
+    },
+    include: listingInclude,
+    orderBy: { createdAt: 'desc' },
+    take: 4,
+  })
+  const related = relatedRaw as LWP[]
+
+  const isSold = listing.status === 'sold'
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
+
+      {/* ===== SOLD BANNER ===== */}
+      {isSold && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-orange-500/30 bg-orange-500/10 px-5 py-4">
+          <span className="inline-block rounded-full bg-orange-500 px-3 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
+            Sold
+          </span>
+          <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
+            This item has been marked as sold. It is no longer available.
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
         {/* ========== Left column ========== */}
         <div className="flex flex-col gap-6">
+
           {/* Photo gallery */}
           <ListingPhotoGallery photos={listing.photos} />
 
-          {/* Description */}
-          <section>
-            <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">Description</h2>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-muted)]">
-              {listing.description}
-            </p>
-          </section>
+          {/* Title */}
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">{listing.title}</h1>
 
-          {/* Specs grid */}
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[var(--color-dim)]">
+            <span className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              Posted {formatDate(listing.createdAt)}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Eye className="h-3.5 w-3.5" />
+              {listing.viewCount} {listing.viewCount === 1 ? 'view' : 'views'}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Bookmark className="h-3.5 w-3.5" />
+              {listing.saveCount} {listing.saveCount === 1 ? 'watcher' : 'watchers'}
+            </span>
+            {location && (
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                {location}
+              </span>
+            )}
+          </div>
+
+          {/* Item Specifics */}
           {specs.length > 0 && (
             <section>
               <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">
-                Specifications
+                Item Specifics
               </h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {specs.map((spec) => (
@@ -105,6 +185,14 @@ export function ListingDetail({ listing }: ListingDetailProps) {
               </div>
             </section>
           )}
+
+          {/* Description */}
+          <section>
+            <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">Description</h2>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-muted)]">
+              {listing.description}
+            </p>
+          </section>
 
           {/* Tags */}
           {listing.tags.length > 0 && (
@@ -123,19 +211,36 @@ export function ListingDetail({ listing }: ListingDetailProps) {
               </div>
             </section>
           )}
+
+          {/* Related listings */}
+          {related.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-lg font-semibold text-[var(--color-text)]">
+                More in {categoryLabels[listing.category]}
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {related.map((r) => (
+                  <ListingCard key={r.id} listing={r} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
-        {/* ========== Right column ========== */}
-        <div className="flex flex-col gap-4">
-          {/* Title */}
-          <h1 className="text-2xl font-bold text-[var(--color-text)]">{listing.title}</h1>
+        {/* ========== Right column (sticky sidebar) ========== */}
+        <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
 
           {/* Price */}
-          <div className="flex items-center gap-2">
-            <span className="text-3xl font-bold text-[var(--color-primary)]">
+          <div className="flex items-baseline gap-2">
+            <span
+              className={`text-3xl font-bold ${isSold ? 'text-[var(--color-dim)] line-through' : 'text-[var(--color-primary)]'}`}
+            >
               {formatPrice(listing.price)}
             </span>
-            {listing.acceptsOffers && (
+            {isSold && (
+              <span className="text-sm font-medium text-[var(--color-dim)]">(SOLD)</span>
+            )}
+            {listing.acceptsOffers && !isSold && (
               <span className="rounded-full bg-[var(--color-primary-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]">
                 OBO
               </span>
@@ -150,23 +255,16 @@ export function ListingDetail({ listing }: ListingDetailProps) {
             </span>
           </div>
 
-          {/* Location */}
-          {location && (
-            <div className="flex items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
-              <MapPin className="h-4 w-4 shrink-0" />
-              <span>{location}</span>
-            </div>
-          )}
+          {/* Primary action (Message / Edit) */}
+          <ListingActions
+            listingId={listing.id}
+            sellerId={listing.sellerId}
+            acceptsOffers={listing.acceptsOffers}
+            listingPrice={parseFloat(String(listing.price))}
+            listingSlug={listing.slug}
+          />
 
-          {/* View count */}
-          <div className="flex items-center gap-1.5 text-sm text-[var(--color-dim)]">
-            <Eye className="h-4 w-4 shrink-0" />
-            <span>
-              {listing.viewCount} {listing.viewCount === 1 ? 'view' : 'views'}
-            </span>
-          </div>
-
-          {/* Fulfillment info */}
+          {/* Fulfillment */}
           <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
             {fulfillmentIcons[listing.fulfillment]}
             <div className="flex flex-col">
@@ -184,14 +282,20 @@ export function ListingDetail({ listing }: ListingDetailProps) {
             </div>
           </div>
 
-          {/* Action buttons */}
-          <ListingActions
-            listingId={listing.id}
-            sellerId={listing.sellerId}
-            acceptsOffers={listing.acceptsOffers}
-            listingPrice={parseFloat(String(listing.price))}
-            listingSlug={listing.slug}
-          />
+          {/* Save / Share / Report action row */}
+          <div className="flex items-center gap-2">
+            <SaveButton
+              listingId={listing.id}
+              initialSaved={initialSaved}
+              saveCount={listing.saveCount}
+              variant="detail"
+            />
+            <ShareButton slug={listing.slug} title={listing.title} />
+            <ReportButton listingId={listing.id} />
+          </div>
+
+          {/* Seller card */}
+          <SellerCard seller={listing.seller} />
         </div>
       </div>
     </div>
