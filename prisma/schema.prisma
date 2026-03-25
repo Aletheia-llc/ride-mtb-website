@@ -118,6 +118,8 @@ model User {
   manufacturerPicks  ManufacturerPick[]
   manufacturerScores ManufacturerEventScore[]
   eventPreference    UserEventPreference?
+  facilityReviews FacilityReview[]
+  facilityPhotos  FacilityPhoto[]
 
   @@map("users")
 }
@@ -2975,6 +2977,18 @@ enum ResultStatus {
   @@map("ResultStatus")
 }
 
+enum FacilityType {
+  SKATEPARK
+  PUMPTRACK
+  BIKEPARK
+}
+
+enum FacilityPhotoStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model CoachingClinic {
   id          String       @id @default(cuid())
   coachId     String
@@ -2998,5 +3012,81 @@ model CoachingClinic {
   @@index([startDate, status])
   @@index([latitude, longitude])
   @@map("coaching_clinics")
+}
+
+// ============================================================
+// PARKS FACILITY TRACKER
+// ============================================================
+
+model Facility {
+  id            String       @id @default(cuid())
+  osmId         String       @unique
+  type          FacilityType
+  name          String
+  slug          String       @unique
+  latitude      Float
+  longitude     Float
+  address       String?
+  city          String?
+  state         String?
+  stateSlug     String?
+  operator      String?
+  openingHours  String?
+  surface       String?
+  website       String?
+  phone         String?
+  lit           Boolean?
+  fee           Boolean?
+  description   String?
+  metadata      Json?
+  lastSyncedAt  DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  reviews       FacilityReview[]
+  photos        FacilityPhoto[]
+
+  @@index([type, stateSlug])
+  @@index([stateSlug])
+}
+
+model FacilityReview {
+  id         String   @id @default(cuid())
+  facilityId String
+  userId     String
+  rating     Int
+  body       String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, userId])
+  @@index([facilityId])
+}
+
+model FacilityPhoto {
+  id         String              @id @default(cuid())
+  facilityId String
+  userId     String
+  storageKey String
+  caption    String?
+  status     FacilityPhotoStatus @default(PENDING)
+  aiVerdict  String?
+  createdAt  DateTime            @default(now())
+
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([facilityId, status])
+  @@index([status, createdAt])
+}
+
+model SyncState {
+  id             String    @id @default("parks-sync")
+  syncInProgress Boolean   @default(false)
+  lastSyncedAt   DateTime?
+  lastSyncResult Json?
 }
 
