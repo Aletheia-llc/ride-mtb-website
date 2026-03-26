@@ -101,6 +101,22 @@ function buildSlug(name, suffix) {
   return `${base}-${safeSuffix}`
 }
 
+async function buildUniqueSystemSlug(pool, managingOrg) {
+  const base = buildSlug(managingOrg, 'usfs')
+  const { rows } = await pool.query(
+    `SELECT slug FROM trail_systems WHERE slug LIKE $1`,
+    [base + '%'],
+  )
+  if (!rows.length) return base
+  const existing = new Set(rows.map(r => r.slug))
+  if (!existing.has(base)) return base
+  for (let i = 2; i <= 99; i++) {
+    const candidate = `${base}-${i}`
+    if (!existing.has(candidate)) return candidate
+  }
+  throw new Error(`Too many slug collisions for "${base}"`)
+}
+
 function convertCoordinates(geojsonCoords) {
   return geojsonCoords.map(([lng, lat, ele]) => [lat, lng, ele ?? 0])
 }
@@ -316,7 +332,7 @@ async function main() {
           console.log(`    ✓ Matched (${confidence}): "${system.name}"`)
           summary.systemsEnriched++
         } else {
-          const slug = buildSlug(managingOrg, 'usfs')
+          const slug = await buildUniqueSystemSlug(pool, managingOrg)
           const res = await pool.query(
             `INSERT INTO trail_systems (
                id, name, slug, state, country, latitude, longitude,
