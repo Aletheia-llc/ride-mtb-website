@@ -420,6 +420,10 @@ export async function searchEvents(params: SearchEventsParams): Promise<{ events
 
 export async function getEventsNearLocation(params: NearMeParams): Promise<EventSearchResult[]> {
   const limit = params.limit ?? 20
+  // Bounding-box pre-filter: avoids Haversine on every row by using the lat/lon B-tree index.
+  // 1° latitude ≈ 111 km; 1° longitude ≈ 111 * cos(lat) km.
+  const latDelta = params.radiusKm / 111.0
+  const lonDelta = params.radiusKm / (111.0 * Math.cos((params.latitude * Math.PI) / 180))
   const result = await pool.query<EventSearchResult>(`
     SELECT id, slug, title, "startDate", "eventType"::text, status::text, city, state,
            "coverImageUrl", "isFree", "rsvpCount"
@@ -428,6 +432,8 @@ export async function getEventsNearLocation(params: NearMeParams): Promise<Event
       AND latitude IS NOT NULL
       AND longitude IS NOT NULL
       AND "startDate" >= NOW()
+      AND latitude  BETWEEN $1 - $5 AND $1 + $5
+      AND longitude BETWEEN $2 - $6 AND $2 + $6
       AND (
         6371 * acos(
           cos(radians($1)) * cos(radians(latitude)) *
@@ -437,7 +443,7 @@ export async function getEventsNearLocation(params: NearMeParams): Promise<Event
       ) <= $3
     ORDER BY "startDate" ASC
     LIMIT $4
-  `, [params.latitude, params.longitude, params.radiusKm, limit])
+  `, [params.latitude, params.longitude, params.radiusKm, limit, latDelta, lonDelta])
   return result.rows
 }
 
