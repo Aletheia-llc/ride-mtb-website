@@ -7,6 +7,8 @@ const METERS_TO_FEET = 3.28084
 const ELEVATION_NOISE_FT = 3
 const MIN_DISTANCE_MILES = 0.05
 
+export const IMPORT_SOURCE = 'USFS'
+
 export type GpsPoint = [number, number, number] // [lat, lng, ele_meters]
 
 export interface TrailStats {

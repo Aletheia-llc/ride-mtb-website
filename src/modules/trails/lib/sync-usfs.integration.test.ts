@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import {
   normalizeSystemName,
   buildExternalId,
   convertCoordinates,
   calculateStats,
   qualityCheck,
+  IMPORT_SOURCE,
 } from './usfs-utils'
 
 // Fixture: 3 trails from one small forest (matches USFS GeoJSON structure)
@@ -47,32 +48,31 @@ describe('sync-usfs integration (mocked DB)', () => {
       const points = convertCoordinates(f.geometry.coordinates)
       return calculateStats(points).distance
     })
+    // Each fixture trail spans ~0.02° lat/lng — should be roughly 1-2 miles each
+    distances.forEach(d => {
+      expect(d).toBeGreaterThan(0.5)
+      expect(d).toBeLessThan(3)
+    })
     const totalMiles = distances.reduce((sum, d) => sum + d, 0)
-    const expectedTotal = distances[0] + distances[1] + distances[2]
-    expect(totalMiles).toBeCloseTo(expectedTotal, 8)
-    // Sanity check: reasonable range
-    expect(totalMiles).toBeGreaterThan(0)
-    expect(totalMiles).toBeLessThan(10)
+    expect(totalMiles).toBeGreaterThan(1.5)
+    expect(totalMiles).toBeLessThan(9)
   })
 
-  it('importSource constant is USFS for all imported records', () => {
-    // The sync script sets importSource = 'USFS' for all records.
-    // Verify the expected value matches the spec.
-    const IMPORT_SOURCE = 'USFS'
+  it('importSource is USFS and externalId follows MANAGING_ORG#TRAIL_NO format', () => {
     expect(IMPORT_SOURCE).toBe('USFS')
-    // ExternalId format combines MANAGING_ORG and TRAIL_NO with #
     FIXTURE_FEATURES.forEach(f => {
       const externalId = buildExternalId(f.properties.MANAGING_ORG, f.properties.TRAIL_NO)
-      expect(externalId).toContain(f.properties.MANAGING_ORG)
-      expect(externalId).toContain('#')
-      expect(externalId).toContain(f.properties.TRAIL_NO)
+      expect(externalId).toBe(`${f.properties.MANAGING_ORG}#${f.properties.TRAIL_NO}`)
     })
   })
 
-  it('system externalId is just the managing org name', () => {
-    // TrailSystem externalId = MANAGING_ORG (no # suffix)
-    expect(FIXTURE_ORG).toBe('Green Mountain National Forest')
-    expect(FIXTURE_ORG).not.toContain('#')
+  it('system externalId is the raw managing org name (no # separator)', () => {
+    // TrailSystem.externalId = MANAGING_ORG directly (no trail number suffix)
+    // The # separator is only used for trail-level externalIds
+    const trailExternalId = buildExternalId(FIXTURE_ORG, '1')
+    expect(trailExternalId).toContain('#')
+    expect(FIXTURE_ORG).not.toContain('#') // system ID has no # — it's just the org name
+    expect(normalizeSystemName(FIXTURE_ORG)).not.toBe(FIXTURE_ORG) // normalized != raw
   })
 
   it('idempotency: re-processing same features produces same external IDs', () => {
