@@ -1,4 +1,5 @@
 import 'server-only'
+import '@/lib/env' // validate required env vars at startup
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@/generated/prisma/client'

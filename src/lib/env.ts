@@ -2,9 +2,9 @@ import 'server-only'
 import { z } from 'zod'
 
 const envSchema = z.object({
-  // Database
-  DATABASE_URL: z.string().url(),
-  DATABASE_POOLED_URL: z.string().url(),
+  // Database — at least one of these must be set (validated in client.ts)
+  DATABASE_DIRECT_URL: z.string().url().optional(),
+  DATABASE_POOLED_URL: z.string().url().optional(),
 
   // Auth
   AUTH_SECRET: z.string().min(32),
