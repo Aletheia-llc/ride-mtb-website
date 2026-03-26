@@ -2,8 +2,9 @@ import 'server-only'
 import { db } from '@/lib/db/client'
 import type { FeedItem } from '@/modules/feed/types'
 
-export async function getRideLogFeedItems(limit: number): Promise<FeedItem[]> {
+export async function getRideLogFeedItems(limit: number, followedUserIds?: string[]): Promise<FeedItem[]> {
   const logs = await db.rideLog.findMany({
+    where: followedUserIds ? { userId: { in: followedUserIds } } : undefined,
     take: limit,
     orderBy: { createdAt: 'desc' },
     select: {

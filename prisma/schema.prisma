@@ -120,6 +120,8 @@ model User {
   eventPreference    UserEventPreference?
   facilityReviews FacilityReview[]
   facilityPhotos  FacilityPhoto[]
+  following       UserFollow[]     @relation("Follower")
+  followers       UserFollow[]     @relation("Following")
 
   @@map("users")
 }
@@ -3097,5 +3099,20 @@ model SyncState {
   lastSyncResult Json?
 
   @@map("sync_state")
+}
+
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("user_follows")
 }
 

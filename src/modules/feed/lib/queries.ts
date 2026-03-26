@@ -9,8 +9,19 @@ import { getArticleFeedItems } from '@/modules/editorial/lib/feed'
 
 const ITEMS_PER_SOURCE = 50
 
-export async function getFeedCandidates(page: number = 1): Promise<FeedItem[]> {
+export async function getFeedCandidates(page: number = 1, userId?: string): Promise<FeedItem[]> {
   const { skip } = paginate(page, ITEMS_PER_SOURCE)
+
+  let followedUserIds: string[] | undefined
+  if (userId) {
+    const follows = await db.userFollow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    })
+    if (follows.length > 0) {
+      followedUserIds = follows.map((f) => f.followingId)
+    }
+  }
 
   const [courses, trailSystems, threads, events, reviews, listings, rideLogs, trailReviews, creatorVideos, articles] = await Promise.all([
     db.learnCourse.findMany({
@@ -76,7 +87,7 @@ export async function getFeedCandidates(page: number = 1): Promise<FeedItem[]> {
         location: true, createdAt: true,
       },
     }),
-    getRideLogFeedItems(ITEMS_PER_SOURCE),
+    getRideLogFeedItems(ITEMS_PER_SOURCE, followedUserIds),
     getTrailReviewFeedItems(ITEMS_PER_SOURCE),
     getCreatorVideoFeedItems(ITEMS_PER_SOURCE),
     getArticleFeedItems(ITEMS_PER_SOURCE),
