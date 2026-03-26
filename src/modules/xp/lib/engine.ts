@@ -10,12 +10,39 @@ export interface GrantXPInput {
   refId: string
 }
 
+const STREAK_MILESTONES = [3, 7, 14, 30] as const
+
 function getStreakMultiplier(streakDays: number): number {
   let multiplier = 1.0
   for (const [threshold, mult] of Object.entries(STREAK_MULTIPLIERS)) {
     if (streakDays >= Number(threshold)) multiplier = mult
   }
   return multiplier
+}
+
+function computeNewStreak(lastGrantAt: Date | null, currentStreak: number): number {
+  if (!lastGrantAt) return 1
+
+  const now = new Date()
+  const todayUTC = now.toISOString().slice(0, 10)
+  const lastDateUTC = lastGrantAt.toISOString().slice(0, 10)
+
+  if (lastDateUTC === todayUTC) {
+    // Already earned XP today — streak unchanged
+    return currentStreak
+  }
+
+  const yesterday = new Date(now)
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+  const yesterdayUTC = yesterday.toISOString().slice(0, 10)
+
+  if (lastDateUTC === yesterdayUTC) {
+    // Consecutive day — increment streak
+    return currentStreak + 1
+  }
+
+  // Gap of 2+ days — reset
+  return 1
 }
 
 export async function grantXP(input: GrantXPInput): Promise<XpGrantResult> {
@@ -27,9 +54,14 @@ export async function grantXP(input: GrantXPInput): Promise<XpGrantResult> {
   }
 
   try {
-    const result = await db.$transaction(async (tx) => {
+    const { granted, points, newTotal, newStreak } = await db.$transaction(async (tx) => {
       const aggregate = await tx.xpAggregate.findUnique({ where: { userId } })
-      const streakMultiplier = getStreakMultiplier(aggregate?.streakDays ?? 0)
+
+      const newStreak = computeNewStreak(
+        aggregate?.lastGrantAt ?? null,
+        aggregate?.streakDays ?? 0,
+      )
+      const streakMultiplier = getStreakMultiplier(newStreak)
       const total = Math.round(basePoints * streakMultiplier)
 
       await tx.xpGrant.create({
@@ -38,21 +70,54 @@ export async function grantXP(input: GrantXPInput): Promise<XpGrantResult> {
 
       await tx.$executeRaw`
         INSERT INTO xp_aggregates (id, "userId", "totalXp", "moduleBreakdown", "streakDays", "lastGrantAt", "updatedAt")
-        VALUES (gen_random_uuid(), ${userId}, ${total}, jsonb_build_object(${module}::text, ${total}), 0, NOW(), NOW())
+        VALUES (gen_random_uuid(), ${userId}, ${total}, jsonb_build_object(${module}::text, ${total}), ${newStreak}, NOW(), NOW())
         ON CONFLICT ("userId") DO UPDATE SET
           "totalXp" = xp_aggregates."totalXp" + ${total},
           "moduleBreakdown" = xp_aggregates."moduleBreakdown" ||
             jsonb_build_object(${module}::text,
               COALESCE((xp_aggregates."moduleBreakdown"->>${module})::int, 0) + ${total}),
+          "streakDays" = ${newStreak},
           "lastGrantAt" = NOW(),
           "updatedAt" = NOW()
       `
 
       const updated = await tx.xpAggregate.findUnique({ where: { userId } })
-      return { granted: true, points: total, newTotal: updated?.totalXp ?? total }
+      return { granted: true, points: total, newTotal: updated?.totalXp ?? total, newStreak }
     })
 
-    return result
+    // Award streak milestone bonus (idempotent via unique refId)
+    if (STREAK_MILESTONES.includes(newStreak as typeof STREAK_MILESTONES[number])) {
+      const year = new Date().getUTCFullYear()
+      const bonusRefId = `streak_${newStreak}_${year}`
+      const bonusPoints = XP_VALUES.streak_bonus
+
+      try {
+        await db.xpGrant.create({
+          data: {
+            userId,
+            event: 'streak_bonus',
+            module: 'forum',
+            points: bonusPoints,
+            multiplier: 1.0,
+            total: bonusPoints,
+            refId: bonusRefId,
+          },
+        })
+        await db.$executeRaw`
+          UPDATE xp_aggregates SET
+            "totalXp" = "totalXp" + ${bonusPoints},
+            "moduleBreakdown" = "moduleBreakdown" ||
+              jsonb_build_object('forum'::text,
+                COALESCE(("moduleBreakdown"->>'forum')::int, 0) + ${bonusPoints}),
+            "updatedAt" = NOW()
+          WHERE "userId" = ${userId}
+        `
+      } catch {
+        // Duplicate — bonus already granted for this milestone this year
+      }
+    }
+
+    return { granted, points, newTotal }
   } catch (error: unknown) {
     if (error !== null && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       const existing = await db.xpAggregate.findUnique({ where: { userId } })

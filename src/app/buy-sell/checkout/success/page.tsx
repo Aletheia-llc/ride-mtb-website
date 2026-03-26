@@ -15,8 +15,10 @@ export default async function CheckoutSuccessPage({
   searchParams,
 }: CheckoutSuccessPageProps) {
   const sp = await searchParams
+  // Accept either our own ?paymentIntentId= param or Stripe's redirect ?payment_intent= param
   const paymentIntentId =
-    typeof sp.paymentIntentId === 'string' ? sp.paymentIntentId : undefined
+    (typeof sp.paymentIntentId === 'string' ? sp.paymentIntentId : undefined) ??
+    (typeof sp.payment_intent === 'string' ? sp.payment_intent : undefined)
 
   if (!paymentIntentId) {
     notFound()

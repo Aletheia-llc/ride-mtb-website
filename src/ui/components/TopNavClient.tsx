@@ -20,7 +20,7 @@ const NAV_LINKS: { label: string; href: string; Icon: React.ComponentType<{ size
   { label: 'Forum', href: '/forum', Icon: MessageSquare, megaKey: 'forum' },
   { label: 'Bikes', href: '/bikes', Icon: Bike, megaKey: 'bikes' },
   { label: 'Fantasy', href: '/fantasy', Icon: Trophy, megaKey: null },
-  { label: 'Buy/Sell', href: '/buy-sell', Icon: ShoppingBag, megaKey: 'marketplace' },
+  { label: 'Marketplace', href: '/marketplace', Icon: ShoppingBag, megaKey: 'marketplace' },
 ]
 
 interface TopNavClientProps {
@@ -77,7 +77,7 @@ export function TopNavClient({ session, features }: TopNavClientProps) {
 
           <nav className="hidden md:flex items-center justify-center gap-0.5">
             {NAV_LINKS
-              .filter(({ href }) => href !== '/buy-sell' || features.marketplace)
+              .filter(({ href }) => href !== '/marketplace' || features.marketplace)
               .map(({ label, href, Icon, megaKey }) => {
               const isActive = megaKey !== null && activeNav === megaKey
               return (

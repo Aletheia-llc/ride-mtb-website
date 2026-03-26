@@ -373,7 +373,7 @@ export async function handleResultsScore(payload: { eventId: string }) {
       [eventId]
     )
 
-    console.log(`[fantasy.results.score] Scored event ${eventId}: ${allScores.length} teams`)
+    console.info(`[fantasy.results.score] Scored event ${eventId}: ${allScores.length} teams`)
 
     await client.query('COMMIT')
   } catch (err) {

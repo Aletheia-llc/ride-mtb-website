@@ -29,6 +29,16 @@ export interface UserProfileData {
     streakDays: number
     lastGrantAt: Date | null
   } | null
+  userBadges: Array<{
+    badge: {
+      id: string
+      name: string
+      slug: string
+      description: string
+      icon: string
+      color: string
+    }
+  }>
   _count: {
     posts: number
     trailReviews: number

@@ -4,7 +4,7 @@ import Image from 'next/image'
 import {
   MessageSquare, TrendingUp, Calendar, Mail,
   Award, FilePlus, ThumbsUp, TrendingUp as TrendingUpIcon2,
-  MessageCircle, MessagesSquare,
+  MessageCircle, MessagesSquare, Star, Bike, Map,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { auth } from '@/lib/auth/config'
@@ -12,6 +12,7 @@ import { auth } from '@/lib/auth/config'
 import { getForumUserProfile, getUserPosts, getBookmarkedPosts } from '@/modules/forum/lib/queries'
 // eslint-disable-next-line no-restricted-imports
 import { ForumThreadCard } from '@/modules/forum/components/ForumThreadCard'
+import { XPOverview } from '@/modules/profile'
 
 import type { Metadata } from 'next'
 
@@ -107,6 +108,24 @@ export default async function ForumUserProfilePage({ params }: PageProps) {
               <MessageSquare className="h-4 w-4" />
               {user._count.posts} posts
             </span>
+            {user._count.trailReviews > 0 && (
+              <span className="flex items-center gap-1">
+                <Map className="h-4 w-4" />
+                {user._count.trailReviews} trail review{user._count.trailReviews !== 1 ? 's' : ''}
+              </span>
+            )}
+            {user._count.rideLogs > 0 && (
+              <span className="flex items-center gap-1">
+                <Bike className="h-4 w-4" />
+                {user._count.rideLogs} ride{user._count.rideLogs !== 1 ? 's' : ''}
+              </span>
+            )}
+            {user._count.gearReviews > 0 && (
+              <span className="flex items-center gap-1">
+                <Star className="h-4 w-4" />
+                {user._count.gearReviews} gear review{user._count.gearReviews !== 1 ? 's' : ''}
+              </span>
+            )}
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               Joined {joinDate}
@@ -145,6 +164,21 @@ export default async function ForumUserProfilePage({ params }: PageProps) {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* XP */}
+      {user.xpAggregate && (
+        <div className="mb-8">
+          <h2 className="mb-3 text-lg font-bold text-[var(--color-text)]">XP & Progress</h2>
+          <XPOverview
+            xpAggregate={{
+              totalXp: user.xpAggregate.totalXp,
+              moduleBreakdown: (user.xpAggregate.moduleBreakdown ?? {}) as Record<string, number>,
+              streakDays: user.xpAggregate.streakDays,
+              lastGrantAt: null,
+            }}
+          />
         </div>
       )}
 

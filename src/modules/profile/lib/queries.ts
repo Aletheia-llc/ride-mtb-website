@@ -36,6 +36,21 @@ export async function getUserProfile(userId: string): Promise<UserProfileData | 
           lastGrantAt: true,
         },
       },
+      userBadges: {
+        select: {
+          badge: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              description: true,
+              icon: true,
+              color: true,
+            },
+          },
+        },
+        orderBy: { id: 'asc' },
+      },
       _count: {
         select: {
           posts: true,
@@ -143,6 +158,21 @@ export async function getUserByUsername(username: string): Promise<UserProfileDa
           streakDays: true,
           lastGrantAt: true,
         },
+      },
+      userBadges: {
+        select: {
+          badge: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              description: true,
+              icon: true,
+              color: true,
+            },
+          },
+        },
+        orderBy: { id: 'asc' },
       },
       _count: {
         select: {

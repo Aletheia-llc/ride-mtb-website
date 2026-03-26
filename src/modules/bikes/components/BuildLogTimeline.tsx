@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useActionState } from 'react'
 import { addBuildLogEntry } from '../actions/addBuildLogEntry'
 
@@ -26,7 +27,7 @@ export function BuildLogTimeline({ bikeId, entries }: { bikeId: string; entries:
                 <span className="text-xs text-[var(--color-text-muted)]">{new Date(entry.entryDate).toLocaleDateString()}</span>
               </div>
               {entry.description && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{entry.description}</p>}
-              {entry.imageUrl && <img src={entry.imageUrl} alt={entry.title} className="mt-2 rounded h-32 object-cover" />}
+              {entry.imageUrl && <Image src={entry.imageUrl} alt={entry.title} width={400} height={128} className="mt-2 rounded h-32 object-cover" unoptimized />}
             </div>
           </div>
         ))}

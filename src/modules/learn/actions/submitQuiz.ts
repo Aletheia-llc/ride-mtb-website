@@ -95,7 +95,7 @@ export async function submitQuiz(
     )
 
     // Save the attempt to the database
-    const attempt = await submitQuizAttempt({
+    const { attempt, wasImproved } = await submitQuizAttempt({
       userId: user.id,
       quizId,
       score: result.score,
@@ -104,7 +104,7 @@ export async function submitQuiz(
       answers: result.answers,
     })
 
-    // Grant ecosystem-wide XP (idempotent via refId)
+    // Grant XP for this attempt (every completion)
     await grantXP({
       userId: user.id,
       event: 'learn_quiz_completed',
@@ -112,7 +112,17 @@ export async function submitQuiz(
       refId: attempt.id,
     })
 
-    // Check for course completion if quiz belongs to a module with a course
+    // Bonus XP when a retake beats the previous best tier
+    if (wasImproved) {
+      await grantXP({
+        userId: user.id,
+        event: 'learn_quiz_improved',
+        module: 'learn',
+        refId: `improved_${attempt.id}`,
+      })
+    }
+
+    // Check for course/module completion if quiz belongs to a module
     let courseCompleted = false
     let certificateTier: string | null = null
 
@@ -120,6 +130,14 @@ export async function submitQuiz(
       const mod = await db.learnModule.findUnique({
         where: { id: quiz.moduleId! },
         select: { courseId: true },
+      })
+
+      // Module completion XP (idempotent — fires once per module per user)
+      await grantXP({
+        userId: user.id,
+        event: 'learn_module_completed',
+        module: 'learn',
+        refId: quiz.moduleId,
       })
 
       if (mod?.courseId) {

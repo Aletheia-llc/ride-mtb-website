@@ -151,6 +151,7 @@ export async function submitQuizAttempt({
       where: { userId_quizId: { userId, quizId } },
     })
 
+    let wasImproved = false
     if (!existing) {
       await tx.learnProgress.create({
         data: { userId, quizId, bestTier: tier },
@@ -160,9 +161,10 @@ export async function submitQuizAttempt({
         where: { id: existing.id },
         data: { bestTier: tier },
       })
+      wasImproved = true
     }
 
-    return attempt
+    return { attempt, wasImproved }
   })
 }
 

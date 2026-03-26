@@ -2,9 +2,10 @@ import type { LucideIcon } from 'lucide-react'
 import {
   GraduationCap, BookOpen, ClipboardList, Trophy, LayoutDashboard,
   MessageSquare, LayoutList, Users, Search, Bookmark, PenLine, CalendarDays,
-  Map, Compass, MapPin,
+  Map, Compass, MapPin, Newspaper, Zap,
   Bike, Sliders, Wrench, Star, History,
   ShoppingBag, Tag, PlusCircle, Heart,
+  Users2,
 } from 'lucide-react'
 
 export interface MegaNavLink {
@@ -58,6 +59,13 @@ export const MEGA_NAV_CONFIG: Record<string, MegaNavEntry> = {
           { icon: GraduationCap, label: 'My Certificates', href: '/dashboard' },
         ],
       },
+      {
+        label: 'Live Instruction',
+        links: [
+          { icon: Users2, label: 'Find a Coach', href: '/coaching' },
+          { icon: CalendarDays, label: 'Coaching Clinics', href: '/coaching/clinics' },
+        ],
+      },
     ],
   },
   forum: {
@@ -77,6 +85,7 @@ export const MEGA_NAV_CONFIG: Record<string, MegaNavEntry> = {
           { icon: Users, label: 'Communities', href: '/forum/communities' },
           { icon: Search, label: 'Search', href: '/forum/search' },
           { icon: CalendarDays, label: 'Events', href: '/events' },
+          { icon: Newspaper, label: 'MTB News', href: '/mtb-news' },
         ],
       },
       {
@@ -103,6 +112,7 @@ export const MEGA_NAV_CONFIG: Record<string, MegaNavEntry> = {
         links: [
           { icon: Compass, label: 'Explore Systems', href: '/trails/explore' },
           { icon: MapPin, label: 'Trail Map', href: '/trails/map' },
+          { icon: Zap, label: 'Parks & Facilities', href: '/parks' },
         ],
       },
     ],

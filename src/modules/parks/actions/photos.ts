@@ -126,6 +126,10 @@ export async function uploadFacilityPhoto(
 }
 
 export async function getFacilityPhotos(facilityId: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return []
+
   const supabase = getAdminSupabase()
   const photos = await db.facilityPhoto.findMany({
     where: { facilityId, status: FacilityPhotoStatus.APPROVED },

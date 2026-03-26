@@ -85,7 +85,7 @@ export async function handlePricesReveal(payload: { eventId: string }) {
             body: content,
           },
         })
-        console.log(
+        console.info(
           `[fantasy.prices.reveal] Posted ownership breakdown to thread ${forumThreadId}`
         )
       } catch (err) {
@@ -94,7 +94,7 @@ export async function handlePricesReveal(payload: { eventId: string }) {
       }
     }
 
-    console.log(
+    console.info(
       `[fantasy.prices.reveal] Event ${eventId}: ownership finalized for ${picksRes.rows.length} riders`
     )
   } finally {

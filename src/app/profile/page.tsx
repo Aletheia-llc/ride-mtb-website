@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/guards'
 import { Card } from '@/ui/components'
-import { ProfileHeader, XPOverview, ActivityFeed, ProfileStats } from '@/modules/profile'
+import { ProfileHeader, XPOverview, BadgesSection, ActivityFeed, ProfileStats } from '@/modules/profile'
 // eslint-disable-next-line no-restricted-imports
 import { getUserProfile, getRecentActivity } from '@/modules/profile/lib/queries'
 
@@ -24,6 +24,8 @@ export default async function ProfilePage() {
       <ProfileStats counts={profile._count} />
 
       <XPOverview xpAggregate={profile.xpAggregate} />
+
+      <BadgesSection userBadges={profile.userBadges} />
 
       <ActivityFeed activities={activities} />
     </div>

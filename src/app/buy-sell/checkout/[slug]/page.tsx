@@ -3,7 +3,6 @@ import { requireAuth } from '@/lib/auth/guards'
 import { getListingDetail } from '@/modules/marketplace/actions/listings'
 import { createPaymentIntent } from '@/modules/marketplace/actions/stripe-connect'
 import { CheckoutForm } from '@/modules/marketplace/components/checkout/CheckoutForm'
-import { OrderSummary } from '@/modules/marketplace/components/checkout/OrderSummary'
 import type { CheckoutData } from '@/modules/marketplace/types'
 
 interface CheckoutPageProps {
@@ -65,6 +64,8 @@ export default async function CheckoutPage({
     platformFee,
     sellerPayout,
     totalCharged,
+    clientSecret,
+    paymentIntentId,
   }
 
   return (
@@ -72,19 +73,7 @@ export default async function CheckoutPage({
       <h1 className="mb-8 text-2xl font-bold text-[var(--color-text)]">
         Checkout
       </h1>
-      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-        <CheckoutForm checkoutData={checkoutData} />
-        <aside>
-          <OrderSummary
-            salePrice={salePrice}
-            shippingCost={shippingCost}
-            totalCharged={totalCharged}
-          />
-        </aside>
-      </div>
-      {/* paymentIntentId passed via hidden input or stored for reference */}
-      <input type="hidden" name="paymentIntentId" value={paymentIntentId} />
-      <input type="hidden" name="clientSecret" value={clientSecret} />
+      <CheckoutForm checkoutData={checkoutData} />
     </div>
   )
 }

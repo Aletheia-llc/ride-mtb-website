@@ -41,13 +41,21 @@ export function UnifiedMap({
     if (!containerRef.current) return
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: MAPBOX_STYLES[mapStyle],
-      center,
-      zoom,
-      antialias: true,
-    })
+    let map: mapboxgl.Map
+    try {
+      map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: MAPBOX_STYLES[mapStyle],
+        center,
+        zoom,
+        antialias: true,
+      })
+    } catch (err) {
+      // Map initialization can fail in environments without WebGL (e.g. headless CI).
+      // Catch silently so the LayerToggle UI still renders.
+      console.warn('[UnifiedMap] Failed to initialize map:', err)
+      return
+    }
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')
     map.on('load', () => {

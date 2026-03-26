@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { AlertTriangle, FileText, MessageSquare } from 'lucide-react'
 import { auth } from '@/lib/auth/config'
 import { db } from '@/lib/db/client'
+import { ModReportActions } from '@/modules/forum/components/ModReportActions'
 
 export const metadata: Metadata = {
   title: 'Reports Queue | Forum Admin | Ride MTB',
@@ -38,14 +39,14 @@ export default async function ForumReportsPage({ searchParams }: PageProps) {
             id: true,
             title: true,
             slug: true,
-            author: { select: { username: true } },
+            author: { select: { id: true, username: true } },
           },
         },
         comment: {
           select: {
             id: true,
             body: true,
-            author: { select: { username: true } },
+            author: { select: { id: true, username: true } },
           },
         },
       },
@@ -121,14 +122,16 @@ export default async function ForumReportsPage({ searchParams }: PageProps) {
           {reports.map((report) => {
             const contentPreview = getContentPreview(report)
             const targetLink = getTargetLink(report)
-            const targetType = report.comment ? 'COMMENT' : report.post ? 'POST' : 'USER'
+            const contentType = report.comment ? 'COMMENT' : report.post ? 'POST' : 'USER'
+            const modTargetType = report.post ? 'THREAD' : 'USER'
+            const authorId = report.post?.author.id ?? report.comment?.author.id ?? null
 
             return (
               <div key={report.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
                 <div className="mb-3 flex flex-wrap items-center gap-3">
                   <span className="flex items-center gap-1 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]">
-                    {targetType === 'POST' ? <FileText className="h-3.5 w-3.5" /> : <MessageSquare className="h-3.5 w-3.5" />}
-                    {targetType}
+                    {contentType === 'POST' ? <FileText className="h-3.5 w-3.5" /> : <MessageSquare className="h-3.5 w-3.5" />}
+                    {contentType}
                   </span>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(report.status)}`}>
                     {report.status}
@@ -167,6 +170,14 @@ export default async function ForumReportsPage({ searchParams }: PageProps) {
                       </Link>
                     )}
                   </div>
+                  {statusFilter === 'pending' && (
+                    <ModReportActions
+                      reportId={report.id}
+                      targetType={modTargetType as 'POST' | 'THREAD' | 'USER'}
+                      threadId={report.post?.id ?? null}
+                      authorId={authorId}
+                    />
+                  )}
                 </div>
               </div>
             )

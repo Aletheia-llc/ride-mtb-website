@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 interface LeaderboardEntry {
   rank: number
   userId?: string
@@ -30,7 +32,7 @@ export function LeaderboardTable({ entries, currentUserId }: { entries: Leaderbo
             <td className="py-2">
               <div className="flex items-center gap-2">
                 {e.avatarUrl
-                  ? <img src={e.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  ? <Image src={e.avatarUrl} alt="" width={24} height={24} className="w-6 h-6 rounded-full object-cover" unoptimized />
                   : <div className="w-6 h-6 rounded-full bg-[var(--color-bg-secondary)] flex items-center justify-center text-xs font-bold">
                       {(e.name ?? e.username ?? '?')[0].toUpperCase()}
                     </div>

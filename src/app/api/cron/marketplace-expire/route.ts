@@ -7,8 +7,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { expireListings } = await import('@/modules/marketplace/actions/maintenance')
-    const result = await expireListings()
+    const { expireListingsInternal } = await import('@/modules/marketplace/lib/maintenance')
+    const result = await expireListingsInternal()
     return NextResponse.json({ ...result, timestamp: new Date().toISOString() })
   } catch (err) {
     console.error('[cron/marketplace-expire]', err)

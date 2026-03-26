@@ -226,6 +226,8 @@ export type CheckoutData = {
   platformFee: number
   sellerPayout: number
   totalCharged: number
+  clientSecret: string
+  paymentIntentId: string
 }
 
 // ---------------------------------------------------------------------------

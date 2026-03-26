@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
+import { uniqueSlug } from '@/lib/slugify'
 import { grantXP } from '@/modules/xp'
 import { createPostRecord } from '../lib/queries'
 // eslint-disable-next-line no-restricted-imports
@@ -26,16 +27,6 @@ const createThreadSchema = z.object({
     .max(10000, 'Content must be at most 10,000 characters'),
 })
 
-function generateSlug(title: string): string {
-  const base = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 80)
-  const suffix = Math.random().toString(36).slice(2, 8)
-  return `${base}-${suffix}`
-}
 
 export type CreateThreadState = {
   errors: Record<string, string>
@@ -75,7 +66,10 @@ export async function createThread(
 
     await rateLimit({ userId: user.id, action: 'forum-create-thread', maxPerMinute: 3 })
 
-    const slug = generateSlug(title)
+    const slug = await uniqueSlug(title, async (candidate) => {
+      const existing = await db.post.findUnique({ where: { slug: candidate } })
+      return existing !== null
+    })
 
     const post = await createPostRecord({
       categoryId,

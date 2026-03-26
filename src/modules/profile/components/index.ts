@@ -1,5 +1,6 @@
 export { ProfileHeader } from './ProfileHeader'
 export { XPOverview } from './XPOverview'
+export { BadgesSection } from './BadgesSection'
 export { ActivityFeed } from './ActivityFeed'
 export { ProfileForm } from './ProfileForm'
 export { ProfileStats } from './ProfileStats'

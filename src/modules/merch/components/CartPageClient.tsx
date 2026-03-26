@@ -1,8 +1,11 @@
 'use client'
 
+import { useTransition, useState } from 'react'
 import Link from 'next/link'
 import { useActionState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { removeFromCart, updateCartQuantity } from '@/modules/merch/actions/cart'
+import { createMerchCheckoutSession } from '@/modules/merch/actions/checkout'
 
 type CartItem = {
   id: string
@@ -105,6 +108,20 @@ function CartLineItem({ item }: { item: CartItem }) {
 
 export function CartPageClient({ items }: CartPageClientProps) {
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+  const [isCheckingOut, startCheckout] = useTransition()
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+
+  const handleCheckout = () => {
+    setCheckoutError(null)
+    startCheckout(async () => {
+      try {
+        const url = await createMerchCheckoutSession()
+        window.location.href = url
+      } catch (err) {
+        setCheckoutError(err instanceof Error ? err.message : 'Checkout failed. Please try again.')
+      }
+    })
+  }
 
   if (items.length === 0) {
     return (
@@ -135,13 +152,23 @@ export function CartPageClient({ items }: CartPageClientProps) {
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
             Shipping and taxes calculated at checkout
           </p>
+          {checkoutError && (
+            <p className="mt-2 text-sm text-red-500">{checkoutError}</p>
+          )}
           <button
-            className="mt-4 w-full px-8 py-3 rounded font-semibold text-white"
+            onClick={handleCheckout}
+            disabled={isCheckingOut}
+            className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded px-8 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             style={{ background: 'var(--color-primary)' }}
-            disabled
-            title="Checkout coming soon"
           >
-            Checkout
+            {isCheckingOut ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Redirecting to checkout...
+              </>
+            ) : (
+              'Checkout'
+            )}
           </button>
         </div>
       </div>

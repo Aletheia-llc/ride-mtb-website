@@ -25,12 +25,13 @@ function calculatePlatformFee(amount: number): number {
  */
 export async function createTransaction(
   listingId: string,
-  buyerId: string,
+  _buyerId: string,
   amount: number,
   stripePaymentIntentId: string,
   fulfillmentType: string,
 ) {
-  await requireAuth()
+  const authUser = await requireAuth()
+  const buyerId = authUser.id!
 
   const listing = await db.listing.findUniqueOrThrow({
     where: { id: listingId },

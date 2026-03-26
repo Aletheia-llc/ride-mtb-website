@@ -22,7 +22,7 @@ if (!connectionString) {
 
 export const pool = globalForDb.pool ?? new Pool({
   connectionString,
-  max: 2,
+  max: 10,
 })
 
 const adapter = new PrismaPg(pool)

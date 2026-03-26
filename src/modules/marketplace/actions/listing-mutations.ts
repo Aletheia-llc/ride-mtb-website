@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { db } from '@/lib/db/client'
 import { requireAuth } from '@/lib/auth/guards'
+import { uniqueSlug } from '@/lib/slugify'
 import {
   ListingCategory,
   ItemCondition,
@@ -14,19 +15,6 @@ import type {
   UpdateListingInput,
   ListingWithPhotos,
 } from '@/modules/marketplace/types'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function slugify(text: string): string {
-  const base = text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  const suffix = Math.random().toString(36).substring(2, 8)
-  return `${base}-${suffix}`
-}
 
 // ---------------------------------------------------------------------------
 // Shared Prisma include
@@ -128,7 +116,10 @@ export async function createListing(data: CreateListingInput): Promise<ListingWi
   }
 
   const validated = parsed.data
-  const slug = slugify(validated.title)
+  const slug = await uniqueSlug(validated.title, async (candidate) => {
+    const existing = await db.listing.findUnique({ where: { slug: candidate } })
+    return existing !== null
+  })
 
   // Auto-approve listings from trusted or verified sellers; others go to moderation
   const sellerProfile = await db.sellerProfile.findUnique({
@@ -253,7 +244,10 @@ export async function updateListing(
 
   // Regenerate slug if title changed
   if (validated.title !== undefined) {
-    updateData.slug = slugify(validated.title)
+    updateData.slug = await uniqueSlug(validated.title, async (candidate) => {
+      const existing = await db.listing.findUnique({ where: { slug: candidate }, select: { id: true } })
+      return existing !== null && existing.id !== id
+    })
   }
 
   const updated = await db.listing.update({

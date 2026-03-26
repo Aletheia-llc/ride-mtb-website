@@ -44,7 +44,7 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
     )
     if (existingPicksRes.rows.length > 0) {
       await client.query('ROLLBACK')
-      console.log(
+      console.info(
         `[fantasy.mulligan.auto-pick] Team ${teamId} already has picks for event ${eventId} — skipping`
       )
       return
@@ -84,7 +84,7 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
     )
     if (mulliganUseRes.rows.length > 0) {
       await client.query('ROLLBACK')
-      console.log(
+      console.info(
         `[fantasy.mulligan.auto-pick] MulliganUse already exists for team ${teamId} event ${eventId} — skipping`
       )
       return
@@ -180,7 +180,7 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
 
     for (const prev of prevPicks) {
       if (!enteredRiderIds.has(prev.riderId)) {
-        console.log(
+        console.info(
           `[fantasy.mulligan.auto-pick] Rider ${prev.riderId} not entered in event ${eventId} — skipping`
         )
         continue
@@ -190,7 +190,7 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
       // Re-derive isWildcard from the previous priceAtPick (not current market price)
       const isWildcard = prev.priceAtPick < WILDCARD_PRICE_THRESHOLD
       if (isWildcard && wildcardCount >= 2) {
-        console.log(
+        console.info(
           `[fantasy.mulligan.auto-pick] Wildcard slots full — skipping rider ${prev.riderId}`
         )
         continue
@@ -198,7 +198,7 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
 
       // Budget check using previous priceAtPick (spec requirement)
       if (totalCost + prev.priceAtPick > salaryCap) {
-        console.log(
+        console.info(
           `[fantasy.mulligan.auto-pick] Budget exceeded at rider ${prev.riderId} (prev price ${prev.priceAtPick}) — skipping`
         )
         continue
@@ -265,7 +265,7 @@ export async function handleMulliganAutoPick(payload: MulliganAutoPickPayload) {
 
     await client.query('COMMIT')
 
-    console.log(
+    console.info(
       `[fantasy.mulligan.auto-pick] Auto-picked ${picksToInsert.length} riders for team ${teamId} event ${eventId} (mulligan used)`
     )
   } catch (err) {

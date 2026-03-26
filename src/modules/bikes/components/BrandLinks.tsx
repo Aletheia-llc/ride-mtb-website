@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 
@@ -73,8 +74,7 @@ export function BrandLinks({ categoryNumber, budget: _budget, ebike }: BrandLink
             >
               <div className="flex items-center gap-2.5">
                 {logo && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logo} alt={brand.name} className="h-6 w-6 shrink-0 rounded object-contain" />
+                  <Image src={logo} alt={brand.name} width={24} height={24} className="h-6 w-6 shrink-0 rounded object-contain" unoptimized />
                 )}
                 <div>
                   <span className="font-medium text-[var(--color-text)]">{brand.name}</span>

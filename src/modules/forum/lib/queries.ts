@@ -218,7 +218,21 @@ export async function getForumUserProfile(username: string) {
       createdAt: true,
       isPremium: true,
       isVerifiedCreator: true,
-      _count: { select: { posts: { where: { deletedAt: null } } } },
+      _count: {
+        select: {
+          posts: { where: { deletedAt: null } },
+          trailReviews: true,
+          rideLogs: true,
+          gearReviews: true,
+        },
+      },
+      xpAggregate: {
+        select: {
+          totalXp: true,
+          moduleBreakdown: true,
+          streakDays: true,
+        },
+      },
       userBadges: {
         include: {
           badge: { select: { name: true, description: true, icon: true, color: true } },

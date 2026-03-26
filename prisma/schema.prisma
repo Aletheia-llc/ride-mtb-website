@@ -229,7 +229,7 @@ model Category {
   coverImageUrl String?
   memberCount   Int      @default(0)
 
-  owner       User?                 @relation("ownedCommunities", fields: [ownerId], references: [id])
+  owner       User?                 @relation("ownedCommunities", fields: [ownerId], references: [id], onDelete: SetNull)
   posts       Post[]
   memberships CommunityMembership[]
 
@@ -259,13 +259,13 @@ model Post {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  author      User         @relation("PostAuthor", fields: [authorId], references: [id])
-  category    Category     @relation(fields: [categoryId], references: [id])
+  author      User         @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  category    Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   comments    Comment[]
   votes       Vote[]
   bookmarks   Bookmark[]
   tags        PostTag[]
-  linkPreview LinkPreview? @relation(fields: [linkPreviewUrl], references: [url])
+  linkPreview LinkPreview? @relation(fields: [linkPreviewUrl], references: [url], onDelete: SetNull)
   notifications ForumNotification[]
   reports     Report[]
   tips        CreditTip[]
@@ -294,8 +294,8 @@ model Comment {
   updatedAt  DateTime  @updatedAt
 
   post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author  User      @relation("CommentAuthor", fields: [authorId], references: [id])
-  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  author  User      @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
   replies Comment[] @relation("CommentReplies")
   votes   Vote[]
   notifications ForumNotification[]
@@ -400,8 +400,8 @@ model Report {
 
   reporter  User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
   moderator User?    @relation("Moderator", fields: [moderatorId], references: [id], onDelete: SetNull)
-  post      Post?    @relation(fields: [postId], references: [id])
-  comment   Comment? @relation(fields: [commentId], references: [id])
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@map("reports")
@@ -506,7 +506,7 @@ model LearnQuiz {
   status      ContentStatus      @default(draft)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
-  module      LearnModule?       @relation(fields: [moduleId], references: [id])
+  module      LearnModule?       @relation(fields: [moduleId], references: [id], onDelete: SetNull)
   questions   LearnQuestion[]
   attempts    LearnQuizAttempt[]
   progress    LearnProgress[]
@@ -543,7 +543,7 @@ model LearnQuizAttempt {
   completedAt DateTime?
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz        LearnQuiz @relation(fields: [quizId], references: [id])
+  quiz        LearnQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
   @@index([userId, quizId])
   @@map("learn_quiz_attempts")
@@ -555,7 +555,7 @@ model LearnProgress {
   quizId   String
   bestTier Tier
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz     LearnQuiz @relation(fields: [quizId], references: [id])
+  quiz     LearnQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
   @@unique([userId, quizId])
   @@map("learn_progress")
@@ -569,7 +569,7 @@ model LearnCertificate {
   issuedAt   DateTime   @default(now())
   pdfUrl     String?
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course     LearnCourse @relation(fields: [courseId], references: [id])
+  course     LearnCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@index([userId])
@@ -631,7 +631,7 @@ model TrailSystem {
   externalId        String?
   submittedByUserId String?
   trails        Trail[]
-  region        TrailRegion? @relation(fields: [regionId], references: [id])
+  region        TrailRegion? @relation(fields: [regionId], references: [id], onDelete: SetNull)
   pois          PointOfInterest[]
   rideLogs      RideLog[]
   creatorVideos   CreatorVideo[]
@@ -682,7 +682,7 @@ model Trail {
   importSource          String?
   externalId            String?
   submittedByUserId     String?
-  system            TrailSystem   @relation(fields: [trailSystemId], references: [id])
+  system            TrailSystem   @relation(fields: [trailSystemId], references: [id], onDelete: Cascade)
   gpsTrack          TrailGpsTrack?
   reviews           TrailReview[]
   favorites         TrailFavorite[]
@@ -768,8 +768,8 @@ model RideLog {
   notes           String?   @db.Text
   createdAt       DateTime  @default(now())
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trail           Trail?       @relation(fields: [trailId], references: [id])
-  trailSystem     TrailSystem? @relation(fields: [trailSystemId], references: [id])
+  trail           Trail?       @relation(fields: [trailId], references: [id], onDelete: SetNull)
+  trailSystem     TrailSystem? @relation(fields: [trailSystemId], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
   @@map("ride_logs")
@@ -900,7 +900,7 @@ model Event {
   updatedAt   DateTime    @updatedAt
   // New fields from race calendar port
   organizerId           String?
-  organizer             OrganizerProfile? @relation(fields: [organizerId], references: [id])
+  organizer             OrganizerProfile? @relation(fields: [organizerId], references: [id], onDelete: SetNull)
   registrationUrl       String?
   registrationDeadline  DateTime?
   costCents             Int?
@@ -962,7 +962,7 @@ model EventComment {
   updatedAt DateTime @updatedAt
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent    EventComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  parent    EventComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
   replies   EventComment[] @relation("CommentReplies")
 
   @@index([eventId, createdAt])
@@ -1252,7 +1252,7 @@ model Listing {
   // Seller info
   sellerType       String   @default("individual")
   acceptsTrades    Boolean  @default(false)
-  seller      User          @relation(fields: [sellerId], references: [id])
+  seller      User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   photos      ListingPhoto[]
   offers      Offer[]
   transaction Transaction?
@@ -1309,7 +1309,7 @@ model Offer {
   message       String?
   status        OfferStatus @default(pending)
   parentOfferId String?
-  parentOffer   Offer?      @relation("CounterOffers", fields: [parentOfferId], references: [id])
+  parentOffer   Offer?      @relation("CounterOffers", fields: [parentOfferId], references: [id], onDelete: SetNull)
   counterOffers Offer[]     @relation("CounterOffers")
   expiresAt     DateTime
   respondedAt   DateTime?
@@ -1359,11 +1359,11 @@ model ListingMessage {
 model Transaction {
   id                    String            @id @default(cuid())
   listingId             String            @unique
-  listing               Listing           @relation(fields: [listingId], references: [id])
+  listing               Listing           @relation(fields: [listingId], references: [id], onDelete: Restrict)
   buyerId               String
-  buyer                 User              @relation("TxBuyer", fields: [buyerId], references: [id])
+  buyer                 User              @relation("TxBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
   sellerId              String
-  seller                User              @relation("TxSeller", fields: [sellerId], references: [id])
+  seller                User              @relation("TxSeller", fields: [sellerId], references: [id], onDelete: Restrict)
   salePrice             Float
   shippingCost          Float             @default(0)
   platformFee           Float             @default(0)
@@ -1618,7 +1618,7 @@ model Shop {
   reviewCount         Int    @default(0)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  owner       User?       @relation(fields: [ownerId], references: [id])
+  owner       User?       @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   photos      ShopPhoto[]
   reviews     ShopReview[]
   affiliateLinks   AffiliateLink[] @relation("ShopAffiliateLinks")
@@ -1715,7 +1715,7 @@ model CoachProfile {
   longitude    Float?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   clinics      CoachingClinic[]
 
   @@map("coach_profiles")
@@ -2129,8 +2129,8 @@ model CreditTip {
   commentId  String?
   createdAt  DateTime @default(now())
 
-  fromUser User     @relation("TipsSent", fields: [fromUserId], references: [id])
-  toUser   User     @relation("TipsReceived", fields: [toUserId], references: [id])
+  fromUser User     @relation("TipsSent", fields: [fromUserId], references: [id], onDelete: Restrict)
+  toUser   User     @relation("TipsReceived", fields: [toUserId], references: [id], onDelete: Restrict)
   post     Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
   comment  Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
 
@@ -2321,7 +2321,7 @@ model CreatorVideo {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   creator        CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  trailSystem    TrailSystem?   @relation(fields: [trailSystemId], references: [id])
+  trailSystem    TrailSystem?   @relation(fields: [trailSystemId], references: [id], onDelete: SetNull)
   tags           CreatorVideoTag[]
   impressions    AdImpression[]
 
@@ -2406,8 +2406,8 @@ model WalletTransaction {
   payoutRequestId String?
   createdAt       DateTime              @default(now())
   creator         CreatorProfile        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  impression      AdImpression?         @relation(fields: [impressionId], references: [id])
-  payoutRequest   PayoutRequest?        @relation(fields: [payoutRequestId], references: [id])
+  impression      AdImpression?         @relation(fields: [impressionId], references: [id], onDelete: SetNull)
+  payoutRequest   PayoutRequest?        @relation(fields: [payoutRequestId], references: [id], onDelete: SetNull)
 
   @@index([creatorId, createdAt])
   @@map("wallet_transactions")

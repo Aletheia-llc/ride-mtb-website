@@ -17,6 +17,110 @@ interface Video {
   _count: { impressions: number }
 }
 
+// ── Analytics tab ─────────────────────────────────────────────────────────
+
+const STATUS_LABELS: Record<Video['status'], string> = {
+  queued: 'Queued',
+  processing: 'Processing',
+  transcoding: 'Transcoding',
+  pending_review: 'Pending Review',
+  live: 'Live',
+  rejected: 'Rejected',
+}
+
+const STATUS_COLORS: Record<Video['status'], string> = {
+  queued: 'text-[var(--color-text-muted)]',
+  processing: 'text-blue-500',
+  transcoding: 'text-blue-500',
+  pending_review: 'text-yellow-500',
+  live: 'text-green-500',
+  rejected: 'text-red-500',
+}
+
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className="text-2xl font-bold text-[var(--color-text)]">{value}</p>
+    </div>
+  )
+}
+
+function AnalyticsTab({ videos, balanceCents }: { videos: Video[]; balanceCents: number }) {
+  const totalViews = videos.reduce((sum, v) => sum + v.viewCount, 0)
+  const totalImpressions = videos.reduce((sum, v) => sum + v._count.impressions, 0)
+  const liveCount = videos.filter((v) => v.status === 'live').length
+  const earningsFormatted = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(balanceCents / 100)
+
+  return (
+    <div className="space-y-6">
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total Views" value={totalViews.toLocaleString()} />
+        <StatCard label="Ad Impressions" value={totalImpressions.toLocaleString()} />
+        <StatCard label="Live Videos" value={liveCount} />
+        <StatCard label="Wallet Balance" value={earningsFormatted} />
+      </div>
+
+      {/* Per-video breakdown */}
+      {videos.length === 0 ? (
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-10 text-center">
+          <p className="text-sm text-[var(--color-text-muted)]">
+            Upload videos to see performance data here.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                <th className="px-4 py-3 text-left font-medium text-[var(--color-text-muted)]">
+                  Video
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-[var(--color-text-muted)]">
+                  Views
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-[var(--color-text-muted)]">
+                  Impressions
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-[var(--color-text-muted)]">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-bg)]">
+              {videos.map((v) => (
+                <tr key={v.id} className="hover:bg-[var(--color-surface)]">
+                  <td className="max-w-0 px-4 py-3">
+                    <p className="truncate font-medium text-[var(--color-text)]">{v.title}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {new Date(v.createdAt).toLocaleDateString()}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                    {v.viewCount.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text)]">
+                    {v._count.impressions.toLocaleString()}
+                  </td>
+                  <td className={`px-4 py-3 text-right font-medium ${STATUS_COLORS[v.status]}`}>
+                    {STATUS_LABELS[v.status]}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Transaction {
   id: string
   amountCents: number
@@ -87,13 +191,7 @@ export function CreatorDashboard({
       {activeTab === 'videos' && <VideoList videos={videos} />}
 
       {activeTab === 'analytics' && (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-12 text-center">
-          <p className="mb-3 text-4xl">📊</p>
-          <h3 className="mb-2 text-lg font-semibold text-[var(--color-text)]">Analytics coming soon</h3>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Views and earnings charts will appear once your content has data.
-          </p>
-        </div>
+        <AnalyticsTab videos={videos} balanceCents={balanceCents} />
       )}
 
       {activeTab === 'wallet' && (

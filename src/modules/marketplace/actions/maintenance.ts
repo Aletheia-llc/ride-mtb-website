@@ -1,30 +1,16 @@
 'use server'
 
-import { db } from '@/lib/db/client'
-
-// ---------------------------------------------------------------------------
-// expireListings
-// ---------------------------------------------------------------------------
+import { auth } from '@/lib/auth/config'
+import { expireListingsInternal } from '@/modules/marketplace/lib/maintenance'
 
 /**
- * Batch-expires listings whose `expiresAt` timestamp is in the past and
- * whose status is still 'active'. Intended to be called by the cron job
- * at /api/cron/marketplace-expire on a scheduled basis.
- *
- * Returns the count of listings that were expired.
+ * Admin-only server action to expire overdue listings.
+ * For the cron route, call expireListingsInternal() directly (CRON_SECRET-gated).
  */
 export async function expireListings(): Promise<{ expiredCount: number }> {
-  const result = await db.listing.updateMany({
-    where: {
-      status: 'active',
-      expiresAt: {
-        lt: new Date(),
-      },
-    },
-    data: {
-      status: 'expired',
-    },
-  })
-
-  return { expiredCount: result.count }
+  const session = await auth()
+  if (session?.user?.role !== 'admin') {
+    throw new Error('Unauthorized')
+  }
+  return expireListingsInternal()
 }
