@@ -2,13 +2,17 @@ import 'server-only'
 import { db } from '@/lib/db/client'
 import { paginate } from '@/lib/db/helpers'
 import type { FeedItem } from '../types'
+import { getRideLogFeedItems } from '@/modules/rides/lib/feed'
+import { getTrailReviewFeedItems } from '@/modules/trails/lib/feed'
+import { getCreatorVideoFeedItems } from '@/modules/creators/lib/feed'
+import { getArticleFeedItems } from '@/modules/editorial/lib/feed'
 
 const ITEMS_PER_SOURCE = 50
 
 export async function getFeedCandidates(page: number = 1): Promise<FeedItem[]> {
   const { skip } = paginate(page, ITEMS_PER_SOURCE)
 
-  const [courses, trailSystems, threads, events, reviews, listings] = await Promise.all([
+  const [courses, trailSystems, threads, events, reviews, listings, rideLogs, trailReviews, creatorVideos, articles] = await Promise.all([
     db.learnCourse.findMany({
       where: { status: 'published' },
       take: ITEMS_PER_SOURCE,
@@ -72,6 +76,10 @@ export async function getFeedCandidates(page: number = 1): Promise<FeedItem[]> {
         location: true, createdAt: true,
       },
     }),
+    getRideLogFeedItems(ITEMS_PER_SOURCE),
+    getTrailReviewFeedItems(ITEMS_PER_SOURCE),
+    getCreatorVideoFeedItems(ITEMS_PER_SOURCE),
+    getArticleFeedItems(ITEMS_PER_SOURCE),
   ])
 
   const items: FeedItem[] = [
@@ -150,6 +158,10 @@ export async function getFeedCandidates(page: number = 1): Promise<FeedItem[]> {
       engagementScore: 0,
       createdAt: l.createdAt,
     })),
+    ...rideLogs,
+    ...trailReviews,
+    ...creatorVideos,
+    ...articles,
   ]
 
   return items

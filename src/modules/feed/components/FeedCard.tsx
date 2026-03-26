@@ -1,12 +1,13 @@
 // src/modules/feed/components/FeedCard.tsx
 import Image from 'next/image'
 import Link from 'next/link'
-import { BookOpen, Map, MessageCircle, Calendar, Star, ShoppingCart } from 'lucide-react'
+import { BookOpen, Map, MessageCircle, Calendar, Star, ShoppingCart, Activity, Mountain, Video, Newspaper } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type { FeedItemType } from '../types'
 
 interface FeedCardProps {
   id: string
-  type: 'course' | 'trail' | 'forum' | 'event' | 'review' | 'buysell'
+  type: FeedItemType
   title: string
   subtitle: string
   url: string
@@ -17,13 +18,17 @@ interface FeedCardProps {
   onClickCapture?: () => void
 }
 
-const TYPE_ICON: Record<FeedCardProps['type'], LucideIcon> = {
+const TYPE_ICON: Record<FeedItemType, LucideIcon> = {
   course: BookOpen,
   trail: Map,
   forum: MessageCircle,
   event: Calendar,
   review: Star,
   buysell: ShoppingCart,
+  ride_log: Activity,
+  trail_review: Mountain,
+  creator_video: Video,
+  article: Newspaper,
 }
 
 export function FeedCard({ id, type, title, subtitle, url, imageUrl, tags, meta, reason, onClickCapture }: FeedCardProps) {
