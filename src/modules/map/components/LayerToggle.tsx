@@ -40,6 +40,8 @@ export function LayerToggle({ availableLayers, activeLayers, onToggle }: LayerTo
             <button
               key={layer}
               type="button"
+              aria-pressed={active}
+              aria-label={`${LAYER_LABELS[layer]} layer (${active ? 'on' : 'off'})`}
               onClick={() => onToggle(layer)}
               style={
                 active
