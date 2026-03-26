@@ -34,22 +34,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user?.id) token.sub = user.id
-      return token
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async session({ session, token }: any) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub
+      if (user?.id) {
+        // Only on sign-in: fetch user data once and cache in the JWT
+        token.sub = user.id
         const dbUser = await db.user.findUnique({
-          where: { id: token.sub },
+          where: { id: user.id },
           select: { role: true, bannedAt: true, onboardingCompletedAt: true, onboardingStep: true, emailVerified: true },
         })
-        session.user.role = dbUser?.role ?? 'user'
-        session.user.bannedAt = dbUser?.bannedAt ?? null
-        session.user.onboardingCompletedAt = dbUser?.onboardingCompletedAt ?? null
-        session.user.onboardingStep = dbUser?.onboardingStep ?? 1
-        session.user.emailVerified = dbUser?.emailVerified ?? null
+        if (dbUser) {
+          token.role = dbUser.role as 'user' | 'instructor' | 'admin'
+          token.bannedAt = dbUser.bannedAt
+          token.onboardingCompletedAt = dbUser.onboardingCompletedAt
+          token.onboardingStep = dbUser.onboardingStep
+          token.emailVerified = dbUser.emailVerified
+        }
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user && token.sub) {
+        session.user.id = token.sub
+        session.user.role = token.role ?? 'user'
+        session.user.bannedAt = (token.bannedAt as Date | null) ?? null
+        session.user.onboardingCompletedAt = (token.onboardingCompletedAt as Date | null) ?? null
+        session.user.onboardingStep = token.onboardingStep ?? 1
+        session.user.emailVerified = (token.emailVerified as Date | null) ?? null
       }
       return session
     },

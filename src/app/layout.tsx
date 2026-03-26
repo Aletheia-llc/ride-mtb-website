@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 import { DM_Sans } from 'next/font/google'
 import { Providers } from './Providers'
 import { TopNav } from '@/ui/components/TopNav'

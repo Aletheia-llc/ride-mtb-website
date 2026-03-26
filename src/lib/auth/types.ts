@@ -1,5 +1,6 @@
 import 'next-auth'
 import '@auth/core/adapters'
+import 'next-auth/jwt'
 
 type Role = 'user' | 'instructor' | 'admin'
 
@@ -32,5 +33,15 @@ declare module '@auth/core/adapters' {
     bannedAt?: Date | null
     onboardingCompletedAt?: Date | null
     onboardingStep?: number
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    role?: Role
+    bannedAt?: Date | null
+    onboardingCompletedAt?: Date | null
+    onboardingStep?: number
+    emailVerified?: Date | null
   }
 }
