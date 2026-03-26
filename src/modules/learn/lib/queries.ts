@@ -257,6 +257,17 @@ export async function checkCourseCompletion(userId: string, courseId: string) {
 
 // ── 10. createCertificate ────────────────────────────────────
 
+// ── getCourseByIdLight ───────────────────────────────────────
+
+export async function getCourseByIdLight(courseId: string) {
+  return db.learnCourse.findUnique({
+    where: { id: courseId },
+    select: { title: true, slug: true },
+  })
+}
+
+// ── 10. createCertificate ────────────────────────────────────
+
 export async function createCertificate(
   userId: string,
   courseId: string,

@@ -2,7 +2,8 @@
 
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth/guards'
-import { checkCourseCompletion, createCertificate } from '../lib/queries'
+import { checkCourseCompletion, createCertificate, getCourseByIdLight } from '../lib/queries'
+import { createNotification } from '@/lib/notifications'
 import type { Tier } from '@/generated/prisma/client'
 
 // ── Input schema ──────────────────────────────────────────────
@@ -61,7 +62,18 @@ export async function requestCertificate(
     )
     const tier = getWorstTier(passedTiers)
 
-    const cert = await createCertificate(user.id, courseId, tier)
+    const [cert, course] = await Promise.all([
+      createCertificate(user.id, courseId, tier),
+      getCourseByIdLight(courseId),
+    ])
+
+    void createNotification(
+      user.id,
+      'course_completed',
+      'Certificate Issued!',
+      `Your ${tier} certificate for "${course?.title ?? 'a course'}" is ready`,
+      course?.slug ? `/learn/certificates` : '/learn',
+    )
 
     return { success: true, certificateId: cert.id, tier }
   } catch (error) {

@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
 import { db } from '@/lib/db/client'
 import { grantXP } from '@/modules/xp'
+import { createNotification } from '@/lib/notifications'
 import {
   getQuizById,
   submitQuizAttempt,
@@ -157,6 +158,18 @@ export async function submitQuiz(
             module: 'learn',
             refId: mod.courseId,
           })
+
+          const course = await db.learnCourse.findUnique({
+            where: { id: mod.courseId },
+            select: { title: true, slug: true },
+          })
+          void createNotification(
+            user.id,
+            'course_completed',
+            'Course Completed!',
+            `You completed "${course?.title ?? 'a course'}" and earned a ${worstTier} certificate`,
+            course?.slug ? `/learn/${course.slug}` : '/learn',
+          )
         }
       }
     }
