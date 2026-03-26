@@ -716,7 +716,6 @@ model TrailGpsTrack {
   importSource  String?
   externalId    String?
 
-  @@unique([importSource, externalId])
   @@map("trail_gps_tracks")
 }
 
