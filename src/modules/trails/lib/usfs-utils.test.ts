@@ -22,6 +22,9 @@ describe('normalizeSystemName', () => {
   it('handles null', () => {
     expect(normalizeSystemName(null)).toBe('')
   })
+  it('handles undefined', () => {
+    expect(normalizeSystemName(undefined)).toBe('')
+  })
 })
 
 describe('convertCoordinates', () => {
@@ -68,6 +71,9 @@ describe('buildExternalId', () => {
   it('formats as "Forest#TrailNo"', () => {
     expect(buildExternalId('Pisgah National Forest', '2108')).toBe('Pisgah National Forest#2108')
   })
+  it('sanitizes # in managingOrg', () => {
+    expect(buildExternalId('Foo#Bar Forest', '99')).toBe('Foo-Bar Forest#99')
+  })
 })
 
 describe('haversineDistance', () => {
@@ -110,5 +116,37 @@ describe('calculateStats', () => {
     expect(s.bounds.swLat).toBe(35.5)
     expect(s.bounds.neLng).toBe(-82.5)
     expect(s.bounds.swLng).toBe(-83.0)
+  })
+})
+
+describe('calculateStats — elevation detail', () => {
+  it('calculates elevationLoss for descending segment', () => {
+    const points: [number, number, number][] = [
+      [35.5, -82.5, 100],   // 100m = 328ft
+      [35.5144, -82.5, 0],  // 0m = 0ft → 328ft loss
+    ]
+    const s = calculateStats(points)
+    expect(s.elevationLoss).toBeGreaterThan(300)
+    expect(s.elevationGain).toBe(0)
+  })
+
+  it('reports highPoint and lowPoint in feet', () => {
+    const points: [number, number, number][] = [
+      [35.5, -82.5, 0],
+      [35.5144, -82.5, 100], // 100m = 328ft
+    ]
+    const s = calculateStats(points)
+    expect(s.highPoint).toBeGreaterThan(300) // ~328ft
+    expect(s.lowPoint).toBe(0)
+  })
+
+  it('filters out elevation changes below noise threshold (< 3ft)', () => {
+    // 0.5m change = 1.64ft — below the 3ft noise threshold
+    const points: [number, number, number][] = [
+      [35.5, -82.5, 0],
+      [35.5144, -82.5, 0.5], // 0.5m = 1.64ft — should be filtered
+    ]
+    const s = calculateStats(points)
+    expect(s.elevationGain).toBe(0)
   })
 })

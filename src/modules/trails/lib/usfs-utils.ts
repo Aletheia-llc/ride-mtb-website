@@ -32,7 +32,8 @@ export function normalizeSystemName(name: string | null | undefined): string {
 
 /** "{MANAGING_ORG}#{TRAIL_NO}" — primary key for upsert deduplication */
 export function buildExternalId(managingOrg: string, trailNo: string | number): string {
-  return `${managingOrg}#${trailNo}`
+  const safeOrg = managingOrg.replace(/#/g, '-')
+  return `${safeOrg}#${trailNo}`
 }
 
 /** GeoJSON [lng, lat, ele?] → [lat, lng, ele] (elevation defaults to 0) */
@@ -82,7 +83,7 @@ export function calculateStats(points: GpsPoint[]): TrailStats {
     const [lat1, lng1] = points[i - 1]
     const [lat2, lng2, ele2] = points[i]
     distance += haversineDistance(lat1, lng1, lat2, lng2)
-    const ele1Ft = points[i - 1][2] * METERS_TO_FEET
+    const ele1Ft = (points[i - 1][2] ?? 0) * METERS_TO_FEET
     const ele2Ft = (ele2 ?? 0) * METERS_TO_FEET
     const diff = ele2Ft - ele1Ft
     if (Math.abs(diff) >= ELEVATION_NOISE_FT) {
