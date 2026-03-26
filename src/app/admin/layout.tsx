@@ -23,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin/affiliate" className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">Affiliate</Link>
         <Link href="/admin/fantasy/series" className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">Fantasy</Link>
         <Link href="/admin/parks" className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">Parks</Link>
+        <Link href="/admin/trails" className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">Trails</Link>
         <Link href="/forum/admin/reports" className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">Forum Reports</Link>
       </nav>
       {children}
