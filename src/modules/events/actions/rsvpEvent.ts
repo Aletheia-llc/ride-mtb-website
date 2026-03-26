@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireAuth } from '@/lib/auth/guards'
 import { rateLimit } from '@/lib/rate-limit'
+import { grantXP } from '@/modules/xp'
 import { rsvpToEvent } from '../lib/queries'
 import type { RsvpStatus } from '../types'
 
@@ -16,6 +17,15 @@ export async function rsvpEvent(
     await rateLimit({ userId: user.id, action: 'rsvp-event', maxPerMinute: 10 })
 
     await rsvpToEvent(eventId, user.id, status)
+
+    if (status === 'going') {
+      await grantXP({
+        userId: user.id,
+        event: 'event_attended',
+        module: 'events',
+        refId: `rsvp:${eventId}:${user.id}`,
+      })
+    }
 
     revalidatePath('/events')
 

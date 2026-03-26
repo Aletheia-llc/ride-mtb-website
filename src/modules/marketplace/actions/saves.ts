@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db/client'
 import { requireAuth } from '@/lib/auth/guards'
+import { grantXP } from '@/modules/xp'
 
 // ---------------------------------------------------------------------------
 // Save a listing (creates ListingSave record, increments listing.saveCount)
@@ -14,7 +15,7 @@ export async function saveListing(listingId: string): Promise<void> {
 
   const listing = await db.listing.findUnique({
     where: { id: listingId },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, sellerId: true },
   })
 
   if (!listing) {
@@ -35,6 +36,16 @@ export async function saveListing(listingId: string): Promise<void> {
     where: { id: listingId },
     data: { saveCount: { increment: 1 } },
   })
+
+  // Award XP to the listing owner (not the saver) — idempotent per saver
+  if (listing.sellerId !== userId) {
+    await grantXP({
+      userId: listing.sellerId,
+      event: 'listing_favorited',
+      module: 'marketplace',
+      refId: `listing_save:${listingId}:${userId}`,
+    })
+  }
 
   revalidatePath(`/buy-sell/${listing.slug}`)
   revalidatePath('/buy-sell/saved')

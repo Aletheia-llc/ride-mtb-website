@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db/client'
 import { requireAuth } from '@/lib/auth/guards'
 import { uniqueSlug } from '@/lib/slugify'
+import { grantXP } from '@/modules/xp'
 import {
   ListingCategory,
   ItemCondition,
@@ -174,6 +175,13 @@ export async function createListing(data: CreateListingInput): Promise<ListingWi
       status: listingStatus,
     },
     include: listingInclude,
+  })
+
+  await grantXP({
+    userId,
+    event: 'listing_created',
+    module: 'marketplace',
+    refId: `listing:${listing.id}`,
   })
 
   revalidatePath('/buy-sell')

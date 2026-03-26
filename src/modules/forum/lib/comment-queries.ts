@@ -1,6 +1,7 @@
 import 'server-only'
 import { Prisma } from '@/generated/prisma/client'
 import { db } from '@/lib/db/client'
+import { grantXP } from '@/modules/xp'
 import { PAGE_SIZE, authorSelect, authorDetailSelect } from './_selects'
 
 export async function getComments(
@@ -111,6 +112,14 @@ export async function voteOnContent(data: {
       where: { id: post.authorId },
       data: { karma: { increment: scoreDelta } },
     })
+    if (scoreDelta > 0 && post.authorId !== userId) {
+      await grantXP({
+        userId: post.authorId,
+        event: 'forum_vote_received',
+        module: 'forum',
+        refId: `post_vote:${postId}:${userId}`,
+      })
+    }
     return { voteScore: post.voteScore }
   } else {
     const comment = await db.comment.update({
@@ -122,6 +131,14 @@ export async function voteOnContent(data: {
       where: { id: comment.authorId },
       data: { karma: { increment: scoreDelta } },
     })
+    if (scoreDelta > 0 && comment.authorId !== userId) {
+      await grantXP({
+        userId: comment.authorId,
+        event: 'forum_vote_received',
+        module: 'forum',
+        refId: `comment_vote:${commentId}:${userId}`,
+      })
+    }
     return { voteScore: comment.voteScore }
   }
 }
