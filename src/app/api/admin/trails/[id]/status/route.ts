@@ -18,10 +18,13 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
   }
 
-  await pool.query(
+  const result = await pool.query(
     `UPDATE trail_systems SET status = $1, "updatedAt" = NOW() WHERE id = $2`,
     [status, id],
   )
+  if ((result.rowCount ?? 0) === 0) {
+    return NextResponse.json({ error: 'Trail system not found' }, { status: 404 })
+  }
 
   return NextResponse.json({ ok: true })
 }

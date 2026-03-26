@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 
 interface PendingSystem {
   id: string
@@ -14,12 +14,13 @@ interface PendingSystem {
 
 export function TrailImportList({ systems }: { systems: PendingSystem[] }) {
   const [list, setList] = useState(systems)
-  const [isPending, startTransition] = useTransition()
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
 
-  const publish = (id: string) => {
+  const publish = async (id: string) => {
     setError(null)
-    startTransition(async () => {
+    setLoadingIds(prev => new Set(prev).add(id))
+    try {
       const res = await fetch(`/api/admin/trails/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -30,7 +31,13 @@ export function TrailImportList({ systems }: { systems: PendingSystem[] }) {
         return
       }
       setList(prev => prev.filter(s => s.id !== id))
-    })
+    } finally {
+      setLoadingIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
   }
 
   if (!list.length) {
@@ -57,7 +64,7 @@ export function TrailImportList({ systems }: { systems: PendingSystem[] }) {
           </div>
           <button
             onClick={() => publish(system.id)}
-            disabled={isPending}
+            disabled={loadingIds.has(system.id)}
             className="ml-4 flex-shrink-0 rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
           >
             Publish
