@@ -11,30 +11,35 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Don't resend if already verified
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { emailVerified: true, email: true },
-  })
-  if (user?.emailVerified) {
+  try {
+    // Don't resend if already verified
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { emailVerified: true, email: true },
+    })
+    if (user?.emailVerified) {
+      return NextResponse.json({ ok: true })
+    }
+
+    const email = user!.email!
+
+    // Delete any existing verification tokens for this email
+    await db.verificationToken.deleteMany({ where: { identifier: `verify:${email}` } })
+
+    const token = crypto.randomBytes(32).toString('hex')
+    await db.verificationToken.create({
+      data: {
+        identifier: `verify:${email}`,
+        token,
+        expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    })
+
+    await sendVerificationEmail(email, token)
+
     return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('Resend verification error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-
-  const email = user!.email!
-
-  // Delete any existing verification tokens for this email
-  await db.verificationToken.deleteMany({ where: { identifier: `verify:${email}` } })
-
-  const token = crypto.randomBytes(32).toString('hex')
-  await db.verificationToken.create({
-    data: {
-      identifier: `verify:${email}`,
-      token,
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    },
-  })
-
-  await sendVerificationEmail(email, token)
-
-  return NextResponse.json({ ok: true })
 }

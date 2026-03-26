@@ -19,18 +19,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 401 })
   }
 
-  const body = await request.json().catch(() => null)
-  if (!body?.category || typeof body.category !== 'string') {
-    return NextResponse.json({ ok: false }, { status: 400 })
+  try {
+    const body = await request.json().catch(() => null)
+    if (!body?.category || typeof body.category !== 'string') {
+      return NextResponse.json({ ok: false }, { status: 400 })
+    }
+
+    const { category } = body as { category: string }
+
+    let inc = 1
+    for (const [prefix, val] of Object.entries(CLICK_INCREMENT_MAP)) {
+      if (category.startsWith(prefix)) { inc = val; break }
+    }
+
+    await recordFeedClick(session.user.id, category, inc)
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('Feed click error:', error)
+    return NextResponse.json({ ok: false }, { status: 500 })
   }
-
-  const { category } = body as { category: string }
-
-  let inc = 1
-  for (const [prefix, val] of Object.entries(CLICK_INCREMENT_MAP)) {
-    if (category.startsWith(prefix)) { inc = val; break }
-  }
-
-  await recordFeedClick(session.user.id, category, inc)
-  return NextResponse.json({ ok: true })
 }

@@ -8,9 +8,14 @@ export async function GET() {
     return NextResponse.json({ unreadCount: 0 })
   }
 
-  const unreadCount = await db.forumNotification.count({
-    where: { userId: session.user.id, read: false },
-  })
+  try {
+    const unreadCount = await db.forumNotification.count({
+      where: { userId: session.user.id, read: false },
+    })
 
-  return NextResponse.json({ unreadCount })
+    return NextResponse.json({ unreadCount })
+  } catch (error) {
+    console.error('Notifications count error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

@@ -5,17 +5,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { db } = await import('@/lib/db/client')
+  try {
+    const { db } = await import('@/lib/db/client')
 
-  const twoWeeksFromNow = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    const twoWeeksFromNow = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
 
-  const result = await db.fantasyEvent.updateMany({
-    where: {
-      status: 'upcoming',
-      raceDate: { gte: new Date(), lte: twoWeeksFromNow },
-    },
-    data: { status: 'roster_open' },
-  })
+    const result = await db.fantasyEvent.updateMany({
+      where: {
+        status: 'upcoming',
+        raceDate: { gte: new Date(), lte: twoWeeksFromNow },
+      },
+      data: { status: 'roster_open' },
+    })
 
-  return NextResponse.json({ opened: result.count, timestamp: new Date().toISOString() })
+    return NextResponse.json({ opened: result.count, timestamp: new Date().toISOString() })
+  } catch (error) {
+    console.error('Fantasy open-rosters cron error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

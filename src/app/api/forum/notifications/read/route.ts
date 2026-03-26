@@ -8,10 +8,15 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  await db.forumNotification.updateMany({
-    where: { userId: session.user.id, read: false },
-    data: { read: true },
-  })
+  try {
+    await db.forumNotification.updateMany({
+      where: { userId: session.user.id, read: false },
+      data: { read: true },
+    })
 
-  return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Notifications read error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
