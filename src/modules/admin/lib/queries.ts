@@ -129,17 +129,23 @@ export async function unbanUser(userId: string) {
 
 export type DeleteAccountResult =
   | { outcome: 'deleted' }
-  | { outcome: 'anonymized'; reason: 'has_transactions' }
+  | { outcome: 'anonymized'; reason: 'has_restricted_records' }
 
 export async function deleteAccount(userId: string): Promise<DeleteAccountResult> {
-  const [buyerTxCount, sellerTxCount] = await Promise.all([
+  // Check all onDelete: Restrict FK constraints on User:
+  //   Transaction.buyerId, Transaction.sellerId, CreditTip.fromUserId, CreditTip.toUserId
+  // Any of these prevents a hard-delete and requires anonymization instead.
+  const [buyerTxCount, sellerTxCount, tipsSentCount, tipsReceivedCount] = await Promise.all([
     db.transaction.count({ where: { buyerId: userId } }),
     db.transaction.count({ where: { sellerId: userId } }),
+    db.creditTip.count({ where: { fromUserId: userId } }),
+    db.creditTip.count({ where: { toUserId: userId } }),
   ])
 
-  const hasTransactions = buyerTxCount > 0 || sellerTxCount > 0
+  const hasRestrictedFKs =
+    buyerTxCount > 0 || sellerTxCount > 0 || tipsSentCount > 0 || tipsReceivedCount > 0
 
-  if (hasTransactions) {
+  if (hasRestrictedFKs) {
     // Anonymize: scrub PII, revoke auth sessions, lock the account
     await db.$transaction([
       db.account.deleteMany({ where: { userId } }),
@@ -162,7 +168,7 @@ export async function deleteAccount(userId: string): Promise<DeleteAccountResult
         },
       }),
     ])
-    return { outcome: 'anonymized', reason: 'has_transactions' }
+    return { outcome: 'anonymized', reason: 'has_restricted_records' }
   }
 
   await db.user.delete({ where: { id: userId } })

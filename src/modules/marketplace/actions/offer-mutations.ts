@@ -181,20 +181,21 @@ export async function acceptOffer(offerId: string) {
     throw new Error('This offer is no longer pending.')
   }
 
-  await db.offer.update({
-    where: { id: offerId },
-    data: { status: 'accepted', respondedAt: new Date() },
-  })
-
-  await db.offer.updateMany({
-    where: { listingId: offer.listingId, id: { not: offerId }, status: 'pending' },
-    data: { status: 'declined', respondedAt: new Date() },
-  })
-
-  await db.listing.update({
-    where: { id: offer.listingId },
-    data: { status: 'reserved' },
-  })
+  const now = new Date()
+  await db.$transaction([
+    db.offer.update({
+      where: { id: offerId },
+      data: { status: 'accepted', respondedAt: now },
+    }),
+    db.offer.updateMany({
+      where: { listingId: offer.listingId, id: { not: offerId }, status: 'pending' },
+      data: { status: 'declined', respondedAt: now },
+    }),
+    db.listing.update({
+      where: { id: offer.listingId },
+      data: { status: 'reserved' },
+    }),
+  ])
 
   const conversationId = await findOrCreateConversation(offer.listingId, offer.buyerId, userId)
   await sendSystemMessage(conversationId, `Seller accepted offer of ${formatAmount(offer.amount)}`)

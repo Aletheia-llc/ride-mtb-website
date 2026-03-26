@@ -1,6 +1,6 @@
 'use client'
 
-import { useReducer, useCallback, useRef } from 'react'
+import { useReducer, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { PhotoItem } from './ListingPhotoUploader'
 import { createListing, updateListing } from '@/modules/marketplace/actions/listing-mutations'
@@ -255,35 +255,40 @@ export function useListingForm(initialData?: InitialData) {
     [state, isEditMode, fromGarageBikeId, router],
   )
 
-  const handlers = {
-    setTitle: (v: string) => set('title', v),
-    setDescription: (v: string) => set('description', v),
-    setCategory: (v: string) => set('category', v),
-    setCondition: (v: string) => set('condition', v),
-    setBrand: (v: string) => set('brand', v),
-    setModelName: (v: string) => set('modelName', v),
-    setYear: (v: string) => set('year', v),
-    removeTag: (tag: string) => dispatch({ type: 'REMOVE_TAG', tag }),
-    setPrice: (v: string) => set('price', v),
-    setAcceptsOffers: (v: boolean) => set('acceptsOffers', v),
-    setAcceptsTrades: (v: boolean) => set('acceptsTrades', v),
-    setMinOfferPercent: (v: string) => set('minOfferPercent', v),
-    setFulfillment: (v: string) => set('fulfillment', v),
-    setShippingCost: (v: string) => set('shippingCost', v),
-    setEstimatedWeight: (v: string) => set('estimatedWeight', v),
-    setPackageLength: (v: string) => set('packageLength', v),
-    setPackageWidth: (v: string) => set('packageWidth', v),
-    setPackageHeight: (v: string) => set('packageHeight', v),
-    setCity: (v: string) => set('city', v),
-    setState: (v: string) => set('state', v),
-    setZipCode: (v: string) => set('zipCode', v),
-    setFrameSize: (v: string) => set('frameSize', v),
-    setWheelSize: (v: string) => set('wheelSize', v),
-    setForkTravel: (v: string) => set('forkTravel', v),
-    setRearTravel: (v: string) => set('rearTravel', v),
-    setFrameMaterial: (v: string) => set('frameMaterial', v),
-    setSellerType: (v: string) => set('sellerType', v),
-  }
+  // Memoized so sub-components using React.memo don't re-render on unrelated state changes.
+  // `set` and `dispatch` are both stable references (useCallback/useReducer).
+  const handlers = useMemo(
+    () => ({
+      setTitle: (v: string) => set('title', v),
+      setDescription: (v: string) => set('description', v),
+      setCategory: (v: string) => set('category', v),
+      setCondition: (v: string) => set('condition', v),
+      setBrand: (v: string) => set('brand', v),
+      setModelName: (v: string) => set('modelName', v),
+      setYear: (v: string) => set('year', v),
+      removeTag: (tag: string) => dispatch({ type: 'REMOVE_TAG', tag }),
+      setPrice: (v: string) => set('price', v),
+      setAcceptsOffers: (v: boolean) => set('acceptsOffers', v),
+      setAcceptsTrades: (v: boolean) => set('acceptsTrades', v),
+      setMinOfferPercent: (v: string) => set('minOfferPercent', v),
+      setFulfillment: (v: string) => set('fulfillment', v),
+      setShippingCost: (v: string) => set('shippingCost', v),
+      setEstimatedWeight: (v: string) => set('estimatedWeight', v),
+      setPackageLength: (v: string) => set('packageLength', v),
+      setPackageWidth: (v: string) => set('packageWidth', v),
+      setPackageHeight: (v: string) => set('packageHeight', v),
+      setCity: (v: string) => set('city', v),
+      setState: (v: string) => set('state', v),
+      setZipCode: (v: string) => set('zipCode', v),
+      setFrameSize: (v: string) => set('frameSize', v),
+      setWheelSize: (v: string) => set('wheelSize', v),
+      setForkTravel: (v: string) => set('forkTravel', v),
+      setRearTravel: (v: string) => set('rearTravel', v),
+      setFrameMaterial: (v: string) => set('frameMaterial', v),
+      setSellerType: (v: string) => set('sellerType', v),
+    }),
+    [set],
+  )
 
   return {
     state,

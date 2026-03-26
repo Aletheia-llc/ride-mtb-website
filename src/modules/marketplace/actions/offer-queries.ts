@@ -28,16 +28,12 @@ export async function getMyOffersSent(): Promise<OfferWithDetails[]> {
           },
         },
       },
+      buyer: { select: { id: true, name: true, image: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
 
-  const currentUser = await db.user.findUniqueOrThrow({
-    where: { id: userId },
-    select: { id: true, name: true, image: true },
-  })
-
-  return offers.map((offer) => ({ ...offer, buyer: currentUser }))
+  return offers
 }
 
 // ---------------------------------------------------------------------------
