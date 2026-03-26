@@ -16,29 +16,61 @@ export interface ImportEvent {
 }
 
 export async function dedupAndInsert(events: ImportEvent[]): Promise<{ inserted: number; skipped: number }> {
-  let inserted = 0
-  let skipped = 0
+  if (events.length === 0) return { inserted: 0, skipped: 0 }
 
-  for (const event of events) {
-    const existing = await pool.query(
-      `SELECT id FROM events WHERE "importSource" = $1 AND "externalId" = $2 LIMIT 1`,
-      [event.importSource, event.externalId]
-    )
-    if (existing.rows.length > 0) {
-      skipped++
-      continue
-    }
+  // Single query to find all existing (importSource, externalId) pairs in this batch
+  const importSources = events.map((e) => e.importSource)
+  const externalIds = events.map((e) => e.externalId)
 
-    await pool.query(
-      `INSERT INTO events (id, title, slug, "startDate", "eventType", status, "importSource", "externalId",
-        location, city, state, "registrationUrl", "isFree", "createdAt", "updatedAt")
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, 'published', $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
-      [event.title, event.slug, event.startDate, event.eventType, event.importSource,
-       event.externalId, event.location ?? null, event.city ?? null, event.state ?? null,
-       event.registrationUrl ?? null, event.isFree ?? false]
-    )
-    inserted++
+  const existingResult = await pool.query<{ importSource: string; externalId: string }>(
+    `SELECT "importSource", "externalId"
+     FROM events
+     WHERE ("importSource", "externalId") IN (
+       SELECT unnest($1::text[]), unnest($2::text[])
+     )`,
+    [importSources, externalIds],
+  )
+
+  const existingKeys = new Set(
+    existingResult.rows.map((r) => `${r.importSource}::${r.externalId}`),
+  )
+
+  const newEvents = events.filter((e) => !existingKeys.has(`${e.importSource}::${e.externalId}`))
+
+  if (newEvents.length === 0) {
+    return { inserted: 0, skipped: events.length }
   }
 
-  return { inserted, skipped }
+  // Batch insert all new events in a single query
+  const valueClauses: string[] = []
+  const params: unknown[] = []
+  let p = 1
+
+  for (const event of newEvents) {
+    valueClauses.push(
+      `(gen_random_uuid(), $${p++}, $${p++}, $${p++}, $${p++}, 'published', $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, NOW(), NOW())`,
+    )
+    params.push(
+      event.title,
+      event.slug,
+      event.startDate,
+      event.eventType,
+      event.importSource,
+      event.externalId,
+      event.location ?? null,
+      event.city ?? null,
+      event.state ?? null,
+      event.registrationUrl ?? null,
+      event.isFree ?? false,
+    )
+  }
+
+  await pool.query(
+    `INSERT INTO events (id, title, slug, "startDate", "eventType", status, "importSource", "externalId",
+      location, city, state, "registrationUrl", "isFree", "createdAt", "updatedAt")
+     VALUES ${valueClauses.join(', ')}`,
+    params,
+  )
+
+  return { inserted: newEvents.length, skipped: events.length - newEvents.length }
 }
