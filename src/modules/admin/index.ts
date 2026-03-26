@@ -2,3 +2,5 @@
 export * from './types'
 export * from './components'
 export { manageUser } from './actions/manageUser'
+export { deleteAccount } from './actions/deleteAccount'
+export type { DeleteAccountState } from './actions/deleteAccount'

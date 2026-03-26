@@ -1,206 +1,41 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { X, AlertCircle } from 'lucide-react'
+import { AlertCircle, X } from 'lucide-react'
+import { useListingForm } from './useListingForm'
 import { ListingPhotoUploader, type PhotoItem } from './ListingPhotoUploader'
 import { CategorySelect } from './CategorySelect'
 import { ConditionSelect } from './ConditionSelect'
 import { PricingSection } from './PricingSection'
 import { FulfillmentSection } from './FulfillmentSection'
 import { ListingSpecsSection } from './ListingSpecsSection'
-import { createListing, updateListing } from '@/modules/marketplace/actions/listing-mutations'
-import { uploadListingPhoto } from '@/modules/marketplace/actions/photos'
 import type { CreateListingInput } from '@/modules/marketplace/types'
 
 type CreateListingFormProps = {
   initialData?: Partial<CreateListingInput> & { id?: string; photos?: PhotoItem[] }
 }
 
+const inputClass =
+  'w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]'
+
+const labelClass = 'text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]'
+
 export function CreateListingForm({ initialData }: CreateListingFormProps) {
-  const router = useRouter()
-  const isEditMode = Boolean(initialData?.id)
-  const pendingFilesRef = useRef<Map<string, File>>(new Map())
-
-  // ----- Form state -----
-  const [title, setTitle] = useState(initialData?.title ?? '')
-  const [description, setDescription] = useState(initialData?.description ?? '')
-  const [category, setCategory] = useState(initialData?.category ?? '')
-  const [condition, setCondition] = useState(initialData?.condition ?? '')
-  const [brand, setBrand] = useState(initialData?.brand ?? '')
-  const [modelName, setModelName] = useState(initialData?.modelName ?? '')
-  const [year, setYear] = useState(initialData?.year?.toString() ?? '')
-  const [tags, setTags] = useState<string[]>(initialData?.tags ?? [])
-  const [tagInput, setTagInput] = useState('')
-  const [price, setPrice] = useState(
-    initialData?.price !== undefined ? initialData.price.toString() : '',
-  )
-  const [acceptsOffers, setAcceptsOffers] = useState(initialData?.acceptsOffers ?? true)
-  const [acceptsTrades, setAcceptsTrades] = useState(initialData?.acceptsTrades ?? false)
-  const [minOfferPercent, setMinOfferPercent] = useState(
-    initialData?.minOfferPercent !== undefined ? initialData.minOfferPercent.toString() : '',
-  )
-  const [fulfillment, setFulfillment] = useState<string>(
-    initialData?.fulfillment ?? 'local_or_ship',
-  )
-  const [shippingCost, setShippingCost] = useState(
-    initialData?.shippingCost !== undefined ? initialData.shippingCost.toString() : '',
-  )
-  const [estimatedWeight, setEstimatedWeight] = useState(
-    initialData?.estimatedWeight !== undefined ? initialData.estimatedWeight.toString() : '',
-  )
-  const [packageLength, setPackageLength] = useState(
-    initialData?.packageLength !== undefined ? initialData.packageLength.toString() : '',
-  )
-  const [packageWidth, setPackageWidth] = useState(
-    initialData?.packageWidth !== undefined ? initialData.packageWidth.toString() : '',
-  )
-  const [packageHeight, setPackageHeight] = useState(
-    initialData?.packageHeight !== undefined ? initialData.packageHeight.toString() : '',
-  )
-  const [city, setCity] = useState(initialData?.city ?? '')
-  const [state, setState] = useState(initialData?.state ?? '')
-  const [zipCode, setZipCode] = useState(initialData?.zipCode ?? '')
-  const fromGarageBikeId = initialData?.fromGarageBikeId
-
-  // MTB specs
-  const [frameSize, setFrameSize] = useState(initialData?.frameSize ?? '')
-  const [wheelSize, setWheelSize] = useState(initialData?.wheelSize ?? '')
-  const [forkTravel, setForkTravel] = useState(
-    initialData?.forkTravel !== undefined ? initialData.forkTravel.toString() : '',
-  )
-  const [rearTravel, setRearTravel] = useState(
-    initialData?.rearTravel !== undefined ? initialData.rearTravel.toString() : '',
-  )
-  const [frameMaterial, setFrameMaterial] = useState(initialData?.frameMaterial ?? '')
-  const [sellerType, setSellerType] = useState(initialData?.sellerType ?? 'individual')
-
-  const [photos, setPhotos] = useState<PhotoItem[]>(initialData?.photos ?? [])
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // ----- Tag handling -----
-  const addTag = useCallback(
-    (raw: string) => {
-      const trimmed = raw.trim().toLowerCase()
-      if (trimmed && !tags.includes(trimmed) && tags.length < 10) {
-        setTags((prev) => [...prev, trimmed])
-      }
-    },
-    [tags],
-  )
-
-  const removeTag = useCallback((tag: string) => {
-    setTags((prev) => prev.filter((t) => t !== tag))
-  }, [])
-
-  const handleTagKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault()
-        addTag(tagInput)
-        setTagInput('')
-      }
-      if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
-        setTags((prev) => prev.slice(0, -1))
-      }
-    },
-    [addTag, tagInput, tags.length],
-  )
-
-  const handleTagInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value
-      if (val.includes(',')) {
-        val.split(',').forEach((part) => { if (part.trim()) addTag(part) })
-        setTagInput('')
-      } else {
-        setTagInput(val)
-      }
-    },
-    [addTag],
-  )
-
-  const handlePhotosChange = useCallback(
-    (newPhotos: PhotoItem[], newFiles?: Map<string, File>) => {
-      setPhotos(newPhotos)
-      if (newFiles) {
-        for (const [id, file] of newFiles) pendingFilesRef.current.set(id, file)
-        const photoIds = new Set(newPhotos.map((p) => p.id))
-        for (const id of pendingFilesRef.current.keys()) {
-          if (!photoIds.has(id)) pendingFilesRef.current.delete(id)
-        }
-      }
-    },
-    [],
-  )
-
-  // ----- Submit -----
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsSubmitting(true)
-
-    try {
-      const data: CreateListingInput = {
-        title: title.trim(),
-        description: description.trim(),
-        category: category as CreateListingInput['category'],
-        condition: condition as CreateListingInput['condition'],
-        brand: brand.trim() || undefined,
-        modelName: modelName.trim() || undefined,
-        year: year ? parseInt(year, 10) : undefined,
-        tags: tags.length > 0 ? tags : undefined,
-        price: parseFloat(price),
-        acceptsOffers,
-        acceptsTrades,
-        minOfferPercent: minOfferPercent ? parseInt(minOfferPercent, 10) : undefined,
-        fulfillment: fulfillment as CreateListingInput['fulfillment'],
-        shippingCost: shippingCost ? parseFloat(shippingCost) : undefined,
-        estimatedWeight: estimatedWeight ? parseFloat(estimatedWeight) : undefined,
-        packageLength: packageLength ? parseInt(packageLength, 10) : undefined,
-        packageWidth: packageWidth ? parseInt(packageWidth, 10) : undefined,
-        packageHeight: packageHeight ? parseInt(packageHeight, 10) : undefined,
-        city: city.trim() || undefined,
-        state: state.trim() || undefined,
-        zipCode: zipCode.trim() || undefined,
-        fromGarageBikeId: fromGarageBikeId || undefined,
-        frameSize: frameSize || undefined,
-        wheelSize: wheelSize || undefined,
-        forkTravel: forkTravel ? parseInt(forkTravel, 10) : undefined,
-        rearTravel: rearTravel ? parseInt(rearTravel, 10) : undefined,
-        frameMaterial: frameMaterial || undefined,
-        sellerType: sellerType || 'individual',
-      }
-
-      if (isEditMode && initialData?.id) {
-        const updated = await updateListing(initialData.id, data)
-        router.push(`/buy-sell/${updated.slug}`)
-      } else {
-        const listing = await createListing(data)
-        for (const photo of photos) {
-          const file = pendingFilesRef.current.get(photo.id)
-          if (file) await uploadListingPhoto(listing.id, file)
-        }
-        router.push(`/buy-sell/${listing.slug}`)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-      setIsSubmitting(false)
-    }
-  }
-
-  const inputClass =
-    'w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]'
-
-  const labelClass = 'text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]'
+  const {
+    state,
+    handlers,
+    isEditMode,
+    handleSubmit,
+    handlePhotosChange,
+    handleTagKeyDown,
+    handleTagInputChange,
+  } = useListingForm(initialData)
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {/* Error banner */}
-      {error && (
+      {state.error && (
         <div className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3">
-          <span className="text-sm text-red-500">{error}</span>
+          <span className="text-sm text-red-500">{state.error}</span>
         </div>
       )}
 
@@ -225,8 +60,8 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
       <section className="flex flex-col gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/50 p-5">
         <ListingPhotoUploader
           listingId={isEditMode ? initialData?.id : undefined}
-          photos={photos}
-          onPhotosChange={(newPhotos) => handlePhotosChange(newPhotos)}
+          photos={state.photos}
+          onPhotosChange={handlePhotosChange}
         />
       </section>
 
@@ -236,10 +71,9 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
           Item Details
         </h3>
 
-        {/* Category + Condition — top of form, gates spec fields */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <CategorySelect value={category} onChange={setCategory} />
-          <ConditionSelect value={condition} onChange={setCondition} />
+          <CategorySelect value={state.category} onChange={handlers.setCategory} />
+          <ConditionSelect value={state.condition} onChange={handlers.setCondition} />
         </div>
 
         {/* Title */}
@@ -251,8 +85,8 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
             id="listing-title"
             type="text"
             placeholder="e.g. 2023 Santa Cruz Megatower CC X01"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={state.title}
+            onChange={(e) => handlers.setTitle(e.target.value)}
             maxLength={200}
             required
             className={inputClass}
@@ -267,8 +101,8 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
               id="listing-brand"
               type="text"
               placeholder="e.g. Santa Cruz"
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
+              value={state.brand}
+              onChange={(e) => handlers.setBrand(e.target.value)}
               maxLength={100}
               className={inputClass}
             />
@@ -280,8 +114,8 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
               id="listing-model"
               type="text"
               placeholder="e.g. Megatower"
-              value={modelName}
-              onChange={(e) => setModelName(e.target.value)}
+              value={state.modelName}
+              onChange={(e) => handlers.setModelName(e.target.value)}
               maxLength={100}
               className={inputClass}
             />
@@ -295,8 +129,8 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
               min="1900"
               max="2030"
               placeholder="e.g. 2023"
-              value={year}
-              onChange={(e) => setYear(e.target.value)}
+              value={state.year}
+              onChange={(e) => handlers.setYear(e.target.value)}
               className={`${inputClass} [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
             />
           </div>
@@ -310,9 +144,9 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
               <button
                 key={type}
                 type="button"
-                onClick={() => setSellerType(type)}
+                onClick={() => handlers.setSellerType(type)}
                 className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
-                  sellerType === type
+                  state.sellerType === type
                     ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
                     : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-muted)]'
                 }`}
@@ -332,14 +166,14 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
             id="listing-description"
             rows={6}
             placeholder="Describe the item, its condition, upgrades, and anything buyers should know..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={state.description}
+            onChange={(e) => handlers.setDescription(e.target.value)}
             maxLength={5000}
             required
             className={`${inputClass} resize-y`}
           />
           <span className="self-end text-xs text-[var(--color-text-muted)]">
-            {description.length}/5000
+            {state.description.length}/5000
           </span>
         </div>
 
@@ -349,9 +183,9 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
           <p className="text-xs text-[var(--color-text-muted)]">
             Press Enter or comma to add a tag (max 10)
           </p>
-          {tags.length > 0 && (
+          {state.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
+              {state.tags.map((tag) => (
                 <span
                   key={tag}
                   className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-xs font-medium text-[var(--color-text)]"
@@ -359,7 +193,7 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
                   {tag}
                   <button
                     type="button"
-                    onClick={() => removeTag(tag)}
+                    onClick={() => handlers.removeTag(tag)}
                     className="text-[var(--color-text-muted)] transition-colors hover:text-red-500"
                     aria-label={`Remove tag ${tag}`}
                   >
@@ -372,11 +206,11 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
           <input
             id="listing-tags"
             type="text"
-            placeholder={tags.length >= 10 ? 'Maximum tags reached' : 'e.g. enduro, carbon, 29er'}
-            value={tagInput}
+            placeholder={state.tags.length >= 10 ? 'Maximum tags reached' : 'e.g. enduro, carbon, 29er'}
+            value={state.tagInput}
             onChange={handleTagInputChange}
             onKeyDown={handleTagKeyDown}
-            disabled={tags.length >= 10}
+            disabled={state.tags.length >= 10}
             className={inputClass}
           />
         </div>
@@ -384,29 +218,29 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
 
       {/* ---- Section 3: MTB Specs (category-gated) ---- */}
       <ListingSpecsSection
-        category={category}
-        frameSize={frameSize}
-        wheelSize={wheelSize}
-        forkTravel={forkTravel}
-        rearTravel={rearTravel}
-        frameMaterial={frameMaterial}
-        onFrameSizeChange={setFrameSize}
-        onWheelSizeChange={setWheelSize}
-        onForkTravelChange={setForkTravel}
-        onRearTravelChange={setRearTravel}
-        onFrameMaterialChange={setFrameMaterial}
+        category={state.category}
+        frameSize={state.frameSize}
+        wheelSize={state.wheelSize}
+        forkTravel={state.forkTravel}
+        rearTravel={state.rearTravel}
+        frameMaterial={state.frameMaterial}
+        onFrameSizeChange={handlers.setFrameSize}
+        onWheelSizeChange={handlers.setWheelSize}
+        onForkTravelChange={handlers.setForkTravel}
+        onRearTravelChange={handlers.setRearTravel}
+        onFrameMaterialChange={handlers.setFrameMaterial}
         inputClass={inputClass}
       />
 
       {/* ---- Section 4: Pricing ---- */}
       <section className="flex flex-col gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/50 p-5">
         <PricingSection
-          price={price}
-          onPriceChange={setPrice}
-          acceptsOffers={acceptsOffers}
-          onAcceptsOffersChange={setAcceptsOffers}
-          minOfferPercent={minOfferPercent}
-          onMinOfferPercentChange={setMinOfferPercent}
+          price={state.price}
+          onPriceChange={handlers.setPrice}
+          acceptsOffers={state.acceptsOffers}
+          onAcceptsOffersChange={handlers.setAcceptsOffers}
+          minOfferPercent={state.minOfferPercent}
+          onMinOfferPercentChange={handlers.setMinOfferPercent}
         />
 
         {/* Accepts Trades toggle */}
@@ -420,15 +254,15 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
           <button
             type="button"
             role="switch"
-            aria-checked={acceptsTrades}
-            onClick={() => setAcceptsTrades((v) => !v)}
+            aria-checked={state.acceptsTrades}
+            onClick={() => handlers.setAcceptsTrades(!state.acceptsTrades)}
             className={`relative h-6 w-11 rounded-full transition-colors focus:outline-none ${
-              acceptsTrades ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'
+              state.acceptsTrades ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'
             }`}
           >
             <span
               className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                acceptsTrades ? 'translate-x-5' : 'translate-x-0.5'
+                state.acceptsTrades ? 'translate-x-5' : 'translate-x-0.5'
               }`}
             />
           </button>
@@ -438,34 +272,34 @@ export function CreateListingForm({ initialData }: CreateListingFormProps) {
       {/* ---- Section 5: Fulfillment ---- */}
       <section className="flex flex-col gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/50 p-5">
         <FulfillmentSection
-          fulfillment={fulfillment}
-          onFulfillmentChange={setFulfillment}
-          shippingCost={shippingCost}
-          onShippingCostChange={setShippingCost}
-          estimatedWeight={estimatedWeight}
-          onEstimatedWeightChange={setEstimatedWeight}
-          packageLength={packageLength}
-          onPackageLengthChange={setPackageLength}
-          packageWidth={packageWidth}
-          onPackageWidthChange={setPackageWidth}
-          packageHeight={packageHeight}
-          onPackageHeightChange={setPackageHeight}
-          city={city}
-          onCityChange={setCity}
-          state={state}
-          onStateChange={setState}
-          zipCode={zipCode}
-          onZipCodeChange={setZipCode}
+          fulfillment={state.fulfillment}
+          onFulfillmentChange={handlers.setFulfillment}
+          shippingCost={state.shippingCost}
+          onShippingCostChange={handlers.setShippingCost}
+          estimatedWeight={state.estimatedWeight}
+          onEstimatedWeightChange={handlers.setEstimatedWeight}
+          packageLength={state.packageLength}
+          onPackageLengthChange={handlers.setPackageLength}
+          packageWidth={state.packageWidth}
+          onPackageWidthChange={handlers.setPackageWidth}
+          packageHeight={state.packageHeight}
+          onPackageHeightChange={handlers.setPackageHeight}
+          city={state.city}
+          onCityChange={handlers.setCity}
+          state={state.state}
+          onStateChange={handlers.setState}
+          zipCode={state.zipCode}
+          onZipCodeChange={handlers.setZipCode}
         />
       </section>
 
       {/* ---- Submit ---- */}
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={state.isSubmitting}
         className="w-full rounded-lg bg-[var(--color-primary)] py-3 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting
+        {state.isSubmitting
           ? 'Publishing...'
           : isEditMode
             ? 'Save Changes'

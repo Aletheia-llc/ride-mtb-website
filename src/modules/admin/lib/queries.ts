@@ -117,3 +117,54 @@ export async function unbanUser(userId: string) {
     select: { id: true, bannedAt: true },
   })
 }
+
+// ── 6. deleteAccount ─────────────────────────────────────────
+//
+// Users who have Transaction records (buyer or seller) cannot be hard-deleted
+// because Transaction.buyer/seller use onDelete: Restrict to preserve the
+// financial audit trail. In that case we anonymize instead: scrub PII and
+// revoke auth tokens, but keep the row so transactions remain intact.
+//
+// Users with no transactions are hard-deleted; cascades handle everything else.
+
+export type DeleteAccountResult =
+  | { outcome: 'deleted' }
+  | { outcome: 'anonymized'; reason: 'has_transactions' }
+
+export async function deleteAccount(userId: string): Promise<DeleteAccountResult> {
+  const [buyerTxCount, sellerTxCount] = await Promise.all([
+    db.transaction.count({ where: { buyerId: userId } }),
+    db.transaction.count({ where: { sellerId: userId } }),
+  ])
+
+  const hasTransactions = buyerTxCount > 0 || sellerTxCount > 0
+
+  if (hasTransactions) {
+    // Anonymize: scrub PII, revoke auth sessions, lock the account
+    await db.$transaction([
+      db.account.deleteMany({ where: { userId } }),
+      db.session.deleteMany({ where: { userId } }),
+      db.user.update({
+        where: { id: userId },
+        data: {
+          email: `deleted-${userId}@deleted.local`,
+          name: '[Deleted User]',
+          username: `deleted-${userId}`,
+          image: null,
+          avatarUrl: null,
+          coverUrl: null,
+          bio: null,
+          location: null,
+          ridingStyle: null,
+          websiteUrl: null,
+          passwordHash: null,
+          bannedAt: new Date(),
+        },
+      }),
+    ])
+    return { outcome: 'anonymized', reason: 'has_transactions' }
+  }
+
+  await db.user.delete({ where: { id: userId } })
+  return { outcome: 'deleted' }
+}
