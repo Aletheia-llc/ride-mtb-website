@@ -97,7 +97,7 @@ function buildSlug(name, suffix) {
     .replace(/-+/g, '-')
     .slice(0, 50)
     .replace(/-$/, '')
-  const safeSuffix = suffix.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 30)
+  const safeSuffix = suffix.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 40)
   return `${base}-${safeSuffix}`
 }
 
@@ -288,6 +288,7 @@ async function main() {
 
     for (const [managingOrg, forestFeatures] of forestGroups) {
       console.log(`\n  [${managingOrg}] ${forestFeatures.length} segments`)
+      try {
 
       // Centroid: average midpoint of each segment
       const centers = forestFeatures.flatMap(f => {
@@ -297,6 +298,10 @@ async function main() {
         return [[coords[mid][1], coords[mid][0], 0]] // [lat, lng, 0]
       })
       const centroid = calculateCentroid(centers)
+
+      if (/^\d+$/.test(managingOrg)) {
+        console.warn(`  ⚠ "${managingOrg}" is a numeric org code — system name will need manual cleanup`)
+      }
 
       // Match or create system
       let systemId, systemStatus, isEnrichedSystem = false
@@ -412,7 +417,7 @@ async function main() {
           summary.trailsUpdated++
         } else {
           // Upsert new trail (new system or no name match in enriched system)
-          const trailSlug = buildSlug(trailName, externalId)
+          const trailSlug = buildSlug(trailName, String(trailNo))
           const trailRes = await pool.query(
             `INSERT INTO trails (
                id, "trailSystemId", name, slug, status,
@@ -487,6 +492,12 @@ async function main() {
            WHERE id = $3`,
           [Math.round(systemMiles * 100) / 100, systemTrailCount, systemId],
         )
+      }
+
+      } catch (err) {
+        console.error(`  ✗ Error processing "${managingOrg}": ${err.message}`)
+        summary.segmentsSkipped += forestFeatures.length
+        continue
       }
     }
   }
