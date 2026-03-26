@@ -484,13 +484,19 @@ async function main() {
         )
       }
 
-      // Update system totals
+      // Update system totals by recalculating from DB (safe for multi-state forests re-runs)
       if (!dryRun && systemId !== 'dry-run') {
         await pool.query(
           `UPDATE trail_systems
-           SET "totalMiles" = $1, "trailCount" = $2, "updatedAt" = NOW()
-           WHERE id = $3`,
-          [Math.round(systemMiles * 100) / 100, systemTrailCount, systemId],
+           SET "totalMiles" = ROUND((
+             SELECT COALESCE(SUM(distance), 0) FROM trails WHERE "trailSystemId" = $1
+           )::numeric, 2),
+           "trailCount" = (
+             SELECT COUNT(*) FROM trails WHERE "trailSystemId" = $1
+           ),
+           "updatedAt" = NOW()
+           WHERE id = $1`,
+          [systemId],
         )
       }
 

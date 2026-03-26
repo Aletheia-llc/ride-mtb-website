@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/auth/guards'
+import { auth } from '@/lib/auth/config'
 import { pool } from '@/lib/db/client'
 
 const VALID_STATUSES = ['open', 'pending', 'closed_seasonal', 'closed_conditions',
@@ -9,7 +9,14 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  await requireAdmin()
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { id } = await params
   const body = await req.json()
   const { status } = body
@@ -25,6 +32,5 @@ export async function PATCH(
   if ((result.rowCount ?? 0) === 0) {
     return NextResponse.json({ error: 'Trail system not found' }, { status: 404 })
   }
-
   return NextResponse.json({ ok: true })
 }
