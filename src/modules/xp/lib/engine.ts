@@ -2,6 +2,9 @@ import 'server-only'
 import { db } from '@/lib/db/client'
 import { XP_VALUES, STREAK_MULTIPLIERS } from '@/shared/constants/xp-values'
 import type { XpEvent, XpModule, XpGrantResult } from '@/shared/types/xp'
+import { createNotification } from '@/lib/notifications'
+
+const XP_MILESTONES = [100, 500, 1000, 5000, 10000] as const
 
 export interface GrantXPInput {
   userId: string
@@ -114,6 +117,23 @@ export async function grantXP(input: GrantXPInput): Promise<XpGrantResult> {
         `
       } catch {
         // Duplicate — bonus already granted for this milestone this year
+      }
+    }
+
+    // Notify user when they cross an XP milestone
+    if (granted) {
+      const oldTotal = newTotal - points
+      for (const milestone of XP_MILESTONES) {
+        if (oldTotal < milestone && newTotal >= milestone) {
+          void createNotification(
+            userId,
+            'xp_milestone',
+            `${milestone.toLocaleString()} XP Reached!`,
+            `You've earned ${milestone.toLocaleString()} XP on Ride MTB`,
+            '/profile/settings',
+          )
+          break
+        }
       }
     }
 

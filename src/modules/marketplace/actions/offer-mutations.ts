@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { db } from '@/lib/db/client'
 import { requireAuth } from '@/lib/auth/guards'
+import { createNotification } from '@/lib/notifications'
 
 // ---------------------------------------------------------------------------
 // Zod schemas
@@ -153,6 +154,14 @@ export async function makeOffer(
   const conversationId = await findOrCreateConversation(listingId, userId, listing.sellerId)
   await sendSystemMessage(conversationId, `Buyer made an offer of ${formatAmount(amount)}`)
 
+  void createNotification(
+    listing.sellerId,
+    'offer_received',
+    'New Offer on Your Listing',
+    `Someone offered ${formatAmount(amount)} on "${listing.title}"`,
+    `/buy-sell/my/offers`,
+  )
+
   revalidatePath('/buy-sell/my/offers')
   revalidatePath('/buy-sell/my/messages')
   revalidatePath(`/buy-sell/${listing.slug}`)
@@ -170,7 +179,7 @@ export async function acceptOffer(offerId: string) {
 
   const offer = await db.offer.findUniqueOrThrow({
     where: { id: offerId },
-    include: { listing: { select: { id: true, sellerId: true, slug: true } } },
+    include: { listing: { select: { id: true, sellerId: true, slug: true, title: true } } },
   })
 
   if (offer.listing.sellerId !== userId) {
@@ -200,6 +209,14 @@ export async function acceptOffer(offerId: string) {
   const conversationId = await findOrCreateConversation(offer.listingId, offer.buyerId, userId)
   await sendSystemMessage(conversationId, `Seller accepted offer of ${formatAmount(offer.amount)}`)
 
+  void createNotification(
+    offer.buyerId,
+    'offer_accepted',
+    'Your Offer Was Accepted!',
+    `Your offer of ${formatAmount(offer.amount)} on "${offer.listing.title}" was accepted`,
+    `/buy-sell/${offer.listing.slug}`,
+  )
+
   revalidatePath('/buy-sell/my/offers')
   revalidatePath('/buy-sell/my/messages')
   revalidatePath(`/buy-sell/${offer.listing.slug}`)
@@ -219,7 +236,7 @@ export async function declineOffer(offerId: string, message?: string) {
 
   const offer = await db.offer.findUniqueOrThrow({
     where: { id: offerId },
-    include: { listing: { select: { id: true, sellerId: true, slug: true } } },
+    include: { listing: { select: { id: true, sellerId: true, slug: true, title: true } } },
   })
 
   if (offer.listing.sellerId !== userId) {
@@ -240,6 +257,14 @@ export async function declineOffer(offerId: string, message?: string) {
     ? `Seller declined offer of ${formatAmount(offer.amount)}: "${message}"`
     : `Seller declined offer of ${formatAmount(offer.amount)}`
   await sendSystemMessage(conversationId, systemMsg)
+
+  void createNotification(
+    offer.buyerId,
+    'offer_declined',
+    'Offer Declined',
+    `Your offer on "${offer.listing.title}" was declined`,
+    `/buy-sell/my/offers`,
+  )
 
   revalidatePath('/buy-sell/my/offers')
   revalidatePath('/buy-sell/my/messages')
@@ -263,7 +288,7 @@ export async function counterOffer(offerId: string, amount: number, message?: st
 
   const offer = await db.offer.findUniqueOrThrow({
     where: { id: offerId },
-    include: { listing: { select: { id: true, sellerId: true, slug: true } } },
+    include: { listing: { select: { id: true, sellerId: true, slug: true, title: true } } },
   })
 
   if (offer.listing.sellerId !== userId) {
@@ -296,6 +321,14 @@ export async function counterOffer(offerId: string, amount: number, message?: st
 
   const conversationId = await findOrCreateConversation(offer.listingId, offer.buyerId, userId)
   await sendSystemMessage(conversationId, `Seller countered at ${formatAmount(amount)}`)
+
+  void createNotification(
+    offer.buyerId,
+    'offer_countered',
+    'Counter Offer Received',
+    `Seller countered at ${formatAmount(amount)} on "${offer.listing.title}"`,
+    `/buy-sell/my/offers`,
+  )
 
   revalidatePath('/buy-sell/my/offers')
   revalidatePath('/buy-sell/my/messages')
