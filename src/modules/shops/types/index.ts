@@ -10,6 +10,12 @@ export interface ShopSummary {
   brandsCount: number
 }
 
+export interface ShopAffiliateLink {
+  slug: string
+  name: string
+  url: string
+}
+
 export interface ShopDetailData {
   id: string
   ownerId: string | null
@@ -37,4 +43,5 @@ export interface ShopDetailData {
   reviewCount?: number
   createdAt: Date
   updatedAt: Date
+  affiliateLinks?: ShopAffiliateLink[]
 }

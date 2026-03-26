@@ -1,5 +1,6 @@
 import Image from 'next/image'
-import { MapPin, Phone, Mail, Globe, Wrench, Tag, Clock } from 'lucide-react'
+import Link from 'next/link'
+import { MapPin, Phone, Mail, Globe, Wrench, Tag, Clock, ShoppingBag } from 'lucide-react'
 import { Badge } from '@/ui/components'
 import type { ShopDetailData } from '../types'
 import { ShopHoursTable } from './ShopHoursTable'
@@ -171,6 +172,30 @@ export function ShopDetail({ shop, reviews = [] }: ShopDetailProps) {
             Hours
           </h2>
           <ShopHoursTable hoursJson={shop.hoursJson as Record<string, { open: string; close: string; closed?: boolean }>} />
+        </div>
+      )}
+
+      {/* Affiliate / Shop Links */}
+      {shop.affiliateLinks && shop.affiliateLinks.length > 0 && (
+        <div>
+          <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-[var(--color-text)]">
+            <ShoppingBag className="h-5 w-5" />
+            Shop Links
+          </h2>
+          <div className="flex flex-col gap-2">
+            {shop.affiliateLinks.map((link) => (
+              <Link
+                key={link.slug}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-4 py-3 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+              >
+                <Globe className="h-4 w-4 shrink-0" />
+                {link.name}
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

@@ -1,7 +1,7 @@
 import 'server-only'
 import { db } from '@/lib/db/client'
 import { paginate } from '@/lib/db/helpers'
-import type { ShopSummary, ShopDetailData } from '../types'
+import type { ShopSummary, ShopDetailData, ShopAffiliateLink } from '../types'
 
 // ── getShopReviews ─────────────────────────────────────────
 
@@ -100,9 +100,22 @@ export async function getShops(
 export async function getShopBySlug(slug: string): Promise<ShopDetailData | null> {
   const shop = await db.shop.findUnique({
     where: { slug },
+    include: {
+      affiliateLinks: {
+        where: { isActive: true },
+        select: { slug: true, name: true, url: true },
+        orderBy: { name: 'asc' },
+      },
+    },
   })
 
   if (!shop) return null
+
+  const affiliateLinks: ShopAffiliateLink[] = shop.affiliateLinks.map((l) => ({
+    slug: l.slug,
+    name: l.name,
+    url: `/api/affiliate/track/${l.slug}`,
+  }))
 
   return {
     id: shop.id,
@@ -131,6 +144,7 @@ export async function getShopBySlug(slug: string): Promise<ShopDetailData | null
     reviewCount: shop.reviewCount,
     createdAt: shop.createdAt,
     updatedAt: shop.updatedAt,
+    affiliateLinks: affiliateLinks.length > 0 ? affiliateLinks : undefined,
   }
 }
 
