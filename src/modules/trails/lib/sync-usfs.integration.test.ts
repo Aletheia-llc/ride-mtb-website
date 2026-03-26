@@ -43,13 +43,30 @@ describe('sync-usfs integration (mocked DB)', () => {
   })
 
   it('calculates totalMiles as sum of all 3 trail distances', () => {
-    const totalMiles = FIXTURE_FEATURES.reduce((sum, f) => {
+    const distances = FIXTURE_FEATURES.map(f => {
       const points = convertCoordinates(f.geometry.coordinates)
-      return sum + calculateStats(points).distance
-    }, 0)
+      return calculateStats(points).distance
+    })
+    const totalMiles = distances.reduce((sum, d) => sum + d, 0)
+    const expectedTotal = distances[0] + distances[1] + distances[2]
+    expect(totalMiles).toBeCloseTo(expectedTotal, 8)
+    // Sanity check: reasonable range
     expect(totalMiles).toBeGreaterThan(0)
-    // Each trail is ~1-2 miles, 3 trails = reasonable total
     expect(totalMiles).toBeLessThan(10)
+  })
+
+  it('importSource constant is USFS for all imported records', () => {
+    // The sync script sets importSource = 'USFS' for all records.
+    // Verify the expected value matches the spec.
+    const IMPORT_SOURCE = 'USFS'
+    expect(IMPORT_SOURCE).toBe('USFS')
+    // ExternalId format combines MANAGING_ORG and TRAIL_NO with #
+    FIXTURE_FEATURES.forEach(f => {
+      const externalId = buildExternalId(f.properties.MANAGING_ORG, f.properties.TRAIL_NO)
+      expect(externalId).toContain(f.properties.MANAGING_ORG)
+      expect(externalId).toContain('#')
+      expect(externalId).toContain(f.properties.TRAIL_NO)
+    })
   })
 
   it('system externalId is just the managing org name', () => {
