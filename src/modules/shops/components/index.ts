@@ -1,4 +1,5 @@
 export { ClaimForm } from './ClaimForm'
+export { SubmitShopForm } from './SubmitShopForm'
 export { ShopCard } from './ShopCard'
 export { ShopList } from './ShopList'
 export { ShopDetail } from './ShopDetail'
