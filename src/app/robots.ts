@@ -1,12 +1,14 @@
 import type { MetadataRoute } from 'next'
 
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://ride-mtb.vercel.app'
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/api/', '/admin/', '/profile/settings'],
+      disallow: ['/admin', '/api'],
     },
-    sitemap: 'https://ridemtb.com/sitemap.xml',
+    sitemap: `${BASE_URL}/sitemap.xml`,
   }
 }
