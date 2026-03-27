@@ -1,6 +1,7 @@
 import 'server-only'
 import { db } from '@/lib/db/client'
 import { paginate } from '@/lib/db/helpers'
+import { ShopStatus, LeadEventType } from '@/generated/prisma/client'
 import type { ShopSummary, ShopDetailData, ShopAffiliateLink } from '../types'
 
 // ── getShopReviews ─────────────────────────────────────────
@@ -17,7 +18,7 @@ export async function getShopReviews(shopId: string) {
 // ── getShopWithDetails ─────────────────────────────────────
 
 export async function getShopWithDetails(slug: string) {
-  return db.shop.findUnique({
+  const shop = await db.shop.findUnique({
     where: { slug },
     include: {
       photos: { orderBy: { sortOrder: 'asc' } },
@@ -28,6 +29,9 @@ export async function getShopWithDetails(slug: string) {
       },
     },
   })
+  if (!shop) return null
+  if (shop.status !== ShopStatus.ACTIVE && shop.status !== ShopStatus.CLAIMED) return null
+  return shop
 }
 
 // ── getShops ──────────────────────────────────────────────
@@ -42,7 +46,9 @@ export async function getShops(
   filters?: ShopFilters,
   page: number = 1,
 ): Promise<{ shops: ShopSummary[]; totalCount: number }> {
-  const where: Record<string, unknown> = {}
+  const where: Record<string, unknown> = {
+    status: { in: [ShopStatus.ACTIVE, ShopStatus.CLAIMED] },
+  }
 
   if (filters?.state) {
     where.state = filters.state
@@ -110,6 +116,7 @@ export async function getShopBySlug(slug: string): Promise<ShopDetailData | null
   })
 
   if (!shop) return null
+  if (shop.status !== ShopStatus.ACTIVE && shop.status !== ShopStatus.CLAIMED) return null
 
   const affiliateLinks: ShopAffiliateLink[] = shop.affiliateLinks.map((l) => ({
     slug: l.slug,
@@ -158,6 +165,7 @@ export async function getShopsInBounds(
 ): Promise<ShopSummary[]> {
   const rawShops = await db.shop.findMany({
     where: {
+      status: { in: [ShopStatus.ACTIVE, ShopStatus.CLAIMED] },
       latitude: { gte: swLat, lte: neLat },
       longitude: { gte: swLng, lte: neLng },
     },
@@ -187,4 +195,98 @@ export async function getShopsInBounds(
     servicesCount: Array.isArray(s.services) ? (s.services as string[]).length : 0,
     brandsCount: Array.isArray(s.brands) ? (s.brands as string[]).length : 0,
   }))
+}
+
+// ── getShopForOwner ───────────────────────────────────────
+
+export async function getShopForOwner(slug: string) {
+  return db.shop.findUnique({
+    where: { slug },
+    include: {
+      photos: { orderBy: { sortOrder: 'asc' } },
+    },
+  })
+}
+
+// ── getShopLeadSummary ────────────────────────────────────
+
+export async function getShopLeadSummary(shopId: string): Promise<{
+  websiteClicks: number
+  phoneClicks: number
+  directionsClicks: number
+}> {
+  const [websiteClicks, phoneClicks, directionsClicks] = await Promise.all([
+    db.leadEvent.count({ where: { shopId, eventType: LeadEventType.WEBSITE_CLICK } }),
+    db.leadEvent.count({ where: { shopId, eventType: LeadEventType.PHONE_CLICK } }),
+    db.leadEvent.count({ where: { shopId, eventType: LeadEventType.DIRECTIONS_CLICK } }),
+  ])
+  return { websiteClicks, phoneClicks, directionsClicks }
+}
+
+// ── getShopLeadsByDay ─────────────────────────────────────
+
+export async function getShopLeadsByDay(
+  shopId: string,
+  days: number = 30,
+): Promise<{ date: string; websiteClicks: number; phoneClicks: number; directionsClicks: number }[]> {
+  const since = new Date()
+  since.setDate(since.getDate() - days)
+
+  const events = await db.leadEvent.findMany({
+    where: { shopId, createdAt: { gte: since } },
+    select: { eventType: true, createdAt: true },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  const map = new Map<string, { websiteClicks: number; phoneClicks: number; directionsClicks: number }>()
+
+  // Pre-fill all days
+  for (let i = 0; i < days; i++) {
+    const d = new Date(since)
+    d.setDate(d.getDate() + i)
+    const key = d.toISOString().slice(0, 10)
+    map.set(key, { websiteClicks: 0, phoneClicks: 0, directionsClicks: 0 })
+  }
+
+  for (const event of events) {
+    const key = event.createdAt.toISOString().slice(0, 10)
+    const entry = map.get(key)
+    if (!entry) continue
+    if (event.eventType === LeadEventType.WEBSITE_CLICK) entry.websiteClicks++
+    else if (event.eventType === LeadEventType.PHONE_CLICK) entry.phoneClicks++
+    else if (event.eventType === LeadEventType.DIRECTIONS_CLICK) entry.directionsClicks++
+  }
+
+  return Array.from(map.entries()).map(([date, counts]) => ({ date, ...counts }))
+}
+
+// ── getPendingClaims ──────────────────────────────────────
+
+export async function getPendingClaims() {
+  return db.shopClaimRequest.findMany({
+    where: { status: 'PENDING' },
+    include: {
+      shop: { select: { id: true, name: true, slug: true } },
+      user: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+}
+
+// ── getPendingSubmissions ─────────────────────────────────
+
+export async function getPendingSubmissions() {
+  return db.shop.findMany({
+    where: { status: ShopStatus.PENDING_REVIEW },
+    select: {
+      id: true,
+      name: true,
+      shopType: true,
+      city: true,
+      state: true,
+      createdAt: true,
+      submittedBy: { select: { name: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
 }
