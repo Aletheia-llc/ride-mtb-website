@@ -1,6 +1,5 @@
 'use client'
-
-type EventType = 'WEBSITE_CLICK' | 'PHONE_CLICK' | 'DIRECTIONS_CLICK'
+import type { LeadEventType } from '@/generated/prisma/client'
 
 interface Props {
   shopSlug: string
@@ -11,7 +10,7 @@ interface Props {
   state?: string | null
 }
 
-function trackEvent(slug: string, eventType: EventType) {
+function trackEvent(slug: string, eventType: LeadEventType) {
   fetch(`/api/shops/${slug}/track`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -28,7 +27,7 @@ export function ShopActionButtons({ shopSlug, phone, websiteUrl, address, city, 
       {phone && (
         <a
           href={`tel:${phone}`}
-          onClick={() => trackEvent(shopSlug, 'PHONE_CLICK')}
+          onClick={() => trackEvent(shopSlug, 'PHONE_CLICK' as LeadEventType)}
           className="btn"
         >
           Call
