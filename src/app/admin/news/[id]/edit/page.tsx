@@ -42,6 +42,7 @@ export default async function EditArticlePage({ params }: EditArticlePageProps) 
     createdAt: raw.createdAt,
     authorName: raw.author.name,
     authorImage: raw.author.image,
+    updatedAt: raw.updatedAt,
   }
 
   return (

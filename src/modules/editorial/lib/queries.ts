@@ -96,6 +96,7 @@ export async function getArticleBySlug(slug: string): Promise<ArticleDetail | nu
     createdAt: a.createdAt,
     authorName: a.author.name,
     authorImage: a.author.image,
+    updatedAt: a.updatedAt,
   }
 }
 
@@ -204,6 +205,16 @@ export async function publishArticle(id: string, publish: boolean = true) {
 
 export async function deleteArticle(id: string) {
   return db.article.delete({ where: { id } })
+}
+
+// ── getAllPublishedArticleSlugs ────────────────────────────
+
+export async function getAllPublishedArticleSlugs(): Promise<{ slug: string; updatedAt: Date }[]> {
+  return db.article.findMany({
+    where: { status: 'published' },
+    select: { slug: true, updatedAt: true },
+    orderBy: { publishedAt: 'desc' },
+  })
 }
 
 // ── getRecentPublishedArticles ────────────────────────────

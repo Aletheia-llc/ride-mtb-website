@@ -34,6 +34,7 @@ export interface ArticleSummary {
 export interface ArticleDetail extends ArticleSummary {
   body: JSONContent
   authorImage: string | null
+  updatedAt: Date
 }
 
 export interface ArticleAdminRow extends ArticleSummary {
