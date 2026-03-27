@@ -1,5 +1,6 @@
 // src/app/page.tsx
 import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import { auth } from '@/lib/auth/config'
 /* eslint-disable no-restricted-imports */
 import { getFeedCandidates, getTrendingItems } from '@/modules/feed/lib/queries'
@@ -10,16 +11,36 @@ import { RightSidebar } from '@/modules/feed/components/RightSidebar'
 import { FeedClient } from '@/modules/feed/components/FeedClient'
 import { MTBNewsFeed } from '@/modules/feed/components/MTBNewsFeed'
 import { getUpcomingEvents } from '@/modules/events/lib/queries'
+import { GuestHomeFeed } from '@/modules/feed/components/GuestHomeFeed'
 /* eslint-enable no-restricted-imports */
 
 import { getUserXP, getWeeklyXp } from '@/modules/xp'
 import { db } from '@/lib/db/client'
+
+export const metadata: Metadata = {
+  title: 'Ride MTB — Mountain Bike Community',
+  description: 'The MTB platform for riders. Trails, gear, community, learning.',
+  openGraph: {
+    type: 'website',
+    title: 'Ride MTB — Mountain Bike Community',
+    description: 'The MTB platform for riders. Trails, gear, community, learning.',
+  },
+}
 
 const PAGE_SIZE = 10
 
 export default async function HomePage() {
   const session = await auth()
   const userId = session?.user?.id ?? null
+
+  if (!session?.user) {
+    return (
+      <>
+        <HeroSection />
+        <GuestHomeFeed />
+      </>
+    )
+  }
 
   // Fetch all data in parallel
   const [candidates, trendingItems, { events: upcomingEvents }, xpAggregate, weeklyXp, userProfile] =
