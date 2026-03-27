@@ -17,30 +17,59 @@ The portal lives entirely within the existing `src/modules/shops/` module and `s
 
 ### Schema Additions (one Prisma migration)
 
-**New enum:**
+**New enums** (using SCREAMING_SNAKE_CASE to match existing project conventions):
 ```prisma
 enum ShopStatus {
-  draft
-  pending_review
-  active
-  claimed
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  CLAIMED
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeadEventType {
+  WEBSITE_CLICK
+  PHONE_CLICK
+  DIRECTIONS_CLICK
 }
 ```
 
-**New fields on `Shop`:**
+**New fields on `Shop` and required changes to existing `Shop` fields:**
 ```prisma
-status            ShopStatus @default(active)
+// New fields
+status            ShopStatus @default(ACTIVE)
 submittedByUserId String?
 submittedBy       User?      @relation("ShopSubmittedBy", fields: [submittedByUserId], references: [id])
+
+// Required change to existing field — must add relation name to avoid Prisma ambiguity
+// (two relations between User and Shop now exist)
+owner  User?  @relation("ShopOwner", fields: [ownerId], references: [id], onDelete: SetNull)
 ```
 
-Existing records default to `active`. Both `active` and `claimed` shops are publicly visible; `draft` and `pending_review` are not.
+Existing records default to `ACTIVE`. Both `ACTIVE` and `CLAIMED` shops are publicly visible; `DRAFT` and `PENDING_REVIEW` are not.
+
+`CLAIMED` means "publicly visible with an assigned owner" regardless of how ownership was established (claim flow or new-submission approval). `ACTIVE` means "publicly visible with no owner." Removing an owner from any shop (regardless of origin) sets it back to `ACTIVE`.
 
 **Required back-relations on `User` model:**
 ```prisma
 submittedShops    Shop[]             @relation("ShopSubmittedBy")
 shopClaimRequests ShopClaimRequest[]
-leadEvents        LeadEvent[]
+```
+
+**Required change to existing `User.shops` field** — Prisma will fail to compile once a second `User ↔ Shop` relation is added (`submittedBy`). The existing unnamed relation must be named before or in the same migration:
+```prisma
+shops Shop[] @relation("ShopOwner")
+```
+
+**Required back-relations on `Shop` model** (Prisma requires both sides of every relation):
+```prisma
+claimRequests ShopClaimRequest[]
+leadEvents    LeadEvent[]
 ```
 
 **New model — `ShopClaimRequest`:**
@@ -51,7 +80,7 @@ model ShopClaimRequest {
   userId       String
   businessRole String
   proofDetail  String
-  status       ClaimStatus @default(pending)
+  status       ClaimStatus @default(PENDING)
   adminNote    String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -60,12 +89,6 @@ model ShopClaimRequest {
   user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([shopId, userId])
-}
-
-enum ClaimStatus {
-  pending
-  approved
-  rejected
 }
 ```
 
@@ -83,28 +106,25 @@ model LeadEvent {
 
   @@index([shopId, createdAt])
 }
-
-enum LeadEventType {
-  website_click
-  phone_click
-  directions_click
-}
 ```
 
 ### New Routes
 
 | Route | Purpose | Auth |
 |-------|---------|------|
-| `/shops/owner/new` | Submit a new shop listing | Signed in |
+| `/shops/submit` | Submit a new shop listing | Signed in |
 | `/shops/[slug]/claim` | Claim an existing shop | Signed in |
-| `/shops/[slug]/manage` | Owner dashboard (redirects to `/edit`) | Shop owner |
+| `/shops/[slug]/manage` | Redirect-only — forwards to `/shops/[slug]/manage/edit` | Shop owner |
 | `/shops/[slug]/manage/edit` | Edit shop info | Shop owner |
 | `/shops/[slug]/manage/photos` | Photo management | Shop owner |
 | `/shops/[slug]/manage/reviews` | Respond to reviews | Shop owner |
 | `/shops/[slug]/manage/analytics` | Lead event analytics | Shop owner |
 | `/api/shops/[slug]/track` | Record lead event | Public (rate-limited) |
+| `/admin/shops` | All shops index | Admin |
+| `/admin/shops/[id]` | Shop detail with manual owner assignment | Admin |
 | `/admin/shops/claims` | Admin claim review queue | Admin |
 | `/admin/shops/submissions` | Admin submission review queue | Admin |
+| `/admin/shops/preview/[id]` | Admin-only shop preview (bypasses public status filter) | Admin |
 
 ### New Auth Guard
 
@@ -124,34 +144,34 @@ Add `requireShopOwner(slug: string)` to `src/lib/auth/guards.ts`:
 **Form** (`/shops/[slug]/claim`):
 - Business role field: dropdown (Owner, Manager, Employee)
 - Proof detail field: freetext (e.g. "I'm the owner — business email: kyle@bluepinebikes.com")
-- Submit → creates `ShopClaimRequest` with `status: pending`
+- Submit → creates `ShopClaimRequest` with `status: PENDING`
 - One pending claim per user per shop (unique constraint enforced)
 
 **Admin approval** (`/admin/shops/claims`):
-- Approve → sets `shop.ownerId = claim.userId`, `shop.status = claimed`, marks claim `approved`, sends in-app notification to claimant
-- Reject → admin writes a rejection note, marks claim `rejected`, sends in-app notification
+- Approve → sets `shop.ownerId = claim.userId`, `shop.status = CLAIMED`, marks claim `APPROVED`, sends in-app notification to claimant
+- Reject → admin writes a rejection note, marks claim `REJECTED`, sends in-app notification
 
 ### Submitting a New Shop
 
-**Form** (`/shops/owner/new`) — multi-step:
+**Form** (`/shops/submit`) — multi-step:
 1. Basic info: name, shop type, address, city, state, zip
 2. Contact + hours: phone, email, website, day-by-day open/close times
 3. Services + brands: multi-select chips + tag input
 4. Review + submit
 
 **On submit:**
-- `Shop` created with `status: pending_review`, `submittedByUserId` set, `ownerId` set to submitter immediately
+- `Shop` created with `status: PENDING_REVIEW`, `submittedByUserId` set, `ownerId` set to submitter immediately
 - Shop is not publicly visible until approved
 
 **Admin approval** (`/admin/shops/submissions`):
-- Approve → `status: claimed`, shop becomes publicly visible, submitter notified
-- Reject → admin note, `status: draft`, submitter notified
+- Approve → `status: CLAIMED`, shop becomes publicly visible, submitter notified
+- Reject → admin note, `status: DRAFT`, `ownerId` is cleared to `null` (submitter loses ownership of the rejected listing), submitter notified. There is no re-submission flow — the submitter must contact admin if they want to resubmit.
 
 ### Admin Manual Assignment
 
 New pages at `/admin/shops/` (no existing admin shops pages exist):
 - `/admin/shops/page.tsx` — index listing all shops (name, status, owner, type, city) with links to each
-- `/admin/shops/[id]/page.tsx` — shop detail with "Assign Owner" field (user email search → select → sets `shop.ownerId` + `shop.status: claimed`) and "Remove Owner" button (clears `shop.ownerId`, sets `status: active`)
+- `/admin/shops/[id]/page.tsx` — shop detail with "Assign Owner" field (user email search → select → sets `shop.ownerId` + `shop.status: CLAIMED`) and "Remove Owner" button (clears `shop.ownerId`, sets `status: ACTIVE`)
 
 ---
 
@@ -165,10 +185,10 @@ All tabs share a layout with the shop name, status badge, and tab navigation (Ed
 
 Fields: name, description, address, city, state, zip, phone, email, website, shop type, services (multi-select), brands (tag input), hours (day-by-day open/close or "Closed")
 
-Server action `updateShop(shopId, input)`:
-- Guarded by `requireShopOwner(slug)`
+Server action `updateShop(slug, input)`:
+- Guarded by `requireShopOwner(slug)` (slug available in action scope from the route)
 - Validates with Zod
-- Calls `revalidatePath('/shops/[slug]')` after save
+- Calls `revalidatePath(\`/shops/${slug}\`)` after save
 
 ### Photos Tab (`/manage/photos`)
 
@@ -197,8 +217,8 @@ Summary cards (all-time totals):
 30-day bar chart: grouped by date, stacked by event type. Implemented as a CSS-only bar chart (no external charting library).
 
 Queries:
-- `getShopLeadSummary(shopId)` → `{ websiteClicks, phoneCalls, directionsClicks }` totals
-- `getShopLeadsByDay(shopId, days: 30)` → array of `{ date, website_click, phone_click, directions_click }` grouped by day
+- `getShopLeadSummary(shopId)` → `{ websiteClicks, phoneClicks, directionsClicks }` totals
+- `getShopLeadsByDay(shopId, days: 30)` → array of `{ date, websiteClicks, phoneClicks, directionsClicks }` grouped by day
 
 ---
 
@@ -213,7 +233,7 @@ The existing `ShopDetail` component's "Call", "Get Directions", and "Visit Websi
 ### API Route (`/api/shops/[slug]/track`)
 
 - No authentication required (anonymous visitors tracked)
-- Rate-limited by IP: max 3 events per shop per IP per minute (using existing Upstash Redis rate limiter via `rateLimit({ key, maxPerMinute: 3 })`)
+- Rate-limited by IP **per shop**: max 3 events per shop per IP per minute. The key must include the shop slug to prevent the limit from being shared across all shops: `rateLimit({ identifier: ip, action: \`shop-track:${slug}\`, maxPerMinute: 3 })`. The rate limiter **throws** on both rate-limit hits and misconfiguration, so the route handler wraps the entire call in try/catch and returns 200 immediately for any exception (silent drop — no error propagates to the client).
 - Creates `LeadEvent` record
 - Returns 200 immediately
 - Silently drops requests over the rate limit (no error to client)
@@ -233,10 +253,10 @@ Table columns: Shop name, Claimant name/email, Role, Proof detail, Submitted dat
 
 ### Submissions Queue (`/admin/shops/submissions`)
 
-Table columns: Shop name, Type, City/State, Submitter name, Submitted date
+Table columns: Shop ID (hidden, used for preview link), Shop name, Type, City/State, Submitter name, Submitted date
 
-- Shows all shops with `status: pending_review`
-- "Preview" link opens public detail preview
+- Shows all shops with `status: PENDING_REVIEW`. `getPendingSubmissions` returns `id`, `name`, `shopType`, `city`, `state`, and the submitter's name.
+- "Preview" link routes to `/admin/shops/preview/[id]` — an admin-only page that renders the `ShopDetail` component directly, bypassing the public status filter. Do not link to the public `/shops/[slug]` page as `PENDING_REVIEW` shops are excluded from public queries.
 - Approve / Reject actions same pattern as claims queue
 
 ---
@@ -247,7 +267,7 @@ Table columns: Shop name, Type, City/State, Submitter name, Submitted date
 |------|--------|
 | `prisma/schema.prisma` | Add `ShopStatus`, `ClaimStatus`, `LeadEventType` enums; add `status` + `submittedByUserId` to `Shop`; add `ShopClaimRequest` and `LeadEvent` models |
 | `src/lib/auth/guards.ts` | Add `requireShopOwner(slug)` |
-| `src/modules/shops/lib/queries.ts` | Add owner queries: `getShopForOwner`, `getShopLeadSummary`, `getShopLeadsByDay`, `getPendingClaims`, `getPendingSubmissions`; add `status: { in: ['active', 'claimed'] }` filter to existing public queries `getShops`, `getShopBySlug`, `getShopWithDetails`, `getShopsInBounds` |
+| `src/modules/shops/lib/queries.ts` | Add owner queries: `getShopForOwner`, `getShopLeadSummary`, `getShopLeadsByDay`, `getPendingClaims`, `getPendingSubmissions`; add `status: { in: [ShopStatus.ACTIVE, ShopStatus.CLAIMED] }` filter (import `ShopStatus` from `@/generated/prisma/client`) to existing public queries `getShops`, `getShopBySlug`, `getShopWithDetails`, `getShopsInBounds` |
 | `src/modules/shops/actions/claimShop.ts` | New — submit claim request |
 | `src/modules/shops/actions/submitShop.ts` | New — submit new shop listing |
 | `src/modules/shops/actions/updateShop.ts` | New — owner edits shop info |
@@ -257,7 +277,8 @@ Table columns: Shop name, Type, City/State, Submitter name, Submitted date
 | `src/modules/shops/components/ShopActionButtons.tsx` | New — client component wrapping CTA buttons with lead tracking |
 | `src/modules/shops/components/owner/` | New — dashboard layout + tab components |
 | `src/app/shops/[slug]/claim/page.tsx` | New — claim form page |
-| `src/app/shops/owner/new/page.tsx` | New — new shop submission form |
+| `src/app/shops/submit/page.tsx` | New — new shop submission form |
+| `src/app/shops/[slug]/manage/page.tsx` | New — redirect-only page (`redirect(\`/shops/${slug}/manage/edit\`)`) |
 | `src/app/shops/[slug]/manage/layout.tsx` | New — owner dashboard layout |
 | `src/app/shops/[slug]/manage/edit/page.tsx` | New |
 | `src/app/shops/[slug]/manage/photos/page.tsx` | New |
@@ -268,25 +289,26 @@ Table columns: Shop name, Type, City/State, Submitter name, Submitted date
 | `src/app/admin/shops/[id]/page.tsx` | New — admin shop detail with manual owner assignment |
 | `src/app/admin/shops/claims/page.tsx` | New — admin claims queue |
 | `src/app/admin/shops/submissions/page.tsx` | New — admin submissions queue |
+| `src/app/admin/shops/preview/[id]/page.tsx` | New — admin-only shop preview (bypasses public status filter) |
 | `src/app/shops/[slug]/page.tsx` | Modify — add "Claim this listing" link, swap CTA buttons for `ShopActionButtons` |
 
 ---
 
 ## Error Handling
 
-- `requireShopOwner` redirects unauthenticated users to `/signin?callbackUrl=...`; calls `notFound()` if shop not found; calls `redirect('/403')` if user is not the owner
+- `requireShopOwner` redirects unauthenticated users to `/signin` (via `requireAuth()`, which does not append a callbackUrl); calls `notFound()` if shop not found; calls `redirect('/403')` if user is not the owner
 - Claim submission: duplicate pending claim returns a user-visible error ("You already have a pending claim for this shop")
 - Photo upload: over-limit (>10) returns error; Blob upload failure surfaces as form error
 - Lead tracking API: silent drop on rate limit (200 response, no event created); no error propagates to client
-- New shop submission: slug collision resolved via existing `uniqueSlug()` utility
+- New shop submission: slug collision resolved via existing `uniqueSlug(text, existsCheck)` utility — the `submitShop` action passes a database-querying `existsCheck` callback, e.g. `(s) => db.shop.findUnique({ where: { slug: s } }).then(Boolean)`
 
 ## Testing
 
 - Verify unauthenticated users cannot access `/shops/[slug]/manage/*` (redirected to signin)
 - Verify non-owners cannot access another shop's manage routes (403)
 - Verify claim form creates `ShopClaimRequest` record; duplicate prevented
-- Verify admin approval sets `ownerId` and `status: claimed`
-- Verify new shop submission creates shop with `pending_review` status; not visible in public directory until approved
+- Verify admin approval sets `ownerId` and `status: CLAIMED`
+- Verify new shop submission creates shop with `PENDING_REVIEW` status; not visible in public directory until approved
 - Verify lead tracking fires on button click and creates `LeadEvent`; rate limit prevents >3 per minute per IP per shop
 - Verify photo upload creates Blob URL and `ShopPhoto` record; max 10 enforced
 - Verify owner response saves to `ownerResponse` field and renders on public shop page
