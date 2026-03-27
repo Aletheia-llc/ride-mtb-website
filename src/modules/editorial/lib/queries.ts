@@ -207,16 +207,6 @@ export async function deleteArticle(id: string) {
   return db.article.delete({ where: { id } })
 }
 
-// ── getAllPublishedArticleSlugs ────────────────────────────
-
-export async function getAllPublishedArticleSlugs(): Promise<{ slug: string; updatedAt: Date }[]> {
-  return db.article.findMany({
-    where: { status: 'published' },
-    select: { slug: true, updatedAt: true },
-    orderBy: { publishedAt: 'desc' },
-  })
-}
-
 // ── getRecentPublishedArticles ────────────────────────────
 
 export async function getRecentPublishedArticles(limit: number = 20): Promise<ArticleSummary[]> {
@@ -240,4 +230,14 @@ export async function getRecentPublishedArticles(limit: number = 20): Promise<Ar
     createdAt: a.createdAt,
     authorName: a.author.name,
   }))
+}
+
+// ── getAllPublishedArticleSlugs ────────────────────────────
+
+export async function getAllPublishedArticleSlugs(): Promise<{ slug: string; updatedAt: Date }[]> {
+  return db.article.findMany({
+    where: { status: 'published' },
+    select: { slug: true, updatedAt: true },
+    orderBy: { publishedAt: 'desc' },
+  })
 }
