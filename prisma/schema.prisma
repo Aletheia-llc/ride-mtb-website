@@ -92,7 +92,9 @@ model User {
   sellerTransactions   Transaction[]       @relation("TxSeller")
   listingSaves     ListingSave[]
   listingReports   ListingReport[]
-  shops           Shop[]
+  shops             Shop[]              @relation("ShopOwner")
+  submittedShops    Shop[]              @relation("ShopSubmittedBy")
+  shopClaimRequests ShopClaimRequest[]
   shopReviews     ShopReview[]
   reviewHelpfulVotes ReviewHelpful[]
   trailReviewHelpful TrailReviewHelpful[]
@@ -1620,10 +1622,15 @@ model Shop {
   reviewCount         Int    @default(0)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  owner       User?       @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  status            ShopStatus @default(ACTIVE)
+  submittedByUserId String?
+  owner             User?      @relation("ShopOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  submittedBy       User?      @relation("ShopSubmittedBy", fields: [submittedByUserId], references: [id])
   photos      ShopPhoto[]
   reviews     ShopReview[]
   affiliateLinks   AffiliateLink[] @relation("ShopAffiliateLinks")
+  claimRequests     ShopClaimRequest[]
+  leadEvents        LeadEvent[]
 
   @@index([city, state])
   @@index([latitude, longitude])
@@ -1651,6 +1658,25 @@ enum PartnerTier {
   VERIFIED
   PARTNER
   PREMIER
+}
+
+enum ShopStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  CLAIMED
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeadEventType {
+  WEBSITE_CLICK
+  PHONE_CLICK
+  DIRECTIONS_CLICK
 }
 
 model ShopPhoto {
@@ -1696,6 +1722,36 @@ model ReviewHelpful {
 
   @@unique([reviewId, userId])
   @@map("review_helpful")
+}
+
+model ShopClaimRequest {
+  id           String      @id @default(cuid())
+  shopId       String
+  userId       String
+  businessRole String
+  proofDetail  String      @db.Text
+  status       ClaimStatus @default(PENDING)
+  adminNote    String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  shop  Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, userId])
+  @@map("shop_claim_requests")
+}
+
+model LeadEvent {
+  id        String        @id @default(cuid())
+  shopId    String
+  eventType LeadEventType
+  createdAt DateTime      @default(now())
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+  @@map("lead_events")
 }
 
 // ============================================================
