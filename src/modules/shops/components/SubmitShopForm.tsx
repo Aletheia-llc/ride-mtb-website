@@ -1,5 +1,5 @@
 'use client'
-import { useState, useActionState } from 'react'
+import { useState, useEffect, useActionState } from 'react'
 import { useRouter } from 'next/navigation'
 import { submitShop, type SubmitShopState } from '../actions/submitShop'
 
@@ -16,11 +16,11 @@ export function SubmitShopForm() {
   const [step, setStep] = useState(1)
   const [state, action, pending] = useActionState(submitShop, initial)
 
-  // Redirect on success
-  if (state.success && state.slug) {
-    router.push(`/shops/${state.slug}/manage/edit`)
-    return null
-  }
+  useEffect(() => {
+    if (state.success && state.slug) {
+      router.push(`/shops/${state.slug}/manage/edit`)
+    }
+  }, [state.success, state.slug, router])
 
   const inputClass = 'w-full rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]'
 
