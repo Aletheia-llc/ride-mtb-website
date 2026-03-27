@@ -1,7 +1,7 @@
 import 'server-only'
 import { db } from '@/lib/db/client'
 import { paginate } from '@/lib/db/helpers'
-import { ShopStatus, LeadEventType } from '@/generated/prisma/client'
+import { ShopStatus, ClaimStatus, LeadEventType } from '@/generated/prisma/client'
 import type { ShopSummary, ShopDetailData, ShopAffiliateLink } from '../types'
 
 // ── getShopReviews ─────────────────────────────────────────
@@ -240,8 +240,8 @@ export async function getShopLeadsByDay(
 
   const map = new Map<string, { websiteClicks: number; phoneClicks: number; directionsClicks: number }>()
 
-  // Pre-fill all days
-  for (let i = 0; i < days; i++) {
+  // Pre-fill all days (0 = oldest, days = today inclusive)
+  for (let i = 0; i <= days; i++) {
     const d = new Date(since)
     d.setDate(d.getDate() + i)
     const key = d.toISOString().slice(0, 10)
@@ -264,7 +264,7 @@ export async function getShopLeadsByDay(
 
 export async function getPendingClaims() {
   return db.shopClaimRequest.findMany({
-    where: { status: 'PENDING' },
+    where: { status: ClaimStatus.PENDING },
     include: {
       shop: { select: { id: true, name: true, slug: true } },
       user: { select: { id: true, name: true, email: true } },
