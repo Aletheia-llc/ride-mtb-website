@@ -1,14 +1,14 @@
 import Link from 'next/link'
 import type { ShopStatus } from '@/generated/prisma/client'
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Partial<Record<ShopStatus, string>> = {
   ACTIVE: 'Active',
   CLAIMED: 'Claimed',
   DRAFT: 'Draft',
   PENDING_REVIEW: 'Pending Review',
 }
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_COLORS: Partial<Record<ShopStatus, string>> = {
   ACTIVE: 'bg-green-100 text-green-800',
   CLAIMED: 'bg-blue-100 text-blue-800',
   DRAFT: 'bg-gray-100 text-gray-600',

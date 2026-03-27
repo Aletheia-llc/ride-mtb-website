@@ -1,4 +1,3 @@
-import { requireShopOwner } from '@/lib/auth/guards'
 import { getShopForOwner } from '@/modules/shops/lib/queries'
 import { DashboardLayout } from '@/modules/shops/components/owner/DashboardLayout'
 import { EditTab } from '@/modules/shops/components/owner/EditTab'
@@ -11,12 +10,18 @@ interface Props {
 
 export default async function EditPage({ params }: Props) {
   const { slug } = await params
-  await requireShopOwner(slug) // auth guard
+  // Auth is handled by ManageLayout — no duplicate check needed
 
   const shop = await getShopForOwner(slug)
   if (!shop) notFound()
 
   const boundAction = updateShop.bind(null, slug)
+
+  const shopForEdit = {
+    ...shop,
+    services: Array.isArray(shop.services) ? (shop.services as string[]) : [],
+    brands: Array.isArray(shop.brands) ? (shop.brands as string[]) : [],
+  }
 
   return (
     <DashboardLayout
@@ -25,7 +30,7 @@ export default async function EditPage({ params }: Props) {
       shopStatus={shop.status}
       activeTab="edit"
     >
-      <EditTab shop={shop} action={boundAction} />
+      <EditTab shop={shopForEdit} action={boundAction} />
     </DashboardLayout>
   )
 }

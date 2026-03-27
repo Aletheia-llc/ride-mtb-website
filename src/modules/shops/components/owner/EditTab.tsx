@@ -1,12 +1,9 @@
 'use client'
 import { useActionState } from 'react'
+import { ShopType } from '@/generated/prisma/client'
 import type { UpdateShopState } from '../../actions/updateShop'
 
-const SHOP_TYPES = [
-  'LOCAL_SHOP', 'CHAIN_STORE', 'ONLINE_RETAILER', 'RENTAL_SHOP',
-  'REPAIR_ONLY', 'SUSPENSION_SPECIALIST', 'WHEEL_BUILDER', 'CUSTOM_BUILDER',
-  'DEMO_CENTER', 'GUIDE_SERVICE', 'COACHING', 'TRAIL_ADVOCACY', 'OTHER',
-]
+const SHOP_TYPES = Object.values(ShopType)
 
 interface ShopData {
   name: string
@@ -19,8 +16,8 @@ interface ShopData {
   phone?: string | null
   email?: string | null
   websiteUrl?: string | null
-  services: unknown
-  brands: unknown
+  services: string[]
+  brands: string[]
 }
 
 interface Props {
@@ -93,7 +90,7 @@ export function EditTab({ shop, action }: Props) {
         <label className="block text-sm font-medium mb-1">Services (comma-separated)</label>
         <input
           name="services"
-          defaultValue={Array.isArray(shop.services) ? (shop.services as string[]).join(', ') : ''}
+          defaultValue={shop.services.join(', ')}
           className="input w-full"
         />
       </div>
@@ -102,7 +99,7 @@ export function EditTab({ shop, action }: Props) {
         <label className="block text-sm font-medium mb-1">Brands (comma-separated)</label>
         <input
           name="brands"
-          defaultValue={Array.isArray(shop.brands) ? (shop.brands as string[]).join(', ') : ''}
+          defaultValue={shop.brands.join(', ')}
           className="input w-full"
         />
       </div>
