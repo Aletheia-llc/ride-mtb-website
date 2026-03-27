@@ -1,7 +1,6 @@
 import 'server-only'
 import { auth } from '@/lib/auth/config'
 import { redirect, notFound } from 'next/navigation'
-// eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
 
 export async function requireAuth() {
