@@ -27,14 +27,21 @@ enum ShopStatus {
 }
 ```
 
-**New field on `Shop`:**
+**New fields on `Shop`:**
 ```prisma
-status     ShopStatus @default(active)
+status            ShopStatus @default(active)
 submittedByUserId String?
-submittedBy       User?   @relation("ShopSubmittedBy", fields: [submittedByUserId], references: [id])
+submittedBy       User?      @relation("ShopSubmittedBy", fields: [submittedByUserId], references: [id])
 ```
 
-Existing records default to `active`.
+Existing records default to `active`. Both `active` and `claimed` shops are publicly visible; `draft` and `pending_review` are not.
+
+**Required back-relations on `User` model:**
+```prisma
+submittedShops    Shop[]             @relation("ShopSubmittedBy")
+shopClaimRequests ShopClaimRequest[]
+leadEvents        LeadEvent[]
+```
 
 **New model — `ShopClaimRequest`:**
 ```prisma
@@ -52,7 +59,7 @@ model ShopClaimRequest {
   shop  Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([shopId, userId, status])
+  @@unique([shopId, userId])
 }
 
 enum ClaimStatus {
@@ -61,6 +68,8 @@ enum ClaimStatus {
   rejected
 }
 ```
+
+Note: `@@unique([shopId, userId])` means a user can only ever submit one claim per shop. If rejected, they cannot re-claim (must contact admin).
 
 **New model — `LeadEvent`:**
 ```prisma
@@ -100,9 +109,9 @@ enum LeadEventType {
 ### New Auth Guard
 
 Add `requireShopOwner(slug: string)` to `src/lib/auth/guards.ts`:
-- Calls `requireAuth()` to get the current user
-- Fetches shop by slug, checks `shop.ownerId === user.id` OR `user.role === 'admin'`
-- Throws redirect to `/signin` if not authenticated, 404 if shop not found, 403 if not owner
+- Calls `requireAuth()` to get the current user (which already redirects to `/signin` if unauthenticated)
+- Fetches shop by slug; calls `notFound()` if shop does not exist
+- Checks `shop.ownerId === user.id` OR `user.role === 'admin'`; calls `redirect('/403')` if neither (consistent with existing guard pattern)
 
 ---
 
@@ -140,9 +149,9 @@ Add `requireShopOwner(slug: string)` to `src/lib/auth/guards.ts`:
 
 ### Admin Manual Assignment
 
-Added to existing `/admin/shops/[id]` page:
-- "Assign Owner" field: user email search → select → sets `shop.ownerId` + `shop.status: claimed`
-- "Remove Owner" button: clears `shop.ownerId`, sets `status: active`
+New pages at `/admin/shops/` (no existing admin shops pages exist):
+- `/admin/shops/page.tsx` — index listing all shops (name, status, owner, type, city) with links to each
+- `/admin/shops/[id]/page.tsx` — shop detail with "Assign Owner" field (user email search → select → sets `shop.ownerId` + `shop.status: claimed`) and "Remove Owner" button (clears `shop.ownerId`, sets `status: active`)
 
 ---
 
@@ -165,7 +174,7 @@ Server action `updateShop(shopId, input)`:
 
 - Upload: image file → Vercel Blob → creates `ShopPhoto` record with `shopId`, `url`, `sortOrder`
 - Drag-to-reorder: updates `sortOrder` on all affected records
-- Set cover: sets `isCover: true` on selected photo, clears `isCover` on others
+- Set cover: sets `isPrimary: true` on selected photo, clears `isPrimary` on others (field is `isPrimary` in the existing `ShopPhoto` model)
 - Delete: removes from Blob + deletes `ShopPhoto` record
 - Max 10 photos per shop (enforced server-side)
 
@@ -204,7 +213,7 @@ The existing `ShopDetail` component's "Call", "Get Directions", and "Visit Websi
 ### API Route (`/api/shops/[slug]/track`)
 
 - No authentication required (anonymous visitors tracked)
-- Rate-limited by IP: max 5 events per shop per IP per hour (using existing Upstash Redis rate limiter)
+- Rate-limited by IP: max 3 events per shop per IP per minute (using existing Upstash Redis rate limiter via `rateLimit({ key, maxPerMinute: 3 })`)
 - Creates `LeadEvent` record
 - Returns 200 immediately
 - Silently drops requests over the rate limit (no error to client)
@@ -238,7 +247,7 @@ Table columns: Shop name, Type, City/State, Submitter name, Submitted date
 |------|--------|
 | `prisma/schema.prisma` | Add `ShopStatus`, `ClaimStatus`, `LeadEventType` enums; add `status` + `submittedByUserId` to `Shop`; add `ShopClaimRequest` and `LeadEvent` models |
 | `src/lib/auth/guards.ts` | Add `requireShopOwner(slug)` |
-| `src/modules/shops/lib/queries.ts` | Add owner queries: `getShopForOwner`, `getShopLeadSummary`, `getShopLeadsByDay`, `getPendingClaims`, `getPendingSubmissions` |
+| `src/modules/shops/lib/queries.ts` | Add owner queries: `getShopForOwner`, `getShopLeadSummary`, `getShopLeadsByDay`, `getPendingClaims`, `getPendingSubmissions`; add `status: { in: ['active', 'claimed'] }` filter to existing public queries `getShops`, `getShopBySlug`, `getShopWithDetails`, `getShopsInBounds` |
 | `src/modules/shops/actions/claimShop.ts` | New — submit claim request |
 | `src/modules/shops/actions/submitShop.ts` | New — submit new shop listing |
 | `src/modules/shops/actions/updateShop.ts` | New — owner edits shop info |
@@ -255,16 +264,17 @@ Table columns: Shop name, Type, City/State, Submitter name, Submitted date
 | `src/app/shops/[slug]/manage/reviews/page.tsx` | New |
 | `src/app/shops/[slug]/manage/analytics/page.tsx` | New |
 | `src/app/api/shops/[slug]/track/route.ts` | New — lead tracking endpoint |
+| `src/app/admin/shops/page.tsx` | New — admin shops index (all shops list) |
+| `src/app/admin/shops/[id]/page.tsx` | New — admin shop detail with manual owner assignment |
 | `src/app/admin/shops/claims/page.tsx` | New — admin claims queue |
 | `src/app/admin/shops/submissions/page.tsx` | New — admin submissions queue |
 | `src/app/shops/[slug]/page.tsx` | Modify — add "Claim this listing" link, swap CTA buttons for `ShopActionButtons` |
-| `src/app/admin/shops/[id]/page.tsx` | Modify — add manual owner assignment UI |
 
 ---
 
 ## Error Handling
 
-- `requireShopOwner` redirects unauthenticated users to `/signin?callbackUrl=...`; returns 404 if shop not found; returns 403 if user is not the owner
+- `requireShopOwner` redirects unauthenticated users to `/signin?callbackUrl=...`; calls `notFound()` if shop not found; calls `redirect('/403')` if user is not the owner
 - Claim submission: duplicate pending claim returns a user-visible error ("You already have a pending claim for this shop")
 - Photo upload: over-limit (>10) returns error; Blob upload failure surfaces as form error
 - Lead tracking API: silent drop on rate limit (200 response, no event created); no error propagates to client
@@ -277,6 +287,6 @@ Table columns: Shop name, Type, City/State, Submitter name, Submitted date
 - Verify claim form creates `ShopClaimRequest` record; duplicate prevented
 - Verify admin approval sets `ownerId` and `status: claimed`
 - Verify new shop submission creates shop with `pending_review` status; not visible in public directory until approved
-- Verify lead tracking fires on button click and creates `LeadEvent`; rate limit prevents >5 per hour per IP
+- Verify lead tracking fires on button click and creates `LeadEvent`; rate limit prevents >3 per minute per IP per shop
 - Verify photo upload creates Blob URL and `ShopPhoto` record; max 10 enforced
 - Verify owner response saves to `ownerResponse` field and renders on public shop page
