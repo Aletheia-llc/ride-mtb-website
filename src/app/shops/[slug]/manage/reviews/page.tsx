@@ -23,6 +23,7 @@ export default async function ReviewsPage({ params }: Props) {
     where: { shopId: shop.id },
     include: { user: { select: { name: true } } },
     orderBy: { createdAt: 'desc' },
+    take: 50,
   })
 
   const replyAction = respondToReview.bind(null, slug)

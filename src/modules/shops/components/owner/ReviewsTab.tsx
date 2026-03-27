@@ -1,5 +1,5 @@
 'use client'
-import { useState, useActionState } from 'react'
+import { useState, useEffect, useActionState } from 'react'
 import type { ResponseState } from '../../actions/respondToReview'
 
 interface Review {
@@ -28,6 +28,10 @@ function StarRating({ rating }: { rating: number }) {
 function ReviewRow({ review, replyAction }: { review: Review; replyAction: Props['replyAction'] }) {
   const [showForm, setShowForm] = useState(false)
   const [state, action, pending] = useActionState(replyAction, { errors: {} })
+
+  useEffect(() => {
+    if (state.success) setShowForm(false)
+  }, [state.success])
 
   return (
     <div className="border-b border-[var(--color-border)] pb-6 last:border-0">
