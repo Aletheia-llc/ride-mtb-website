@@ -17,6 +17,8 @@ import { GuestHomeFeed } from '@/modules/feed/components/GuestHomeFeed'
 import { getUserXP, getWeeklyXp } from '@/modules/xp'
 import { db } from '@/lib/db/client'
 
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://ride-mtb.vercel.app'
+
 export const metadata: Metadata = {
   title: 'Ride MTB — Mountain Bike Community',
   description: 'The MTB platform for riders. Trails, gear, community, learning.',
@@ -24,6 +26,7 @@ export const metadata: Metadata = {
     type: 'website',
     title: 'Ride MTB — Mountain Bike Community',
     description: 'The MTB platform for riders. Trails, gear, community, learning.',
+    images: [{ url: `${BASE_URL}/icons/icon-512x512.png`, width: 512, height: 512 }],
   },
 }
 

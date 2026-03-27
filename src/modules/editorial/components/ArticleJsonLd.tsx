@@ -13,7 +13,7 @@ export function ArticleJsonLd({ article }: ArticleJsonLdProps) {
     headline: article.title,
     description: article.excerpt ?? article.title,
     ...(article.coverImageUrl && { image: article.coverImageUrl }),
-    datePublished: article.publishedAt?.toISOString(),
+    ...(article.publishedAt && { datePublished: article.publishedAt.toISOString() }),
     dateModified: article.updatedAt.toISOString(),
     author: {
       '@type': 'Person',
