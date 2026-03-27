@@ -43,7 +43,7 @@ export function ClaimForm({ shopId }: { shopId: string }) {
           required
           minLength={10}
           maxLength={1000}
-          placeholder="e.g. I&apos;m the owner — business email: kyle@bluepinebikes.com"
+          placeholder="e.g. I'm the owner — business email: kyle@bluepinebikes.com"
           className="w-full rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)] min-h-[100px] resize-y"
         />
       </div>

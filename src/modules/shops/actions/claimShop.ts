@@ -1,8 +1,10 @@
 'use server'
 import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
 import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
+import { ClaimStatus } from '@/generated/prisma/client'
 
 const schema = z.object({
   shopId: z.string().min(1),
@@ -21,17 +23,26 @@ export async function claimShop(_prev: ClaimState, formData: FormData): Promise<
     }
     const { shopId, businessRole, proofDetail } = parsed.data
 
+    const shop = await db.shop.findUnique({ where: { id: shopId }, select: { ownerId: true } })
+    if (!shop) return { errors: { general: 'Shop not found' } }
+    if (shop.ownerId) return { errors: { general: 'This shop already has an owner' } }
+
     const existing = await db.shopClaimRequest.findUnique({
       where: { shopId_userId: { shopId, userId: user.id } },
+      select: { status: true },
     })
-    if (existing) {
-      return { errors: { general: 'You already have a pending claim for this shop' } }
+    if (existing?.status === ClaimStatus.PENDING || existing?.status === ClaimStatus.APPROVED) {
+      return { errors: { general: 'You already have a pending or approved claim for this shop' } }
+    }
+    if (existing?.status === ClaimStatus.REJECTED) {
+      return { errors: { general: 'Your previous claim was rejected. Please contact an admin.' } }
     }
 
     await db.shopClaimRequest.create({
       data: { shopId, userId: user.id, businessRole, proofDetail },
     })
 
+    revalidatePath('/shops')
     return { errors: {}, success: true }
   } catch {
     return { errors: { general: 'Something went wrong. Please try again.' } }
