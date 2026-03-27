@@ -1625,7 +1625,7 @@ model Shop {
   status            ShopStatus @default(ACTIVE)
   submittedByUserId String?
   owner             User?      @relation("ShopOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  submittedBy       User?      @relation("ShopSubmittedBy", fields: [submittedByUserId], references: [id])
+  submittedBy       User?      @relation("ShopSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
   photos      ShopPhoto[]
   reviews     ShopReview[]
   affiliateLinks   AffiliateLink[] @relation("ShopAffiliateLinks")
@@ -1738,7 +1738,9 @@ model ShopClaimRequest {
   shop  Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // One claim per user per shop. Rejected users cannot re-claim — they must contact admin.
   @@unique([shopId, userId])
+  @@index([status, createdAt])
   @@map("shop_claim_requests")
 }
 
