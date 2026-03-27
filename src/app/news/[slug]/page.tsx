@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react'
 import { getArticleBySlug } from '@/modules/editorial/lib/queries'
 import { ArticleRenderer, ARTICLE_CATEGORY_LABELS } from '@/modules/editorial'
 import type { ArticleCategory } from '@/modules/editorial'
+import { ArticleJsonLd } from '@/modules/editorial/components/ArticleJsonLd'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://ride-mtb.vercel.app'
 
@@ -25,6 +26,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   return {
     title: `${article.title} | Ride MTB`,
     description: article.excerpt ?? article.title,
+    alternates: {
+      canonical: `${BASE_URL}/news/${slug}`,
+    },
     openGraph: {
       title: article.title,
       description: article.excerpt ?? article.title,
@@ -121,6 +125,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           />
         </div>
       )}
+
+      {/* Structured data */}
+      {article.publishedAt && <ArticleJsonLd article={article} />}
 
       {/* Body */}
       <ArticleRenderer content={article.body} />
