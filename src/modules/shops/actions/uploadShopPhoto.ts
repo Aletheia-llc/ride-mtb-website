@@ -8,22 +8,31 @@ import { db } from '@/lib/db/client'
 export type PhotoState = { errors: Record<string, string>; success?: boolean }
 
 export async function uploadShopPhoto(slug: string, _prev: PhotoState, formData: FormData): Promise<PhotoState> {
-  try {
-    const { shop } = await requireShopOwner(slug)
+  const { shop } = await requireShopOwner(slug)
 
+  const file = formData.get('photo') as File | null
+  if (!file || file.size === 0) {
+    return { errors: { general: 'No file provided' } }
+  }
+
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { errors: { general: 'Only JPEG, PNG, WebP, and GIF images are allowed' } }
+  }
+
+  let blobUrl: string | null = null
+  try {
+    // Note: count check + upload are non-atomic (TOCTOU); a DB-level constraint
+    // would be the true fix. This is a best-effort limit, not a hard guarantee.
     const photoCount = await db.shopPhoto.count({ where: { shopId: shop.id } })
     if (photoCount >= 10) {
       return { errors: { general: 'Maximum 10 photos per shop' } }
     }
 
-    const file = formData.get('photo') as File | null
-    if (!file || file.size === 0) {
-      return { errors: { general: 'No file provided' } }
-    }
-
     const blob = await put(`shops/${shop.id}/${Date.now()}-${file.name}`, file, {
       access: 'public',
     })
+    blobUrl = blob.url
 
     const maxOrder = await db.shopPhoto.findFirst({
       where: { shopId: shop.id },
@@ -42,6 +51,9 @@ export async function uploadShopPhoto(slug: string, _prev: PhotoState, formData:
     revalidatePath(`/shops/${slug}`)
     return { errors: {}, success: true }
   } catch {
+    if (blobUrl) {
+      try { await del(blobUrl) } catch { /* best-effort cleanup */ }
+    }
     return { errors: { general: 'Upload failed. Please try again.' } }
   }
 }

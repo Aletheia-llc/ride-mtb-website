@@ -5,11 +5,11 @@ import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
 import { uniqueSlug } from '@/lib/slugify'
-import { ShopStatus } from '@/generated/prisma/client'
+import { ShopStatus, ShopType } from '@/generated/prisma/client'
 
 const schema = z.object({
   name: z.string().min(2).max(120),
-  shopType: z.string().min(1),
+  shopType: z.nativeEnum(ShopType),
   address: z.string().min(5).max(200),
   city: z.string().min(2).max(100),
   state: z.string().min(2).max(100),
@@ -44,7 +44,7 @@ export async function submitShop(_prev: SubmitShopState, formData: FormData): Pr
         ...rest,
         name,
         slug,
-        shopType: shopType as any,
+        shopType,
         status: ShopStatus.PENDING_REVIEW,
         ownerId: user.id,
         submittedByUserId: user.id,
@@ -52,7 +52,7 @@ export async function submitShop(_prev: SubmitShopState, formData: FormData): Pr
         brands: brands ? brands.split(',').map((b) => b.trim()).filter(Boolean) : [],
         email: email || null,
         websiteUrl: websiteUrl || null,
-        hoursJson: hoursJson ? JSON.parse(hoursJson) : null,
+        hoursJson: hoursJson ? (() => { try { return JSON.parse(hoursJson) } catch { return null } })() : null,
       },
     })
 
