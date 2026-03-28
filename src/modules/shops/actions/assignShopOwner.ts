@@ -23,6 +23,14 @@ export async function assignShopOwner(
       return { error: 'Please enter a valid email address.' }
     }
 
+    const shop = await db.shop.findUnique({ where: { id: shopId } })
+    if (!shop) {
+      return { error: 'No shop found with that ID.' }
+    }
+    if (shop.ownerId) {
+      return { error: 'This shop already has an owner. Remove the current owner first.' }
+    }
+
     const user = await db.user.findUnique({ where: { email: userEmail } })
     if (!user) {
       return { error: 'No user found with that email.' }
