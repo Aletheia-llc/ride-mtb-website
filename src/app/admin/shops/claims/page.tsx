@@ -52,7 +52,7 @@ export default async function AdminClaimsPage() {
                     </Link>
                   </td>
                   <td className="py-3 pr-4">{claim.user.name ?? '—'}</td>
-                  <td className="py-3 pr-4">{claim.user.email}</td>
+                  <td className="py-3 pr-4">{claim.user.email ?? '—'}</td>
                   <td className="py-3 pr-4">
                     {new Date(claim.createdAt).toLocaleDateString()}
                   </td>

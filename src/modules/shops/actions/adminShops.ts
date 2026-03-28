@@ -18,14 +18,12 @@ export async function approveShop(shopId: string): Promise<void> {
 }
 
 // ── rejectShop ────────────────────────────────────────────
-// Note: ShopStatus has no REJECTED value in schema — DRAFT is used to
-// pull the shop back from review without publishing it.
 
 export async function rejectShop(shopId: string): Promise<void> {
   await requireAdmin()
   await db.shop.update({
     where: { id: shopId },
-    data: { status: ShopStatus.DRAFT },
+    data: { status: ShopStatus.REJECTED },
   })
   revalidatePath('/shops')
   revalidatePath('/admin/shops')
@@ -47,10 +45,16 @@ export async function approveClaim(claimId: string): Promise<void> {
       where: { id: claim.shopId },
       data: { status: ShopStatus.CLAIMED, ownerId: claim.userId },
     })
+    // Reject all other pending claims for the same shop
+    await tx.shopClaimRequest.updateMany({
+      where: { shopId: claim.shopId, id: { not: claimId }, status: ClaimStatus.PENDING },
+      data: { status: ClaimStatus.REJECTED },
+    })
   })
 
   revalidatePath('/shops')
   revalidatePath('/admin/shops')
+  revalidatePath('/admin/shops/claims')
 }
 
 // ── denyClaim ─────────────────────────────────────────────

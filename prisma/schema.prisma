@@ -1665,6 +1665,7 @@ enum ShopStatus {
   PENDING_REVIEW
   ACTIVE
   CLAIMED
+  REJECTED
 }
 
 enum ClaimStatus {
