@@ -20,6 +20,11 @@ export async function uploadShopPhoto(slug: string, _prev: PhotoState, formData:
     return { errors: { general: 'Only JPEG, PNG, WebP, and GIF images are allowed' } }
   }
 
+  const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
+  if (file.size > MAX_SIZE) {
+    return { errors: { general: 'Max file size is 5 MB' } }
+  }
+
   let blobUrl: string | null = null
   try {
     // Note: count check + upload are non-atomic (TOCTOU); a DB-level constraint
@@ -81,7 +86,7 @@ export async function setPhotoAsCover(slug: string, photoId: string): Promise<Ph
 
     await db.$transaction(async (tx) => {
       await tx.shopPhoto.updateMany({ where: { shopId: shop.id }, data: { isPrimary: false } })
-      await tx.shopPhoto.update({ where: { id: photoId }, data: { isPrimary: true } })
+      await tx.shopPhoto.update({ where: { id: photoId, shopId: shop.id }, data: { isPrimary: true } })
     })
 
     revalidatePath(`/shops/${slug}`)
