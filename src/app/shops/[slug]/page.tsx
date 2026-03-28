@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import { ShopDetail } from '@/modules/shops'
 // eslint-disable-next-line no-restricted-imports
 import { getShopBySlug, getShopReviews } from '@/modules/shops/lib/queries'
+import { ShopActionButtons } from '@/modules/shops/components/ShopActionButtons'
 
 interface ShopPageProps {
   params: Promise<{ slug: string }>
@@ -43,6 +44,29 @@ export default async function ShopPage({ params }: ShopPageProps) {
         <ArrowLeft className="h-4 w-4" />
         Back to Shops
       </Link>
+
+      {/* CTA buttons: call, directions, website */}
+      <ShopActionButtons
+        shopSlug={shop.slug}
+        phone={shop.phone}
+        websiteUrl={shop.websiteUrl}
+        address={shop.address}
+        city={shop.city}
+        state={shop.state}
+      />
+
+      {/* Claim listing prompt for unclaimed shops */}
+      {shop.ownerId === null && (
+        <p className="text-sm text-[var(--color-text-muted)]">
+          Is this your shop?{' '}
+          <Link
+            href={`/shops/${shop.slug}/claim`}
+            className="text-[var(--color-primary)] hover:underline"
+          >
+            Claim it.
+          </Link>
+        </p>
+      )}
 
       {/* Shop detail */}
       <ShopDetail shop={shop} reviews={reviews} />
