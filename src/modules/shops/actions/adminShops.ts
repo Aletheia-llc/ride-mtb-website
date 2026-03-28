@@ -10,11 +10,13 @@ import { ShopStatus, ClaimStatus } from '@/generated/prisma/client'
 export async function approveShop(shopId: string): Promise<void> {
   await requireAdmin()
   await db.shop.update({
-    where: { id: shopId },
+    where: { id: shopId, status: ShopStatus.PENDING_REVIEW },
     data: { status: ShopStatus.ACTIVE },
   })
   revalidatePath('/shops')
   revalidatePath('/admin/shops')
+  revalidatePath('/admin/shops/submissions')
+  revalidatePath(`/admin/shops/submissions/${shopId}`)
 }
 
 // ── rejectShop ────────────────────────────────────────────
@@ -22,11 +24,13 @@ export async function approveShop(shopId: string): Promise<void> {
 export async function rejectShop(shopId: string): Promise<void> {
   await requireAdmin()
   await db.shop.update({
-    where: { id: shopId },
+    where: { id: shopId, status: ShopStatus.PENDING_REVIEW },
     data: { status: ShopStatus.REJECTED },
   })
   revalidatePath('/shops')
   revalidatePath('/admin/shops')
+  revalidatePath('/admin/shops/submissions')
+  revalidatePath(`/admin/shops/submissions/${shopId}`)
 }
 
 // ── approveClaim ──────────────────────────────────────────
