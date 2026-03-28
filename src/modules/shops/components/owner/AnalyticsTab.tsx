@@ -53,18 +53,27 @@ export function AnalyticsTab({ summary, byDay }: Props) {
         <div className="flex items-end gap-px h-32 overflow-hidden">
           {byDay.map((day) => {
             const total = day.websiteClicks + day.phoneClicks + day.directionsClicks
-            const height = total === 0 ? 0 : Math.max(4, Math.round((total / maxTotal) * 100))
+            const totalPct = total === 0 ? 0 : Math.max(4, Math.round((total / maxTotal) * 100))
+            const wShare = total > 0 ? Math.round((day.websiteClicks / total) * 100) : 0
+            const pShare = total > 0 ? Math.round((day.phoneClicks / total) * 100) : 0
+            const dShare = total > 0 ? 100 - wShare - pShare : 0
             return (
               <div
                 key={day.date}
                 title={`${day.date}\nWebsite: ${day.websiteClicks}\nPhone: ${day.phoneClicks}\nDirections: ${day.directionsClicks}`}
-                className="flex-1 flex flex-col-reverse"
+                className="flex-1 flex flex-col justify-end"
                 style={{ height: '100%' }}
               >
-                <div
-                  className="w-full rounded-sm bg-[var(--color-primary)] opacity-80 hover:opacity-100 transition-opacity"
-                  style={{ height: `${height}%` }}
-                />
+                {total > 0 && (
+                  <div
+                    className="w-full flex flex-col opacity-80 hover:opacity-100 transition-opacity"
+                    style={{ height: `${totalPct}%` }}
+                  >
+                    <div className="bg-purple-500 w-full" style={{ height: `${dShare}%` }} />
+                    <div className="bg-green-500 w-full" style={{ height: `${pShare}%` }} />
+                    <div className="bg-blue-500 w-full" style={{ height: `${wShare}%` }} />
+                  </div>
+                )}
               </div>
             )
           })}
