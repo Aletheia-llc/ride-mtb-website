@@ -27,7 +27,7 @@ export function ShopActionButtons({ shopSlug, phone, websiteUrl, address, city, 
       {phone && (
         <a
           href={`tel:${phone}`}
-          onClick={() => trackEvent(shopSlug, 'PHONE_CLICK' as LeadEventType)}
+          onClick={() => trackEvent(shopSlug, 'PHONE_CLICK')}
           className="btn"
         >
           Call
