@@ -4,6 +4,7 @@ import { paginate } from '@/lib/db/helpers'
 import type { FeedItem } from '../types'
 import { getRideLogFeedItems } from '@/modules/rides/lib/feed'
 import { getTrailReviewFeedItems } from '@/modules/trails/lib/feed'
+// eslint-disable-next-line no-restricted-imports -- feed module aggregates across all modules
 import { getCreatorVideoFeedItems } from '@/modules/creators/lib/feed'
 import { getArticleFeedItems } from '@/modules/editorial/lib/feed'
 
