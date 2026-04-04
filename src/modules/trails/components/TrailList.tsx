@@ -18,7 +18,7 @@ const trailTypeBadge: Record<string, { label: string; variant: 'default' | 'succ
   connector: { label: 'Connector', variant: 'default' },
 }
 
-export function TrailList({ trails }: TrailListProps) {
+export function TrailList({ trails, systemSlug }: TrailListProps) {
   if (trails.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">
@@ -38,7 +38,7 @@ export function TrailList({ trails }: TrailListProps) {
         return (
           <Link
             key={trail.id}
-            href={`/trails/${trail.slug}`}
+            href={`/trails/explore/${systemSlug}/${trail.slug}`}
             className="block"
           >
             <Card className="transition-shadow hover:shadow-md">

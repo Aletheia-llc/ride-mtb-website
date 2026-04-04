@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import mapboxgl from 'mapbox-gl'
 import type { TrailSystemPin } from '../../types'
 
@@ -28,14 +28,9 @@ function difficultyColor(physical: number | null, technical: number | null): str
 }
 
 export function TrailsLayer({ map }: TrailsLayerProps) {
-  const loadedRef = useRef(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   useEffect(() => {
-    if (loadedRef.current) return
-    loadedRef.current = true
-
-    // --- Trail lines helpers ---
+    let isMounted = true
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
     function ensureTrailLinesSource() {
       if (!map.getSource('trail-lines')) {
@@ -50,8 +45,8 @@ export function TrailsLayer({ map }: TrailsLayerProps) {
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
             'line-color': ['get', 'color'],
-            'line-width': 2.5,
-            'line-opacity': 0.85,
+            'line-width': ['interpolate', ['linear'], ['zoom'], 9, 3.5, 11, 2.5, 14, 2],
+            'line-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.7, 11, 0.85],
           },
         })
 
@@ -115,23 +110,26 @@ export function TrailsLayer({ map }: TrailsLayerProps) {
     }
 
     function fetchAndRenderLines() {
-      if (!map || map._removed) return
+      if (!isMounted || !map || map._removed) return
 
       const zoom = map.getZoom()
-      if (zoom < 11) {
+      if (zoom < 9) {
         clearTrailLines()
         if (map.getLayer('trail-pins')) map.setLayoutProperty('trail-pins', 'visibility', 'visible')
         return
       }
 
-      // Hide system pins at high zoom
-      if (map.getLayer('trail-pins')) map.setLayoutProperty('trail-pins', 'visibility', 'none')
+      // Hide pins only when fully zoomed in; keep them visible at zoom 9-10 for context
+      if (zoom >= 11 && map.getLayer('trail-pins')) {
+        map.setLayoutProperty('trail-pins', 'visibility', 'none')
+      } else if (map.getLayer('trail-pins')) {
+        map.setLayoutProperty('trail-pins', 'visibility', 'visible')
+      }
 
-      // Get visible unclustered trail system features
       const visibleSystems = map.querySourceFeatures('trails', {
         filter: ['!', ['has', 'point_count']],
       })
-      const systemIds = [...new Set(visibleSystems.map((f) => f.properties?.id).filter(Boolean))] as string[]
+      const systemIds = [...new Set(visibleSystems.map((f) => f.properties?.id).filter(Boolean))].slice(0, 10) as string[]
 
       if (systemIds.length === 0) {
         clearTrailLines()
@@ -143,7 +141,7 @@ export function TrailsLayer({ map }: TrailsLayerProps) {
       fetch(`/api/trails/lines?systemIds=${systemIds.join(',')}`)
         .then((r) => r.json())
         .then((trails: TrailLine[]) => {
-          if (!map || map._removed) return
+          if (!isMounted || !map || map._removed) return
 
           const features: GeoJSON.Feature[] = trails
             .filter((t) => Array.isArray(t.trackData) && t.trackData.length >= 2)
@@ -161,7 +159,6 @@ export function TrailsLayer({ map }: TrailsLayerProps) {
               },
               geometry: {
                 type: 'LineString',
-                // trackData is [lat, lng, ele] — mapbox expects [lng, lat]
                 coordinates: t.trackData.map(([lat, lng]) => [lng, lat]),
               },
             }))
@@ -173,16 +170,14 @@ export function TrailsLayer({ map }: TrailsLayerProps) {
     }
 
     function scheduleFetch() {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(fetchAndRenderLines, 300)
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(fetchAndRenderLines, 300)
     }
-
-    // --- Trail system pins (existing logic) ---
 
     fetch('/api/trails/map')
       .then((r) => r.json())
       .then((pins: TrailSystemPin[]) => {
-        if (!map || map._removed) return
+        if (!isMounted || !map || map._removed) return
 
         const geojson: GeoJSON.FeatureCollection = {
           type: 'FeatureCollection',
@@ -198,7 +193,7 @@ export function TrailsLayer({ map }: TrailsLayerProps) {
           return
         }
 
-        map.addSource('trails', { type: 'geojson', data: geojson, cluster: true, clusterMaxZoom: 12, clusterRadius: 50 })
+        map.addSource('trails', { type: 'geojson', data: geojson, cluster: true, clusterMaxZoom: 9, clusterRadius: 50 })
         map.addLayer({ id: 'trail-clusters', type: 'circle', source: 'trails', filter: ['has', 'point_count'],
           paint: { 'circle-color': '#16a34a', 'circle-radius': ['step', ['get', 'point_count'], 20, 5, 30, 10, 40], 'circle-opacity': 0.85 } })
         map.addLayer({ id: 'trail-cluster-count', type: 'symbol', source: 'trails', filter: ['has', 'point_count'],
@@ -235,17 +230,16 @@ export function TrailsLayer({ map }: TrailsLayerProps) {
           }
         })
 
-        // Register zoom/move listeners after pins are loaded
         map.on('zoomend', scheduleFetch)
         map.on('moveend', scheduleFetch)
 
-        // Run once in case map is already at high zoom
         fetchAndRenderLines()
       })
       .catch(console.error)
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
+      isMounted = false
+      if (debounceTimer) clearTimeout(debounceTimer)
       if (!map || map._removed) return
 
       map.off('zoomend', scheduleFetch)

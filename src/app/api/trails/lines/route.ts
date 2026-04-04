@@ -22,7 +22,11 @@ export async function GET(request: Request) {
         AND g."trackData" IS NOT NULL
       ORDER BY t.name
     `, [systemIds])
-    return NextResponse.json(result.rows)
+    const rows = result.rows.map(row => ({
+      ...row,
+      trackData: typeof row.trackData === 'string' ? JSON.parse(row.trackData) : row.trackData,
+    }))
+    return NextResponse.json(rows)
   } catch (error) {
     console.error('GET /api/trails/lines error:', error)
     return NextResponse.json({ error: 'Failed to fetch trail lines' }, { status: 500 })
