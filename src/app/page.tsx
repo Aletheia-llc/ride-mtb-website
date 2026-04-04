@@ -40,6 +40,9 @@ export default async function HomePage() {
     return (
       <>
         <HeroSection />
+        <Suspense fallback={null}>
+          <MTBNewsFeed />
+        </Suspense>
         <GuestHomeFeed />
       </>
     )

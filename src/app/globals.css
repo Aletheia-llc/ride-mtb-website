@@ -20,11 +20,23 @@ body {
   gap: 12px;
 }
 
+.homepage-grid-guest {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 24px;
+}
+
 @media (max-width: 900px) {
   .homepage-grid {
     grid-template-columns: 1fr;
   }
   .homepage-grid > aside:last-child {
+    display: none;
+  }
+  .homepage-grid-guest {
+    grid-template-columns: 1fr;
+  }
+  .homepage-grid-guest > aside {
     display: none;
   }
 }

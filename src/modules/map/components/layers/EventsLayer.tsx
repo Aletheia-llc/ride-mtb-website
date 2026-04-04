@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import mapboxgl from 'mapbox-gl'
 import type { EventPin } from '../../types'
 
@@ -23,16 +23,13 @@ interface EventsLayerProps {
 }
 
 export function EventsLayer({ map }: EventsLayerProps) {
-  const loadedRef = useRef(false)
-
   useEffect(() => {
-    if (loadedRef.current) return
-    loadedRef.current = true
+    let isMounted = true
 
     fetch('/api/events/map')
       .then((r) => r.json())
       .then((pins: EventPin[]) => {
-        if (!map || map._removed) return
+        if (!isMounted || !map || map._removed) return
 
         const geojson: GeoJSON.FeatureCollection = {
           type: 'FeatureCollection',
@@ -77,6 +74,7 @@ export function EventsLayer({ map }: EventsLayerProps) {
       .catch(console.error)
 
     return () => {
+      isMounted = false
       if (!map || map._removed) return
       for (const layer of ['event-clusters', 'event-cluster-count', 'event-pins']) {
         if (map.getLayer(layer)) map.removeLayer(layer)

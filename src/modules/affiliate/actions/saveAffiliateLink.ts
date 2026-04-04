@@ -21,6 +21,10 @@ export async function saveAffiliateLinkAction(
   const slug = (formData.get('slug') as string)?.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')
   const linkType = (formData.get('linkType') as AffiliateLinkType) ?? 'external'
   const commission = parseFloat(formData.get('commission') as string) || 0
+  const associatedId = (formData.get('associatedId') as string)?.trim() || null
+
+  const shopId = linkType === 'shop_directory' ? associatedId : null
+  const gearReviewId = linkType === 'gear_review' ? associatedId : null
 
   if (!name) return { errors: 'Name is required' }
   if (!url) return { errors: 'URL is required' }
@@ -29,11 +33,11 @@ export async function saveAffiliateLinkAction(
   if (id) {
     await db.affiliateLink.update({
       where: { id },
-      data: { name, url, slug, linkType, commission },
+      data: { name, url, slug, linkType, commission, shopId, gearReviewId },
     })
   } else {
     await db.affiliateLink.create({
-      data: { name, url, slug, linkType, commission },
+      data: { name, url, slug, linkType, commission, shopId, gearReviewId },
     })
   }
 

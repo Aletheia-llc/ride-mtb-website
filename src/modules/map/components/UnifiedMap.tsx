@@ -15,6 +15,8 @@ import { CoachesLayer } from './layers/CoachesLayer'
 import { SkateparksLayer } from './layers/SkateparksLayer'
 import { PumpTracksLayer } from './layers/PumpTracksLayer'
 import { BikeParksLayer } from './layers/BikeParksLayer'
+import { BikeShopsLayer } from './layers/BikeShopsLayer'
+import { CampgroundsLayer } from './layers/CampgroundsLayer'
 
 interface UnifiedMapProps {
   defaultLayers: LayerName[]
@@ -126,6 +128,12 @@ export function UnifiedMap({
       )}
       {mapLoaded && mapRef.current && availableLayers.includes('bikeparks') && activeLayers.has('bikeparks') && (
         <BikeParksLayer map={mapRef.current} />
+      )}
+      {mapLoaded && mapRef.current && availableLayers.includes('bikeshops') && activeLayers.has('bikeshops') && (
+        <BikeShopsLayer map={mapRef.current} />
+      )}
+      {mapLoaded && mapRef.current && availableLayers.includes('campgrounds') && activeLayers.has('campgrounds') && (
+        <CampgroundsLayer map={mapRef.current} />
       )}
     </div>
   )

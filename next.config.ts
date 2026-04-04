@@ -66,6 +66,8 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'abs.twimg.com' },
       // Supabase Storage — marketplace images and other assets
       { protocol: 'https', hostname: '*.supabase.co' },
+      // Unsplash — article cover images
+      { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
 }

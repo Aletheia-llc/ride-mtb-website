@@ -6,7 +6,7 @@ import type { FacilityPin } from '@/modules/parks/types'
 
 interface FacilityLayerProps {
   map: mapboxgl.Map
-  type: 'skateparks' | 'pumptracks' | 'bikeparks'
+  type: 'skateparks' | 'pumptracks' | 'bikeparks' | 'bikeshops' | 'campgrounds'
   color: string
   iconSvg: string
 }
@@ -56,11 +56,15 @@ export function FacilityLayer({ map, type, color, iconSvg }: FacilityLayerProps)
             SKATEPARK: 'Skatepark',
             PUMPTRACK: 'Pump Track',
             BIKEPARK: 'Bike Park',
+            BIKE_SHOP: 'Bike Shop',
+            CAMPGROUND: 'Campground',
           }
           const TYPE_COLORS: Record<string, string> = {
             SKATEPARK: '#f97316',
             PUMPTRACK: '#14b8a6',
             BIKEPARK: '#a855f7',
+            BIKE_SHOP: '#ec4899',
+            CAMPGROUND: '#78716c',
           }
           const typeColor = TYPE_COLORS[pin.type] ?? color
 
@@ -86,6 +90,38 @@ export function FacilityLayer({ map, type, color, iconSvg }: FacilityLayerProps)
             locEl.style.cssText = 'font-size: 12px; color: #6b7280; margin: 0 0 6px;'
             locEl.textContent = [pin.city, pin.state].filter(Boolean).join(', ')
             popupEl.appendChild(locEl)
+          }
+
+          // Contact info for bike shops
+          if (pin.type === 'BIKE_SHOP') {
+            if (pin.phone || pin.website || pin.openingHours) {
+              const contactEl = document.createElement('div')
+              contactEl.style.cssText = 'display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px;'
+              if (pin.phone) {
+                const phoneEl = document.createElement('a')
+                phoneEl.href = `tel:${pin.phone}`
+                phoneEl.style.cssText = 'font-size: 12px; color: #6b7280; text-decoration: none;'
+                phoneEl.textContent = `📞 ${pin.phone}`
+                contactEl.appendChild(phoneEl)
+              }
+              if (pin.website) {
+                const webEl = document.createElement('a')
+                webEl.href = pin.website
+                webEl.target = '_blank'
+                webEl.rel = 'noopener noreferrer'
+                webEl.style.cssText = 'font-size: 12px; color: #ec4899; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;'
+                const url = pin.website.replace(/^https?:\/\//, '').replace(/\/$/, '')
+                webEl.textContent = `🌐 ${url}`
+                contactEl.appendChild(webEl)
+              }
+              if (pin.openingHours) {
+                const hoursEl = document.createElement('p')
+                hoursEl.style.cssText = 'font-size: 11px; color: #6b7280; margin: 0;'
+                hoursEl.textContent = `🕐 ${pin.openingHours}`
+                contactEl.appendChild(hoursEl)
+              }
+              popupEl.appendChild(contactEl)
+            }
           }
 
           // Tags row: surface, lit, fee

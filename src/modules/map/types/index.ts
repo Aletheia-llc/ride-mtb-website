@@ -1,4 +1,4 @@
-export type LayerName = 'trails' | 'events' | 'coaching' | 'skateparks' | 'pumptracks' | 'bikeparks'
+export type LayerName = 'trails' | 'events' | 'coaching' | 'skateparks' | 'pumptracks' | 'bikeparks' | 'bikeshops' | 'campgrounds'
 
 export interface TrailSystemPin {
   id: string

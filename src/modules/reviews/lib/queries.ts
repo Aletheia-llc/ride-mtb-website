@@ -75,12 +75,28 @@ export async function getGearReviews(
 // ── 2. getGearReviewBySlug ────────────────────────────────────
 
 export async function getGearReviewBySlug(slug: string) {
-  return db.gearReview.findUnique({
+  const review = await db.gearReview.findUnique({
     where: { slug },
     include: {
       user: { select: userSelect },
+      affiliateLinks: {
+        where: { isActive: true },
+        select: { slug: true, name: true, url: true },
+        orderBy: { name: 'asc' },
+      },
     },
   })
+
+  if (!review) return null
+
+  return {
+    ...review,
+    affiliateLinks: review.affiliateLinks.map((l) => ({
+      slug: l.slug,
+      name: l.name,
+      url: `/api/affiliate/track/${l.slug}`,
+    })),
+  }
 }
 
 // ── 3. createGearReview ───────────────────────────────────────

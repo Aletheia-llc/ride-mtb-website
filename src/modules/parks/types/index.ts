@@ -1,4 +1,4 @@
-export type FacilityType = 'SKATEPARK' | 'PUMPTRACK' | 'BIKEPARK'
+export type FacilityType = 'SKATEPARK' | 'PUMPTRACK' | 'BIKEPARK' | 'BIKE_SHOP' | 'CAMPGROUND'
 export type FacilityPhotoStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export interface FacilityPin {
@@ -14,6 +14,9 @@ export interface FacilityPin {
   stateSlug: string | null
   surface: string | null
   lit: boolean | null
+  phone: string | null
+  website: string | null
+  openingHours: string | null
   avgRating: number | null
   reviewCount: number
 }

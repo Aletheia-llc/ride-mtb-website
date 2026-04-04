@@ -22,7 +22,12 @@ const QUERIES = [
   {
     type: 'BIKEPARK',
     label: 'Bike Parks',
-    query: `[out:json][timeout:60];(way["leisure"="bikepark"](${US_BBOX});relation["leisure"="bikepark"](${US_BBOX});way["sport"="mountain_biking"](${US_BBOX});relation["sport"="mountain_biking"](${US_BBOX});way["sport"="cycling"]["name"~"bike park|bikepark|jump park|skills park|dirt jump",i](${US_BBOX});relation["sport"="cycling"]["name"~"bike park|bikepark|jump park|skills park|dirt jump",i](${US_BBOX}););out center tags;`,
+    query: `[out:json][timeout:90];(way["leisure"="bikepark"](${US_BBOX});relation["leisure"="bikepark"](${US_BBOX});way["sport"="mountain_biking"](${US_BBOX});relation["sport"="mountain_biking"](${US_BBOX});way["sport"="cycling"]["name"~"bike park|bikepark|jump park|skills park|dirt jump",i](${US_BBOX});relation["sport"="cycling"]["name"~"bike park|bikepark|jump park|skills park|dirt jump",i](${US_BBOX});way["landuse"="winter_sports"](${US_BBOX});relation["landuse"="winter_sports"](${US_BBOX}););out center tags;`,
+  },
+  {
+    type: 'BIKE_SHOP',
+    label: 'Bike Shops',
+    query: `[out:json][timeout:90];node["shop"="bicycle"](${US_BBOX});out center tags;`,
   },
 ]
 

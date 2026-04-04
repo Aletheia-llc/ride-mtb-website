@@ -1,4 +1,6 @@
 import Image from 'next/image'
+import Link from 'next/link'
+import { ShoppingBag } from 'lucide-react'
 import { Avatar, Badge } from '@/ui/components'
 import type { GearReviewDetail } from '../types'
 import { getCategoryLabel } from '../types'
@@ -98,6 +100,30 @@ export function ReviewDetail({ review }: ReviewDetailProps) {
       <div className="whitespace-pre-wrap text-[var(--color-text)] leading-relaxed">
         {review.content}
       </div>
+
+      {/* Affiliate / Buy links */}
+      {review.affiliateLinks.length > 0 && (
+        <div className="mt-8 border-t border-[var(--color-border)] pt-8">
+          <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-[var(--color-text)]">
+            <ShoppingBag className="h-5 w-5" />
+            Where to Buy
+          </h2>
+          <div className="flex flex-col gap-2">
+            {review.affiliateLinks.map((link) => (
+              <Link
+                key={link.slug}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-4 py-3 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+              >
+                <ShoppingBag className="h-4 w-4 shrink-0" />
+                {link.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </article>
   )
 }

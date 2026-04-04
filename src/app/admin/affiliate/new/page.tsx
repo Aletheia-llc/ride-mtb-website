@@ -41,8 +41,16 @@ export default function NewAffiliateLinkPage() {
               <option value="external">External</option>
               <option value="shop_directory">Shop Directory</option>
               <option value="bike_selector">Bike Selector</option>
+              <option value="gear_review">Gear Review</option>
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+            Associated ID <span className="text-[var(--color-text-muted)] font-normal">(shop or gear review ID — optional)</span>
+          </label>
+          <input name="associatedId" className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none" placeholder="cuid of shop or gear review" />
         </div>
 
         <div>

@@ -21,8 +21,6 @@ interface RightSidebarProps {
 export function RightSidebar({ upcomingEvents }: RightSidebarProps) {
   return (
     <aside className="flex flex-col gap-4">
-      <AdSlot size="rectangle" />
-
       <div className="rounded-lg p-3 border border-[var(--color-border)]">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Explore</p>
         <ul className="grid grid-cols-2 gap-1.5">
@@ -59,6 +57,8 @@ export function RightSidebar({ upcomingEvents }: RightSidebarProps) {
           </ul>
         </div>
       )}
+
+      <AdSlot size="rectangle" />
     </aside>
   )
 }

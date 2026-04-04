@@ -221,6 +221,11 @@ async function fetchAllUsfsTrails(bbox) {
 async function findMatchingSystem(pool, managingOrg, centroid) {
   const normalizedUsfs = normalizeSystemName(managingOrg)
 
+  // Numeric org codes (e.g. "080106") can't be name-matched — skip to create new
+  if (/^\d+$/.test(normalizedUsfs.replace(/\s/g, ''))) {
+    return { system: null, isNew: true, confidence: null }
+  }
+
   // Fetch all non-USFS systems (avoid matching our own previously-imported systems)
   const { rows } = await pool.query(
     `SELECT id, name, slug, status, latitude, longitude
@@ -231,7 +236,10 @@ async function findMatchingSystem(pool, managingOrg, centroid) {
 
   for (const system of rows) {
     const normName = normalizeSystemName(system.name)
-    const nameMatch = normalizedUsfs && normName && (normName.includes(normalizedUsfs) || normalizedUsfs.includes(normName))
+    // Require at least 4 chars to avoid false positives on short names
+    const nameMatch = normalizedUsfs && normName &&
+      normalizedUsfs.length >= 4 && normName.length >= 4 &&
+      (normName.includes(normalizedUsfs) || normalizedUsfs.includes(normName))
     if (!nameMatch) continue
 
     // Log confidence level (name alone is sufficient to enrich; geo just adds confidence)

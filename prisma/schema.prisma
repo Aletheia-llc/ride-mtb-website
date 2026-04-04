@@ -1040,7 +1040,8 @@ model GearReview {
   imageUrl     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  affiliateLinks AffiliateLink[] @relation("GearReviewAffiliateLinks")
 
   @@index([category])
   @@index([userId])
@@ -2607,6 +2608,7 @@ model Article {
 enum AffiliateLinkType {
   shop_directory
   bike_selector
+  gear_review
   external
 
   @@map("affiliate_link_type")
@@ -2618,6 +2620,7 @@ model AffiliateLink {
   url         String
   linkType    AffiliateLinkType @default(external)
   shopId      String?
+  gearReviewId String?
   slug        String            @unique
   commission  Float             @default(0)
   isActive    Boolean           @default(true)
@@ -2625,6 +2628,7 @@ model AffiliateLink {
   updatedAt   DateTime          @updatedAt
 
   shop        Shop?             @relation("ShopAffiliateLinks", fields: [shopId], references: [id], onDelete: SetNull)
+  gearReview  GearReview?       @relation("GearReviewAffiliateLinks", fields: [gearReviewId], references: [id], onDelete: SetNull)
   clicks      AffiliateClick[]
 
   @@map("affiliate_links")
@@ -3046,6 +3050,8 @@ enum FacilityType {
   SKATEPARK
   PUMPTRACK
   BIKEPARK
+  BIKE_SHOP
+  CAMPGROUND
 }
 
 enum FacilityPhotoStatus {

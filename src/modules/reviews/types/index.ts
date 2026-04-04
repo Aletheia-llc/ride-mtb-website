@@ -50,6 +50,12 @@ export interface GearReviewSummary {
   user: GearReviewAuthor
 }
 
+export interface GearReviewAffiliateLink {
+  slug: string
+  name: string
+  url: string
+}
+
 export interface GearReviewDetail {
   id: string
   userId: string
@@ -66,6 +72,7 @@ export interface GearReviewDetail {
   createdAt: Date
   updatedAt: Date
   user: GearReviewAuthor
+  affiliateLinks: GearReviewAffiliateLink[]
 }
 
 export function getCategoryLabel(category: GearCategory): string {

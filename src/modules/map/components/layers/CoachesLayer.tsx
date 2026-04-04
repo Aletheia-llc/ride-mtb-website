@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import mapboxgl from 'mapbox-gl'
 import type { CoachPin, ClinicPin } from '../../types'
 
@@ -9,16 +9,13 @@ interface CoachesLayerProps {
 }
 
 export function CoachesLayer({ map }: CoachesLayerProps) {
-  const loadedRef = useRef(false)
-
   useEffect(() => {
-    if (loadedRef.current) return
-    loadedRef.current = true
+    let isMounted = true
 
     fetch('/api/coaching/map')
       .then((r) => r.json())
       .then(({ coaches, clinics }: { coaches: CoachPin[]; clinics: ClinicPin[] }) => {
-        if (!map || map._removed) return
+        if (!isMounted || !map || map._removed) return
 
         // Coach profile pins
         const coachGeojson: GeoJSON.FeatureCollection = {
@@ -136,6 +133,7 @@ export function CoachesLayer({ map }: CoachesLayerProps) {
       .catch(console.error)
 
     return () => {
+      isMounted = false
       if (!map || map._removed) return
       for (const layer of ['coach-pins', 'clinic-pins']) {
         if (map.getLayer(layer)) map.removeLayer(layer)
