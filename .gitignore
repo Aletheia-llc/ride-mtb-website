@@ -47,3 +47,4 @@ src/generated/
 .env*.local
 .worktrees/
 .claude/
+*.csv
