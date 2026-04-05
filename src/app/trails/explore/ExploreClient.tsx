@@ -64,6 +64,12 @@ export function ExploreClient({ initialSystems }: Props) {
   const [distanceFilter, setDistanceFilter] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [expandedSystemId, setExpandedSystemId] = useState<string | null>(null)
+
+  // Autocomplete search
+  interface SearchResult { id: string; name: string; slug: string; systemName: string; systemSlug: string; location: string; difficulty: number | null; distance: number | null }
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [showAutocomplete, setShowAutocomplete] = useState(false)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [trailsMap, setTrailsMap] = useState<Record<string, TrailLineData[]>>({})
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
   const [mobileTab, setMobileTab] = useState<'list' | 'map'>('map')
@@ -230,10 +236,66 @@ export function ExploreClient({ initialSystems }: Props) {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, city, state..."
+              onChange={(e) => {
+                const val = e.target.value
+                setSearch(val)
+                if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+                if (val.length >= 2) {
+                  searchTimerRef.current = setTimeout(async () => {
+                    try {
+                      const res = await fetch(`/api/trails/search?q=${encodeURIComponent(val)}`)
+                      if (res.ok) {
+                        const data = await res.json()
+                        setSearchResults(data)
+                        setShowAutocomplete(true)
+                      }
+                    } catch { /* ignore */ }
+                  }, 300)
+                } else {
+                  setSearchResults([])
+                  setShowAutocomplete(false)
+                }
+              }}
+              onFocus={() => { if (searchResults.length > 0) setShowAutocomplete(true) }}
+              onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
+              placeholder="Search trails, systems, cities..."
               className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] py-2 pl-9 pr-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20"
             />
+            {showAutocomplete && searchResults.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
+                {searchResults.map((r) => (
+                  <button
+                    key={r.id}
+                    className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-[var(--color-bg-secondary)] transition-colors"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setShowAutocomplete(false)
+                      setSearch('')
+                      router.push(`/trails/explore/${r.systemSlug}/${r.slug}`)
+                    }}
+                  >
+                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--color-text)] truncate">{r.name}</p>
+                      <p className="text-xs text-[var(--color-text-muted)] truncate">
+                        {r.systemName}{r.location ? ` · ${r.location}` : ''}
+                        {r.distance != null && r.distance > 0 ? ` · ${r.distance.toFixed(1)}mi` : ''}
+                      </p>
+                    </div>
+                    {r.difficulty != null && r.difficulty > 0 && (
+                      <span
+                        className="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor:
+                            r.difficulty <= 2 ? '#22c55e' :
+                            r.difficulty === 3 ? '#3b82f6' : '#111',
+                        }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex gap-2 flex-wrap">
             {TYPE_FILTER_OPTIONS.map((opt) => (

@@ -17,6 +17,7 @@ import {
 import { ConditionBadge } from '@/modules/trails/components/ConditionBadge'
 import { ConditionReportForm } from '@/modules/trails/components/ConditionReportForm'
 import { GpxUploadForm } from '@/modules/trails/components/GpxUploadForm'
+import { GpxDownloadButton } from '@/modules/trails/components/GpxDownloadButton'
 import { Card } from '@/ui/components'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
@@ -192,6 +193,9 @@ export default async function TrailDetailPage({ params }: Props) {
           <GetDirectionsButton lat={trailLat} lng={trailLng} />
         )}
         <ShareButton title={trail.name} text={trail.description ?? undefined} />
+        {hasGpsData && (
+          <GpxDownloadButton trailName={trail.name} trackData={trail.gpsTrack!.trackData!} />
+        )}
       </div>
 
       {/* Conditions section */}

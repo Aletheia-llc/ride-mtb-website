@@ -15,7 +15,12 @@ export async function GET(request: NextRequest) {
     const results = trails.map((t) => ({
       id: t.id,
       name: t.name,
+      slug: t.slug,
       systemName: t.system.name,
+      systemSlug: t.system.slug,
+      location: [t.system.city, t.system.state].filter(Boolean).join(', '),
+      difficulty: t.physicalDifficulty,
+      distance: t.distance,
     }))
 
     return NextResponse.json(results)

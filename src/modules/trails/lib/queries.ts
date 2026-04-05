@@ -274,20 +274,41 @@ export async function getTrailReviews(trailId: string, page: number = 1) {
 
 // ── 6. searchTrails ───────────────────────────────────────────
 
-export async function searchTrails(query: string, limit: number = 10) {
+export async function searchTrails(query: string, limit: number = 15) {
+  // Split into words for multi-term matching
+  const words = query.trim().split(/\s+/).filter(Boolean)
+  const where = words.length > 1
+    ? {
+        AND: words.map((w) => ({
+          OR: [
+            { name: { contains: w, mode: 'insensitive' as const } },
+            { system: { name: { contains: w, mode: 'insensitive' as const } } },
+            { system: { city: { contains: w, mode: 'insensitive' as const } } },
+            { system: { state: { contains: w, mode: 'insensitive' as const } } },
+          ],
+        })),
+      }
+    : {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' as const } },
+          { system: { name: { contains: query, mode: 'insensitive' as const } } },
+          { system: { city: { contains: query, mode: 'insensitive' as const } } },
+          { system: { state: { contains: query, mode: 'insensitive' as const } } },
+        ],
+      }
+
   return db.trail.findMany({
-    where: {
-      OR: [
-        { name: { contains: query, mode: 'insensitive' as const } },
-        { system: { name: { contains: query, mode: 'insensitive' as const } } },
-        { system: { city: { contains: query, mode: 'insensitive' as const } } },
-      ],
-    },
+    where: { ...where, status: 'open' },
     take: limit,
-    orderBy: { name: 'asc' },
-    include: {
+    orderBy: [{ averageRating: 'desc' }, { name: 'asc' }],
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      physicalDifficulty: true,
+      distance: true,
       system: {
-        select: { name: true, slug: true },
+        select: { name: true, slug: true, city: true, state: true },
       },
     },
   })
