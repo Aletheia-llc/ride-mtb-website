@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, ChevronDown, ChevronRight, MapPin, Star, Map, List } from 'lucide-react'
+import { Search, ChevronDown, ChevronRight, MapPin, Star, Map, List, Filter } from 'lucide-react'
 import mapboxgl from 'mapbox-gl'
 import { SystemClusterMapDynamic, TrailLines } from '@/modules/trails/components'
 import type { TrailLineData } from '@/modules/trails/components'
@@ -40,11 +40,29 @@ const TYPE_FILTER_OPTIONS = [
   { value: 'private_property', label: 'Private' },
 ]
 
+const DIFFICULTY_OPTIONS = [
+  { value: '', label: 'Any Difficulty' },
+  { value: '1-2', label: 'Beginner', color: '#22c55e' },
+  { value: '3', label: 'Intermediate', color: '#3b82f6' },
+  { value: '4', label: 'Advanced', color: '#111' },
+  { value: '5', label: 'Expert', color: '#111' },
+]
+
+const DISTANCE_OPTIONS = [
+  { value: '', label: 'Any Distance' },
+  { value: '0-2', label: '< 2 mi' },
+  { value: '2-5', label: '2–5 mi' },
+  { value: '5-99', label: '5+ mi' },
+]
+
 export function ExploreClient({ initialSystems }: Props) {
   const router = useRouter()
   const [systems, setSystems] = useState<SystemPin[]>(initialSystems)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
+  const [difficultyFilter, setDifficultyFilter] = useState('')
+  const [distanceFilter, setDistanceFilter] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [expandedSystemId, setExpandedSystemId] = useState<string | null>(null)
   const [trailsMap, setTrailsMap] = useState<Record<string, TrailLineData[]>>({})
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
@@ -85,6 +103,7 @@ export function ExploreClient({ initialSystems }: Props) {
           name: t.name,
           physicalDifficulty: t.physicalDifficulty,
           technicalDifficulty: t.technicalDifficulty,
+          distanceMiles: t.distance,
           trackData: t.gpsTrack.trackData,
         }))
 
@@ -172,8 +191,29 @@ export function ExploreClient({ initialSystems }: Props) {
     [expandedSystemId, loadTrailsForSystem],
   )
 
+  // Filter trails within expanded systems by difficulty + distance
+  function filterTrails(trails: TrailLineData[]) {
+    return trails.filter((t) => {
+      if (difficultyFilter) {
+        const diff = t.physicalDifficulty ?? 0
+        if (difficultyFilter === '1-2' && diff > 2) return false
+        if (difficultyFilter === '3' && diff !== 3) return false
+        if (difficultyFilter === '4' && diff !== 4) return false
+        if (difficultyFilter === '5' && diff !== 5) return false
+      }
+      if (distanceFilter) {
+        const dist = t.distanceMiles ?? 0
+        const [min, max] = distanceFilter.split('-').map(Number)
+        if (dist < min || dist > max) return false
+      }
+      return true
+    })
+  }
+
+  const hasActiveTrailFilters = !!difficultyFilter || !!distanceFilter
   const expandedSystem = filteredSystems.find((s) => s.id === expandedSystemId) ?? null
-  const expandedTrails = expandedSystemId ? (trailsMap[expandedSystemId] ?? []) : []
+  const expandedTrailsRaw = expandedSystemId ? (trailsMap[expandedSystemId] ?? []) : []
+  const expandedTrails = hasActiveTrailFilters ? filterTrails(expandedTrailsRaw) : expandedTrailsRaw
 
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden">
@@ -210,6 +250,66 @@ export function ExploreClient({ initialSystems }: Props) {
               </button>
             ))}
           </div>
+          {/* Trail filters toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${
+              hasActiveTrailFilters
+                ? 'text-[var(--color-primary)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Trail Filters
+            {hasActiveTrailFilters && ' (active)'}
+            <ChevronDown className={`h-3 w-3 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+          {showFilters && (
+            <div className="space-y-2">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Difficulty</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {DIFFICULTY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setDifficultyFilter(opt.value)}
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                        difficultyFilter === opt.value
+                          ? 'bg-[var(--color-primary)] text-white'
+                          : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                      }`}
+                    >
+                      {opt.color && (
+                        <span
+                          className="inline-block w-2 h-2 rounded-full mr-1"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      )}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Distance</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {DISTANCE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setDistanceFilter(opt.value)}
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                        distanceFilter === opt.value
+                          ? 'bg-[var(--color-primary)] text-white'
+                          : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           <p className="text-xs text-[var(--color-text-muted)]">
             {filteredSystems.length} system{filteredSystems.length !== 1 ? 's' : ''} in view
           </p>
@@ -283,22 +383,44 @@ export function ExploreClient({ initialSystems }: Props) {
                     <div className="bg-[var(--color-bg-secondary)] pl-10 pr-4 pb-2">
                       {loadingIds.has(system.id) ? (
                         <p className="py-3 text-xs text-[var(--color-text-muted)]">Loading trails…</p>
-                      ) : trails.length === 0 ? (
-                        <p className="py-3 text-xs text-[var(--color-text-muted)]">No GPS trails available</p>
-                      ) : (
-                        <ul className="divide-y divide-[var(--color-border)]">
-                          {trails.map((trail) => (
-                            <li key={trail.slug}>
-                              <Link
-                                href={`/trails/explore/${system.slug}/${trail.slug}`}
-                                className="block py-2 text-xs text-[var(--color-text)] hover:text-[var(--color-primary)] truncate"
-                              >
-                                {trail.name}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                      ) : (() => {
+                        const filtered = hasActiveTrailFilters ? filterTrails(trails) : trails
+                        return filtered.length === 0 ? (
+                          <p className="py-3 text-xs text-[var(--color-text-muted)]">
+                            {trails.length === 0 ? 'No GPS trails available' : 'No trails match filters'}
+                          </p>
+                        ) : (
+                          <ul className="divide-y divide-[var(--color-border)]">
+                            {filtered.map((trail) => (
+                              <li key={trail.slug}>
+                                <Link
+                                  href={`/trails/explore/${system.slug}/${trail.slug}`}
+                                  className="flex items-center justify-between gap-2 py-2 text-xs text-[var(--color-text)] hover:text-[var(--color-primary)]"
+                                >
+                                  <span className="truncate">{trail.name}</span>
+                                  <span className="flex items-center gap-2 shrink-0 text-[var(--color-text-muted)]">
+                                    {trail.physicalDifficulty != null && trail.physicalDifficulty > 0 && (
+                                      <span
+                                        className="inline-block w-2 h-2 rounded-full"
+                                        style={{
+                                          backgroundColor:
+                                            trail.physicalDifficulty <= 2 ? '#22c55e' :
+                                            trail.physicalDifficulty === 3 ? '#3b82f6' :
+                                            trail.physicalDifficulty === 4 ? '#333' : '#111',
+                                        }}
+                                        title={`Difficulty ${trail.physicalDifficulty}/5`}
+                                      />
+                                    )}
+                                    {trail.distanceMiles != null && trail.distanceMiles > 0 && (
+                                      <span>{trail.distanceMiles.toFixed(1)}mi</span>
+                                    )}
+                                  </span>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )
+                      })()}
                     </div>
                   )}
                 </div>

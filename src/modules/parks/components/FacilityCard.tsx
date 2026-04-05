@@ -6,12 +6,16 @@ const TYPE_LABELS: Record<FacilityType, string> = {
   SKATEPARK: 'Skatepark',
   PUMPTRACK: 'Pump Track',
   BIKEPARK: 'Bike Park',
+  BIKE_SHOP: 'Bike Shop',
+  CAMPGROUND: 'Campground',
 }
 
 const TYPE_COLORS: Record<FacilityType, string> = {
   SKATEPARK: 'text-orange-500',
   PUMPTRACK: 'text-teal-500',
   BIKEPARK: 'text-purple-500',
+  BIKE_SHOP: 'text-green-500',
+  CAMPGROUND: 'text-amber-600',
 }
 
 interface FacilityCardProps {

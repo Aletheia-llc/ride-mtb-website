@@ -46,7 +46,6 @@ export async function submitShop(_prev: SubmitShopState, formData: FormData): Pr
         slug,
         shopType,
         status: ShopStatus.PENDING_REVIEW,
-        ownerId: user.id,
         submittedByUserId: user.id,
         services: services ? services.split(',').map((s) => s.trim()).filter(Boolean) : [],
         brands: brands ? brands.split(',').map((b) => b.trim()).filter(Boolean) : [],

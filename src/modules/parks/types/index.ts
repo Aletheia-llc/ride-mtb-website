@@ -14,9 +14,9 @@ export interface FacilityPin {
   stateSlug: string | null
   surface: string | null
   lit: boolean | null
-  phone: string | null
-  website: string | null
-  openingHours: string | null
+  phone?: string | null
+  website?: string | null
+  openingHours?: string | null
   avgRating: number | null
   reviewCount: number
 }

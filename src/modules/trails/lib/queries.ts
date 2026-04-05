@@ -449,6 +449,7 @@ export async function getSystemTrailsForMap(systemId: string) {
       slug: true,
       physicalDifficulty: true,
       technicalDifficulty: true,
+      distance: true,
       gpsTrack: {
         select: { trackData: true },
       },

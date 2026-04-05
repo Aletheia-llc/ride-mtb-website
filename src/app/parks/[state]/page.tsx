@@ -13,6 +13,8 @@ const FILTER_LABELS: Record<FacilityType, string> = {
   SKATEPARK: 'Skateparks',
   PUMPTRACK: 'Pump Tracks',
   BIKEPARK: 'Bike Parks',
+  BIKE_SHOP: 'Bike Shops',
+  CAMPGROUND: 'Campgrounds',
 }
 
 export async function generateMetadata({ params }: StatePageProps) {
