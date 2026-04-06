@@ -3,6 +3,7 @@
 import { requireAuth } from '@/lib/auth/guards'
 import { db } from '@/lib/db/client'
 import { getRecommendations, type SkillLevel } from '@/modules/onboarding/lib/recommendations'
+import { grantXP } from '@/modules/xp/lib/engine'
 
 export async function completeOnboarding() {
   const user = await requireAuth()
@@ -22,6 +23,14 @@ export async function completeOnboarding() {
     await db.user.update({
       where: { id: user.id },
       data: { onboardingCompletedAt: new Date() },
+    })
+
+    // Welcome XP bonus — idempotent via refId
+    void grantXP({
+      userId: user.id,
+      event: 'event_attended',
+      module: 'events',
+      refId: `onboarding_complete_${user.id}`,
     })
   }
 

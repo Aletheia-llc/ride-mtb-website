@@ -37,9 +37,14 @@ export default async function HomePage() {
   const userId = session?.user?.id ?? null
 
   if (!session?.user) {
+    const [trailCount, shopCount, riderCount] = await Promise.all([
+      db.trail.count({ where: { status: 'open' } }).catch(() => 83000),
+      db.facility.count({ where: { type: 'BIKE_SHOP' } }).catch(() => 22000),
+      db.user.count().catch(() => 0),
+    ])
     return (
       <>
-        <HeroSection />
+        <HeroSection stats={{ trailCount, shopCount, riderCount }} />
         <Suspense fallback={null}>
           <MTBNewsFeed />
         </Suspense>

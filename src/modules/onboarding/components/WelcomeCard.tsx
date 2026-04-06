@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { completeOnboarding } from '@/modules/onboarding/actions/completeOnboarding'
 
 interface Course {
@@ -35,7 +36,13 @@ export default function WelcomeCard() {
 
   useEffect(() => {
     completeOnboarding()
-      .then(setRecommendations)
+      .then((recs) => {
+        setRecommendations(recs)
+        toast.success('Welcome to Ride MTB!', {
+          description: 'You earned 20 XP for completing setup',
+          duration: 5000,
+        })
+      })
       .catch(() => setRecommendations({ course: null, community: null, trail: null }))
       .finally(() => setLoading(false))
   }, [])
@@ -64,10 +71,14 @@ export default function WelcomeCard() {
         }}
       >
         <div className="mb-6">
+          <p className="text-4xl mb-3">🤘</p>
           <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
-            You&apos;re all set!
+            Welcome to Ride MTB!
           </h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+          <p className="text-sm" style={{ color: 'var(--color-primary)' }}>
+            +20 XP earned
+          </p>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
             Here&apos;s what we recommend to get you started.
           </p>
         </div>
