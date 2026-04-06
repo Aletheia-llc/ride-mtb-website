@@ -13,4 +13,6 @@ export interface XpGrantResult {
   granted: boolean
   points: number
   newTotal: number
+  streakDays?: number
+  milestoneReached?: number
 }

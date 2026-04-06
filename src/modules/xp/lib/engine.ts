@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client'
 import { XP_VALUES, STREAK_MULTIPLIERS } from '@/shared/constants/xp-values'
 import type { XpEvent, XpModule, XpGrantResult } from '@/shared/types/xp'
 import { createNotification } from '@/lib/notifications'
+import { checkAndAwardBadges } from '@/lib/badges'
 
 const XP_MILESTONES = [100, 500, 1000, 5000, 10000] as const
 
@@ -120,11 +121,13 @@ export async function grantXP(input: GrantXPInput): Promise<XpGrantResult> {
       }
     }
 
-    // Notify user when they cross an XP milestone
+    // Check for XP milestones and notify
+    let milestoneReached: number | undefined
     if (granted) {
       const oldTotal = newTotal - points
       for (const milestone of XP_MILESTONES) {
         if (oldTotal < milestone && newTotal >= milestone) {
+          milestoneReached = milestone
           void createNotification(
             userId,
             'xp_milestone',
@@ -137,7 +140,12 @@ export async function grantXP(input: GrantXPInput): Promise<XpGrantResult> {
       }
     }
 
-    return { granted, points, newTotal }
+    // Check for new badges after XP grant
+    if (granted) {
+      void checkAndAwardBadges(userId)
+    }
+
+    return { granted, points, newTotal, streakDays: newStreak, milestoneReached }
   } catch (error: unknown) {
     if (error !== null && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       const existing = await db.xpAggregate.findUnique({ where: { userId } })

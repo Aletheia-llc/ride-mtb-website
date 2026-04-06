@@ -18,6 +18,7 @@ import { ConditionBadge } from '@/modules/trails/components/ConditionBadge'
 import { ConditionReportForm } from '@/modules/trails/components/ConditionReportForm'
 import { GpxUploadForm } from '@/modules/trails/components/GpxUploadForm'
 import { GpxDownloadButton } from '@/modules/trails/components/GpxDownloadButton'
+import { RadarChart } from '@/modules/trails/components/RadarChart'
 import { Card } from '@/ui/components'
 import { auth } from '@/lib/auth/config'
 // eslint-disable-next-line no-restricted-imports
@@ -256,6 +257,34 @@ export default async function TrailDetailPage({ params }: Props) {
             </span>
           )}
         </h2>
+
+        {/* Review radar chart — show when 3+ reviews have sub-ratings */}
+        {(() => {
+          const reviewsWithRatings = trail.reviews.filter(
+            (r) => r.flowRating != null && r.sceneryRating != null && r.technicalRating != null && r.maintenanceRating != null,
+          )
+          if (reviewsWithRatings.length < 3) return null
+          const avg = (field: 'flowRating' | 'sceneryRating' | 'technicalRating' | 'maintenanceRating') =>
+            reviewsWithRatings.reduce((sum, r) => sum + (r[field] ?? 0), 0) / reviewsWithRatings.length
+          return (
+            <Card className="mb-6 flex items-center justify-center">
+              <RadarChart
+                axes={['Flow', 'Scenery', 'Technical', 'Maintenance']}
+                trails={[{
+                  name: trail.name,
+                  color: '#22c55e',
+                  data: {
+                    Flow: avg('flowRating'),
+                    Scenery: avg('sceneryRating'),
+                    Technical: avg('technicalRating'),
+                    Maintenance: avg('maintenanceRating'),
+                  },
+                }]}
+                size={220}
+              />
+            </Card>
+          )
+        })()}
 
         {/* Review form (logged in users only) */}
         {currentUserId && (

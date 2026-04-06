@@ -6,6 +6,7 @@ import {
   simplifyTrack,
   calculateTrailStats,
 } from '@/modules/trails/lib/gpx-processor'
+import { grantXP } from '@/modules/xp/lib/engine'
 
 export async function POST(request: Request) {
   // 1. Auth check
@@ -114,7 +115,10 @@ export async function POST(request: Request) {
     ],
   )
 
-  // 9. Return success
+  // 9. Grant XP for GPS contribution
+  void grantXP({ userId: session.user.id, event: 'trail_gpx_contributed', module: 'trails', refId: trailId })
+
+  // 10. Return success
   return NextResponse.json({
     success: true,
     pointCount: simplified.length,

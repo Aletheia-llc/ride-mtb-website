@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
+import { grantXP } from '@/modules/xp/lib/engine'
 
 const schema = z.object({
   trailId: z.string().min(1),
@@ -19,9 +20,9 @@ export async function reportCondition(_prev: ConditionState, formData: FormData)
     if (!parsed.success) return { errors: { general: parsed.error.issues[0]?.message ?? 'Invalid' } }
     const { trailId, condition, notes } = parsed.data
 
-    await db.conditionReport.create({ data: { trailId, userId: user.id, condition, notes } })
-    // Update current condition on trail
+    const report = await db.conditionReport.create({ data: { trailId, userId: user.id, condition, notes } })
     await db.trail.update({ where: { id: trailId }, data: { currentCondition: condition, conditionReportedAt: new Date() } })
+    void grantXP({ userId: user.id, event: 'trail_condition_reported', module: 'trails', refId: report.id })
     return { errors: {}, success: true }
   } catch {
     return { errors: { general: 'Something went wrong' } }
