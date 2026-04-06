@@ -4,7 +4,6 @@ import { requireAuth } from '@/lib/auth/guards'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/lib/db/client'
 import { grantXP } from '@/modules/xp/lib/engine'
-import { createNotification } from '@/lib/notifications'
 
 const schema = z.object({
   trailId: z.string().min(1),
@@ -29,21 +28,25 @@ export async function reportCondition(_prev: ConditionState, formData: FormData)
     })
     void grantXP({ userId: user.id, event: 'trail_condition_reported', module: 'trails', refId: report.id })
 
-    // Notify users who favorited this trail
+    // Notify users who favorited this trail (batch insert)
     const favorites = await db.trailFavorite.findMany({
       where: { trailId, userId: { not: user.id } },
       select: { userId: true },
       take: 50,
     })
-    const trailUrl = `/trails/explore/${trail.system?.slug}/${trail.slug}`
-    for (const fav of favorites) {
-      void createNotification(
-        fav.userId,
-        'trail_condition',
-        `${trail.name}: ${condition.replace('_', ' ').toLowerCase()}`,
-        `A rider reported ${condition.replace('_', ' ').toLowerCase()} conditions`,
-        trailUrl,
-      )
+    if (favorites.length > 0) {
+      const trailUrl = `/trails/explore/${trail.system?.slug}/${trail.slug}`
+      const condLabel = condition.replace('_', ' ').toLowerCase()
+      await db.notification.createMany({
+        data: favorites.map((fav) => ({
+          userId: fav.userId,
+          type: 'trail_condition',
+          title: `${trail.name}: ${condLabel}`,
+          message: `A rider reported ${condLabel} conditions`,
+          linkUrl: trailUrl,
+        })),
+        skipDuplicates: true,
+      }).catch(() => {})
     }
 
     return { errors: {}, success: true }

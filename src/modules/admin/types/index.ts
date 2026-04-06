@@ -10,6 +10,14 @@ export interface AdminStats {
   totalEvents: number
   totalReviews: number
   totalListings: number
+  totalShops: number
+  totalTrailSystems: number
+  totalFacilities: number
+  pendingShopClaims: number
+  pendingShopSubmissions: number
+  newUsersToday: number
+  newUsersWeek: number
+  activeStreaks: number
 }
 
 export interface UserAdminView {

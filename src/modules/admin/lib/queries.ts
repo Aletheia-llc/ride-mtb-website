@@ -7,13 +7,15 @@ import type { AdminStats, UserAdminView } from '../types'
 // ── 1. getAdminStats ────────────────────────────────────────
 
 export async function getAdminStats(): Promise<AdminStats> {
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
   const [
-    totalUsers,
-    totalPosts,
-    totalTrails,
-    totalEvents,
-    totalReviews,
-    totalListings,
+    totalUsers, totalPosts, totalTrails, totalEvents, totalReviews, totalListings,
+    totalShops, totalTrailSystems, totalFacilities,
+    pendingShopClaims, pendingShopSubmissions,
+    newUsersToday, newUsersWeek, activeStreaks,
   ] = await Promise.all([
     db.user.count(),
     db.post.count(),
@@ -21,15 +23,21 @@ export async function getAdminStats(): Promise<AdminStats> {
     db.event.count(),
     db.gearReview.count(),
     db.listing.count(),
+    db.shop.count(),
+    db.trailSystem.count(),
+    db.facility.count(),
+    db.shopClaimRequest.count({ where: { status: 'PENDING' } }).catch(() => 0),
+    db.shop.count({ where: { status: 'PENDING_REVIEW' } }).catch(() => 0),
+    db.user.count({ where: { createdAt: { gte: todayStart } } }),
+    db.user.count({ where: { createdAt: { gte: weekAgo } } }),
+    db.xpAggregate.count({ where: { streakDays: { gte: 3 } } }),
   ])
 
   return {
-    totalUsers,
-    totalPosts,
-    totalTrails,
-    totalEvents,
-    totalReviews,
-    totalListings,
+    totalUsers, totalPosts, totalTrails, totalEvents, totalReviews, totalListings,
+    totalShops, totalTrailSystems, totalFacilities,
+    pendingShopClaims, pendingShopSubmissions,
+    newUsersToday, newUsersWeek, activeStreaks,
   }
 }
 

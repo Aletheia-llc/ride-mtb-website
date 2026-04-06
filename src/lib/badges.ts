@@ -83,14 +83,26 @@ async function getCounts(userId: string): Promise<BadgeCounts> {
 }
 
 export async function checkAndAwardBadges(userId: string): Promise<string[]> {
-  const counts = await getCounts(userId)
+  const [counts, allBadges, existingBadgeIds] = await Promise.all([
+    getCounts(userId),
+    db.badge.findMany({
+      where: { slug: { in: BADGE_RULES.map((r) => r.slug) } },
+      select: { id: true, slug: true, name: true },
+    }),
+    db.userBadge.findMany({
+      where: { userId },
+      select: { badgeId: true },
+    }).then((rows) => new Set(rows.map((r) => r.badgeId))),
+  ])
+
+  const badgeMap = new Map(allBadges.map((b) => [b.slug, b]))
   const awarded: string[] = []
 
   for (const rule of BADGE_RULES) {
     if (!rule.check(counts)) continue
 
-    const badge = await db.badge.findUnique({ where: { slug: rule.slug }, select: { id: true, name: true } })
-    if (!badge) continue
+    const badge = badgeMap.get(rule.slug)
+    if (!badge || existingBadgeIds.has(badge.id)) continue
 
     try {
       await db.userBadge.create({ data: { userId, badgeId: badge.id } })
@@ -103,7 +115,7 @@ export async function checkAndAwardBadges(userId: string): Promise<string[]> {
         '/profile',
       )
     } catch {
-      // Already has this badge (unique constraint)
+      // Race condition — already has badge
     }
   }
 
