@@ -3,10 +3,12 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/guards'
 import { BookOpen, MessageSquare, Map, Bike, Flame, Trophy, Plus, ArrowRight } from 'lucide-react'
+import { Suspense } from 'react'
 import { Card } from '@/ui/components'
 import { ActivityFeed, XPOverview } from '@/modules/profile'
 // eslint-disable-next-line no-restricted-imports
 import { getUserProfile, getRecentActivity } from '@/modules/profile/lib/queries'
+import { NearbyTrails } from '@/modules/trails/components/NearbyTrails'
 
 export const metadata: Metadata = {
   title: 'Dashboard | Ride MTB',
@@ -104,6 +106,12 @@ export default async function DashboardPage() {
               ))}
             </div>
           </Card>
+
+          <Suspense fallback={null}>
+            <Card>
+              <NearbyTrails userLocation={profile.location ?? null} />
+            </Card>
+          </Suspense>
 
           <Card>
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">

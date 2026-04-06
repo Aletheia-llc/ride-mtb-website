@@ -54,7 +54,7 @@ export default async function HomePage() {
   }
 
   // Fetch all data in parallel
-  const [candidates, trendingItems, { events: upcomingEvents }, xpAggregate, weeklyXp, userProfile] =
+  const [candidates, trendingItems, { events: upcomingEvents }, xpAggregate, weeklyXp, userProfile, topContributors] =
     await Promise.all([
       getFeedCandidates(),
       getTrendingItems(5),
@@ -67,6 +67,11 @@ export default async function HomePage() {
             select: { interests: true, skillLevel: true, ridingStyle: true, location: true },
           })
         : Promise.resolve(null),
+      db.xpAggregate.findMany({
+        orderBy: { totalXp: 'desc' },
+        take: 5,
+        select: { totalXp: true, user: { select: { name: true, username: true } } },
+      }).then(rows => rows.map(r => ({ name: r.user.name, username: r.user.username, totalXp: r.totalXp }))).catch(() => []),
     ])
 
   // Rank candidates
@@ -131,7 +136,7 @@ export default async function HomePage() {
             />
           </main>
 
-          <RightSidebar upcomingEvents={upcomingEvents} />
+          <RightSidebar upcomingEvents={upcomingEvents} topContributors={topContributors} />
         </div>
       </div>
     </>

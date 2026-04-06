@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { Card } from '@/ui/components'
-import { ProfileHeader, XPOverview, ActivityFeed, ProfileStats } from '@/modules/profile'
+import { ProfileHeader, XPOverview, ActivityFeed, ProfileStats, BadgesSection } from '@/modules/profile'
 // eslint-disable-next-line no-restricted-imports
 import { getUserByUsername, getRecentActivity } from '@/modules/profile/lib/queries'
 
@@ -42,6 +42,10 @@ export default async function PublicProfilePage({ params }: PageProps) {
       <ProfileStats counts={profile._count} />
 
       <XPOverview xpAggregate={profile.xpAggregate} />
+
+      {profile.userBadges.length > 0 && (
+        <BadgesSection userBadges={profile.userBadges} />
+      )}
 
       {activities.length > 0 && <ActivityFeed activities={activities} />}
     </div>

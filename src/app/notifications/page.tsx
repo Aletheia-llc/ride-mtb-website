@@ -49,6 +49,10 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
       forum_vote: '⬆️',
       forum_mention: '@',
       xp_milestone: '⭐',
+      event_reminder: '📅',
+      badge_awarded: '🏅',
+      trail_condition: '🌤️',
+      new_follower: '👤',
       system: '🔔',
     }
     return icons[type] ?? '🔔'

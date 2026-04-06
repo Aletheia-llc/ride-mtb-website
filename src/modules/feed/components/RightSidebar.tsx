@@ -14,11 +14,18 @@ const MODULE_LINKS: { label: string; href: string; Icon: LucideIcon }[] = [
   { label: 'Buy / Sell', href: '/buy-sell', Icon: ShoppingBag },
 ]
 
-interface RightSidebarProps {
-  upcomingEvents: EventSummary[]
+interface TopContributor {
+  name: string | null
+  username: string | null
+  totalXp: number
 }
 
-export function RightSidebar({ upcomingEvents }: RightSidebarProps) {
+interface RightSidebarProps {
+  upcomingEvents: EventSummary[]
+  topContributors?: TopContributor[]
+}
+
+export function RightSidebar({ upcomingEvents, topContributors }: RightSidebarProps) {
   return (
     <aside className="flex flex-col gap-4">
       <div className="rounded-lg p-3 border border-[var(--color-border)]">
@@ -52,6 +59,25 @@ export function RightSidebar({ upcomingEvents }: RightSidebarProps) {
                 <p className="text-xs text-[var(--color-text-muted)]">
                   {event.startDate.toLocaleDateString()} · {event.location}
                 </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {topContributors && topContributors.length > 0 && (
+        <div className="rounded-lg p-3 border border-[var(--color-border)]">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Top Contributors</p>
+          <ul className="space-y-1.5">
+            {topContributors.map((user, i) => (
+              <li key={user.username ?? i}>
+                <Link
+                  href={user.username ? `/profile/${user.username}` : '#'}
+                  className="flex items-center justify-between text-sm hover:text-[var(--color-primary)] transition-colors"
+                >
+                  <span className="truncate">{user.name || user.username || 'Rider'}</span>
+                  <span className="text-xs text-[var(--color-text-muted)]">{user.totalXp.toLocaleString()} XP</span>
+                </Link>
               </li>
             ))}
           </ul>
